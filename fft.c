@@ -32,6 +32,42 @@
 // #define DEBUG_C_FFT
 // #define DEBUG_SWAP_SORT
 
+/* hann_window
+ *
+ * This function implents the hann window.
+ */
+void
+hann_window(sample_buffer *b)
+{
+	double hann;
+
+	for (int i = 0; i < b->n; i++) {
+		hann = pow(sin(M_PI * (double) i / (double) b->n),2);
+		b->data[i] = hann * creal(b->data[i]) + hann * cimag(b->data[i]) * I;
+	}
+}
+
+/* Blackman-Harris terms a0 through a3 */
+static const double a[4] = { 0.35875, 0.48829, 0.14128, 0.01168 };
+
+/* bh_window
+ *
+ * This function implents the periodic 4-term Blackman-Harris window
+ */
+void
+bh_window(sample_buffer *b)
+{
+	double bh;
+
+	for (int i = 0; i < b->n; i++) {
+		bh = a[0] -
+			 a[1] * cos((2.0 * M_PI * (double) i) / (double) b->n) +
+			 a[2] * cos((4.0 * M_PI * (double) i) / (double) b->n) -
+			 a[3] * cos((6.0 * M_PI * (double) i) / (double) b->n);
+		b->data[i] = bh * creal(b->data[i]) + bh * cimag(b->data[i]) * I;
+	}
+}
+
 /*
  * fft( ... )
  *
@@ -69,7 +105,8 @@ compute_fft(sample_buffer *iq, int bins)
 	 * Allocate a buffer for the FFT, keep the sample rate from the
 	 * source data.
 	 */
-	result = alloc_buf(bins, iq->r);
+//	result = alloc_buf(bins, iq->r);
+	result = alloc_buf(bins, bins);
 	iq_data = iq->data;
 	fft_result = result->data;
 	q = (int) t;

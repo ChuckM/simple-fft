@@ -84,8 +84,8 @@ add_cos(sample_buffer *s, double f, double a)
 	 * what span is (n / r) seconds / f = cyles /n is cycles per sample?
 	 */
 	for (i = 0; i < s->n; i++ ) {
-		s->data[i] += (sample_t) (a * (cosf(2 * M_PI * f * i / s->r) +
-									   sinf(2 * M_PI * f * i / s->r) * I));
+		s->data[i] += (sample_t) (a * (cos(2 * M_PI * f * i / s->r) +
+									   sin(2 * M_PI * f * i / s->r) * I));
 		set_minmax(s, i);
 	}
 }
@@ -100,6 +100,7 @@ void
 add_cos_real(sample_buffer *s, double f, double a)
 {
 	int	i;
+	double per;
 
 	/*
 	 * n is samples
@@ -107,8 +108,10 @@ add_cos_real(sample_buffer *s, double f, double a)
 	 * f is frequency (cycles per second)
 	 * what span is (n / r) seconds / f = cyles /n is cycles per sample?
 	 */
+	per = (2 * M_PI * f) / (double) s->r;
+
 	for (i = 0; i < s->n; i++ ) {
-		s->data[i] += (sample_t) (a * (cosf(2 * M_PI * f * i / s->r)));
+		s->data[i] += (sample_t) (a * (cos((double) i * per)));
 		set_minmax(s, i);
 	}
 }
@@ -135,23 +138,50 @@ add_cos_real(sample_buffer *s, double f, double a)
  * of the current sample.
  */
 static double
-__wave_index(double ndx, int rate, double f)
+__i_index(int ndx, int rate, double f)
 {
-	double period = (ndx * f) / (double) rate;
+	double period = ((double) ndx * f) / (double) rate;
 	double t;
 	return (modf(period, &t));
 }
 
-/* add_sin
+static double
+__q_index(int ndx, int rate, double f)
+{
+	double period = (((double) ndx * f) / (double) rate) - 0.25;
+	double t;
+	if (period < 0) {
+		period += 1.0;
+	}
+	return (modf(period, &t));
+}
+
+/* add_test
  *
- * Test function to see if we got this right.
+ * This implements the inphase and quadrature values using a function
+ * which sets the quadrature value to the inphase value 25% earlier in
+ * the period (representing a 90 degree phase shift).
  */
 void
-add_sin(sample_buffer *b, double freq, double amp)
+add_test(sample_buffer *b, double freq, double amp)
 {
 	for (int i = 0; i < b->n; i++) {
-		b->data[i] = amp * sin(2 * M_PI * __wave_index((double) i, b->r, freq)) +
-					 amp * sin(2 * M_PI * __wave_index(((double) i)+.25, b->r, freq)) * I;
+		b->data[i] = amp * cos(2 * M_PI * __i_index(i, b->r, freq)) +
+					 amp * cos(2 * M_PI * __q_index(i, b->r, freq)) * I;
+	}
+}
+
+/* add_test_real
+ *
+ * This function implements add_cos by using the inphase index funtion
+ * to verify that the inphase function is computing the same phase as
+ * the add_cos function does.
+ */
+void
+add_test_real(sample_buffer *b, double freq, double amp)
+{
+	for (int i = 0; i < b->n; i++) {
+		b->data[i] = amp * cos(2 * M_PI * __i_index(i, b->r, freq));
 	}
 }
 
@@ -170,10 +200,27 @@ add_triangle(sample_buffer *s, double f, double a)
 	double t;
 
 	for (i = 0; i < s->n; i++) {
-		s->data[i] += (sample_t)
-			((a * modf(f * (double) i / (double) s->r, &t)) - level) +
-			((a * modf(f * (((double) i) + .25) / (double) s->r, &t)) - level) * I;
-		set_minmax(s, i);
+		s->data[i] += (sample_t) (a * (__i_index(i, s->r, f) - (a/2.0))) + 
+								 (a * (__q_index(i, s->r, f) - (a/2.0))) * I;
+	}
+}
+
+/*
+ * add_triangle_real( ... )
+ *
+ * Add a triangle wave to the sample buffer.
+ * Note it goes from -1/2a to +1/2a to avoid
+ * having a DC component.
+ */
+void
+add_triangle_real(sample_buffer *s, double f, double a)
+{
+	int i;
+	double level = a / 2.0;
+	double t;
+
+	for (i = 0; i < s->n; i++) {
+		s->data[i] += (sample_t) (a * (__i_index(i, s->r, f) - (a/2.0)));
 	}
 }
 
@@ -191,9 +238,25 @@ add_square(sample_buffer *s, double f, double a)
 	double t;
 
 	for (i = 0; i < s->n; i++) {
-		s->data[i] += (sample_t)
-			((modf(f * (double) i / (double) s->r, &t) >= .5) ? level : -level) +
-			((modf(f * (((double) i) + .25) / (double) s->r, &t) >= .5) ? level : -level) * I;
-		set_minmax(s, i);
+		s->data[i] += (sample_t) ((__i_index(i, s->r, f) >= .5) ? level : -level) +
+								 ((__q_index(i, s->r, f) >= .5) ? level : -level) * I;
+	}
+}
+
+/*
+ * add_square_real( ... )
+ *
+ * Add a square wave to the sample buffer.
+ * Note that it goes from -1/2a to +1/2a to avoid a DC component.
+ */
+void
+add_square_real(sample_buffer *s, double f, double a)
+{
+	int i;
+	double level = a / 2.0;
+	double t;
+
+	for (i = 0; i < s->n; i++) {
+		s->data[i] += (sample_t) ((__i_index(i, s->r, f) >= .5) ? level : -level);
 	}
 }

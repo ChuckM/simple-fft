@@ -1,0 +1,11 @@
+set term png font arial 14 large
+set output '| display png:-' 
+set xlabel "frequency"
+set ylabel "dB"
+set label 3 "FFT Output" at 4096,120 center
+set key outside autotitle columnheader
+set grid
+plot [0:10000] "plot.data" using 4:5 title "test" with lines,\
+		       "" using 4:6 title "cos" with lines
+pause mouse keypress
+

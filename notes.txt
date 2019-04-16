@@ -1,0 +1,52 @@
+Notes
+-----
+
+Wondering why my test waveform isn't identical to my cosine wave form. I calculate the
+period in the same way. 
+
+ANSWER: I was using the 'float' version of the cos/sin functions in one case (add_cos)
+and the 'double' version of them in the test case (add_test) so basically double the
+dynamic range. Fixing that gets them a lot closer, but the test one has better
+"nominal" dynamic range, its noise is around -300 dB but it has spurs up to -220DB,
+whereas the one using the functions directly has its noise at -250 dB with no spurs
+really in the -220 range. 
+
+So one question answered, and another created.
+
+Then we have the question of the 'infinity' answers on the FFT when the function is
+exactly 1/8th the FFT bins. That is a different question.
+
+New problem: Changing the sample rate to 10000 generates a *very* odd FFT plot. It looks
+very much like something with very wide skirts. Although the phase noise should not be that bad.
+
+With an 8912 sample rate I get the expected FFT, with a 10000 sample rate, I get a very weird
+FFT. What is more, the frequency along the bottom doesn't seem to change (but that might be
+part of the problem)
+
+That said, the test wave form and trancendental generated waveform generate the EXACT same
+FFT (which is something I would expect) except they just barely touch 0 dB after going up to
+60 dB.
+
+Moving the sample rate to 10240 gets a back to an "expected" FFT (one peak, a lot of 
+noise in the -220 to -300 dB range.
+
+Frequency and sample rate are interacting in a very very weird way. I expect I'm using
+sample rate when I should be using bins in my FFT calculation.
+
+Added Hann window and Blackman-Harris window. Not sure if I can figure out a Kaiser-Bessleman
+window. These two are pretty good and serve to illustrate the problem and the fix.
+
+Add DFT code and examples.
+
+So article outline:
+	Correlation as a way to "pick out" frequencies in a signal.
+	Slewing a sinusoid fro DC to 'N' to map out sinusoids, the DFT
+	Signals and Harmonics - what makes a waveform a waveform?
+	Doing that "Fast" with the Fast Fourier Transform
+	Gotchas and Spectral Leakage
+	Adding a "window" to the FFT
+		The Hann window
+		The Blackman-Harris 4 element window
+	Conclusions and next steps.
+
+

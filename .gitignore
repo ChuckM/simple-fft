@@ -3,3 +3,5 @@ tp
 *.o
 *.d
 *.map
+*.data
+*.png

@@ -40,6 +40,10 @@ typedef struct {
 	sample_t	*data;
 } sample_buffer;
 
+/*
+ * Some syntactic sugar to make this oft used code
+ */
+
 #define cmag(x)	(sqrt(pow(creal((x)),2) + pow(cimag((x)),2)))
 #define min(x, y)	((cmag(x) < cmag(y)) ? cmag(x) : cmag(y))
 #define max(x, y)	((cmag(x) > cmag(y)) ? cmag(x) : cmag(y))
@@ -51,13 +55,23 @@ typedef struct {
 #define clear_samples(s)	memset(s->data, 0, sizeof(sample_t) * s->n)
 
 
-/*
- * Some syntactic sugar to make this oft used code
- */
+/* sample buffer management */
 sample_buffer *alloc_buf(int size, int sample_rate);
 void free_buf(sample_buffer *buf);
-void add_cos(sample_buffer *, double, double);
-void add_triangle(sample_buffer *, double, double);
-void add_square(sample_buffer *, double, double);
 
+/* validate the way I and Q are calculated */
+void add_test(sample_buffer *, double, double);
+void add_test_real(sample_buffer *, double, double);
+
+/* add a cosine wave, with both I & Q, or just I (_real()) */
+void add_cos(sample_buffer *, double, double);
+void add_cos_real(sample_buffer *, double, double);
+
+/* add a triangle wave, with both I & Q, or just I (_real()) */
+void add_triangle(sample_buffer *, double, double);
+void add_triangle_real(sample_buffer *, double, double);
+
+/* add a square wave, with both I & Q, or just I (_real()) */
+void add_square(sample_buffer *, double, double);
+void add_square_real(sample_buffer *, double, double);
 
