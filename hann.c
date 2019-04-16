@@ -2,6 +2,17 @@
  *
  * This generates a Hann window and then lets me plot
  * it out.
+ * 
+ * Written April 2019 by Chuck McManis
+ * Copyright (c) 2019, Chuck McManis
+ *
+ * I hereby grant permission for anyone to use this software for any 
+ * purpose that they choose, I do not warrant the software to be
+ * functional or even correct. It was written as part of an educational
+ * exercise and is not "product grade" as far as the author is concerned.
+ *
+ * NO WARRANTY, EXPRESS OR IMPLIED ACCOMPANIES THIS SOFTWARE. USE IT AT
+ * YOUR OWN RISK.
  */
 
 #include <stdio.h>
