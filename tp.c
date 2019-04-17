@@ -44,11 +44,11 @@ main(int argc, char *argv[]) {
 	src2 = alloc_buf(15000, 8192);
 
 	add_cos(src, 2000.0512, 1.0);
-	fft = compute_fft(src, 1024);
+	fft = compute_fft(src, 1024, W_RECT);
 	printf("Source #1 FFT with %d bins, each bin is %f Hz.\n", fft->n, (double) fft->n / (double) src->r);
 
 	add_test(src2, 2000.0512, 1.0);
-	fft2 = compute_fft(src2, 1024);
+	fft2 = compute_fft(src2, 1024, W_RECT);
 	printf("Source #2 FFT with %d bins, each bin is %f Hz.\n", fft2->n, (double) fft2->n / (double) src2->r);
 
 	of = fopen("plot.data", "w");

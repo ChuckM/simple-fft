@@ -54,7 +54,8 @@ main(int argc, char *argv[]) {
 		src[ndx] = alloc_buf(BINS, SAMPLE_RATE);
 		add_test(src[ndx], freq + (ndx * FREQ_INC), 1.0);
 		bh_window(src[ndx]);
-		fft[ndx] = compute_fft(src[ndx], BINS);
+		bh_window(src[ndx]);
+		fft[ndx] = compute_fft(src[ndx], BINS, W_RECT);
 	}
 	printf("Ran %d tests, with a starting frequency of %f and an increment of %f.\n",
 		EXP_LEN, freq, FREQ_INC);
