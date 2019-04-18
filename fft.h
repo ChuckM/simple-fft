@@ -15,6 +15,7 @@ enum fft_window
  */
 sample_buffer *compute_fft(sample_buffer *s, int bins, enum fft_window);
 sample_buffer *compute_dft(sample_buffer *s, double freq_start, double freq_end, int steps);
+sample_buffer *calc_dft(sample_buffer *s, int bins);
 void hann_window(sample_buffer *);
 void bh_window(sample_buffer *);
 

@@ -3,7 +3,7 @@ BINS = main tp tp2 waves hann bh
 
 LDFLAGS = -lm
 
-OBJS = signal.o plot.o fft.o
+OBJS = signal.o plot.o fft.o dft.o
 
 all: $(BINS)
 
@@ -36,3 +36,6 @@ signal.o: signal.c signal.h
 
 plot.o: plot.c plot.h
 	cc -g -fPIC -c plot.c
+
+dft.o: dft.c
+	cc -g -fPIC -c dft.c
