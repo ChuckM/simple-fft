@@ -21,6 +21,7 @@
 #include <complex.h>
 #include <string.h>
 #include "signal.h"
+#include "windows.h"
 #include "dft.h"
 
 /*
@@ -42,7 +43,8 @@
  *  Or sin(a)cos(a) + 1/2. 
  */
 sample_buffer *
-compute_dft(sample_buffer *src, double min_freq, double max_freq, int steps)
+compute_dft(sample_buffer *src, double min_freq, double max_freq, int steps,
+			window_function window)
 {
 	double 			freq;
 	double			sum;

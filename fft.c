@@ -21,6 +21,7 @@
 #include <math.h>
 #include <complex.h>
 #include "signal.h"
+#include "windows.h"
 #include "fft.h"
 
 /* This defines turn of different levels of 'chattyness' about what
@@ -31,52 +32,6 @@
 // #define DEBUG_FFT
 // #define DEBUG_C_FFT
 // #define DEBUG_SWAP_SORT
-
-/* hann_window
- *
- * This function implents the hann window.
- */
-
-static double __hann_function(int k, int N)
-{
-	return (pow(sin(M_PI * (double) k / (double) N),2));
-}
-
-void
-hann_window(sample_buffer *b)
-{
-	double hann;
-
-	for (int i = 0; i < b->n; i++) {
-		hann = __hann_function(i, b->n);
-		b->data[i] = hann * creal(b->data[i]) + hann * cimag(b->data[i]) * I;
-	}
-}
-
-/* Blackman-Harris terms a0 through a3 */
-static const double a[4] = { 0.35875, 0.48829, 0.14128, 0.01168 };
-static double __bh_function(int k, int N)
-{
-	return ( a[0] -
-			 a[1] * cos((2.0 * M_PI * (double) k) / (double) N) +
-			 a[2] * cos((4.0 * M_PI * (double) k) / (double) N) -
-			 a[3] * cos((6.0 * M_PI * (double) k) / (double) N));
-}
-
-/* bh_window
- *
- * This function implents the periodic 4-term Blackman-Harris window
- */
-void
-bh_window(sample_buffer *b)
-{
-	double bh;
-
-	for (int i = 0; i < b->n; i++) {
-		bh = __bh_function(i, b->n);
-		b->data[i] = bh * creal(b->data[i]) + bh * cimag(b->data[i]) * I;
-	}
-}
 
 /*
  * fft( ... )
@@ -89,7 +44,7 @@ bh_window(sample_buffer *b)
  *
  */
 sample_buffer *
-compute_fft(sample_buffer *iq, int bins, enum fft_window window)
+compute_fft(sample_buffer *iq, int bins, window_function window)
 {
 	int i, j, k;
 	int q;
@@ -149,10 +104,10 @@ compute_fft(sample_buffer *iq, int bins, enum fft_window window)
 				t = 1.0;
 				break;
 			case W_HANN:
-				t = __hann_function(k, bins);
+				t = hann_window_function(k, bins);
 				break;
 			case W_BH:
-				t = __bh_function(k, bins);
+				t = bh_window_function(k, bins);
 				break;
 		}
 

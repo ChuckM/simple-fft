@@ -3,9 +3,9 @@ BINS = main tp tp2 waves hann bh dft_test
 
 LDFLAGS = -lm
 
-OBJS = signal.o plot.o fft.o dft.o
+OBJS = signal.o plot.o fft.o dft.o windows.o
 
-HEADERS = signal.h fft.h dft.h
+HEADERS = signal.h fft.h dft.h windows.h
 
 all: $(BINS)
 
@@ -42,7 +42,10 @@ signal.o: signal.c signal.h
 plot.o: plot.c plot.h
 	cc -g -fPIC -c plot.c
 
-dft.o: dft.c
+windows.o: windows.c windows.h
+	cc -g -fPIC -c windows.c
+
+dft.o: dft.c dft.h
 	cc -g -fPIC -c dft.c
 
 ${OBJS}:	${HEADERS}

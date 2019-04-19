@@ -20,6 +20,7 @@
 #include <math.h>
 #include <complex.h>
 #include "signal.h"
+#include "windows.h"
 #include "fft.h"
 #include "plot.h"
 
@@ -53,8 +54,8 @@ main(int argc, char *argv[]) {
 	for (ndx = 0; ndx < EXP_LEN; ndx++) {
 		src[ndx] = alloc_buf(BINS, SAMPLE_RATE);
 		add_test(src[ndx], freq + (ndx * FREQ_INC), 1.0);
-		bh_window(src[ndx]);
-		bh_window(src[ndx]);
+		bh_window_buffer(src[ndx], BINS);
+		bh_window_buffer(src[ndx], BINS);
 		fft[ndx] = compute_fft(src[ndx], BINS, W_RECT);
 	}
 	printf("Ran %d tests, with a starting frequency of %f and an increment of %f.\n",
