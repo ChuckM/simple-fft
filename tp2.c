@@ -1,5 +1,5 @@
 /*
- * Test program 
+ * Test program #2
  *
  * Written April 2019 by Chuck McManis
  * Copyright (c) 2019, Charles McManis
@@ -12,6 +12,9 @@
  * NO WARRANTY, EXPRESS OR IMPLIED ACCOMPANIES THIS SOFTWARE. USE IT AT
  * YOUR OWN RISK.
  *
+ * This test program was created when I started looking at the weird
+ * output of the FFT when I used certain frequencies. After using it
+ * to explore those anomalies I've instrumented it to plot them.
  */
 
 #include <stdio.h>
@@ -24,6 +27,7 @@
 #include "fft.h"
 #include "plot.h"
 
+#define PLOTFILE	"plots/tp2-plot.data"
 #define BINS		1024		// 1024 FFT bins (must be power of 2)
 #define SAMPLE_RATE	8192		// 10.24 KHz sample rate
 
@@ -62,12 +66,13 @@ main(int argc, char *argv[]) {
 		EXP_LEN, freq, FREQ_INC);
 	printf("Ending frequency was %f\n", freq + (ndx - 1) * FREQ_INC);
 
-	of = fopen("tp2-plot.data", "w");
+	of = fopen(PLOTFILE, "w");
 	if (of == NULL) {
-		fprintf(stderr, "Couldn't open plot.data\n");
+		fprintf(stderr, "Couldn't open %s \n", PLOTFILE);
 		exit(1);
 	}
 
+	fprintf(of, "$my_plot <<EOD\n");
 	fprintf(of, "freq src");
 	for (int i = 0; i < EXP_LEN; i++) {
 		fprintf(of, " %5.2f", (double) i * FREQ_INC + freq);
@@ -81,6 +86,33 @@ main(int argc, char *argv[]) {
 		}
 		fprintf(of, "\n");
 	}
+	fprintf(of,"EOD\n");
+	fprintf(of,
+		"set xlabel \"Frequency (Hz)\"\n"
+		"set ylabel \"Magnitude (dB)\"\n"
+		"set key outside autotitle columnheader\n"
+		"set grid\n"
+		"plot [0:%f] $my_plot using 1:2 with lines,\\\n"
+		"	      \"\" using 1:3 with lines, \\\n"
+		"	      \"\" using 1:4 with lines, \\\n"
+		"	      \"\" using 1:5 with lines, \\\n"
+		"	      \"\" using 1:6 with lines, \\\n"
+		"	      \"\" using 1:7 with lines, \\\n"
+		"	      \"\" using 1:8 with lines, \\\n"
+		"	      \"\" using 1:9 with lines, \\\n"
+		"	      \"\" using 1:10 with lines, \\\n"
+		"	      \"\" using 1:11 with lines, \\\n"
+		"	      \"\" using 1:12 with lines, \\\n"
+		"	      \"\" using 1:13 with lines, \\\n"
+		"	      \"\" using 1:14 with lines, \\\n"
+		"	      \"\" using 1:15 with lines, \\\n"
+		"	      \"\" using 1:16 with lines, \\\n"
+		"	      \"\" using 1:17 with lines, \\\n"
+		"	      \"\" using 1:18 with lines, \\\n"
+		"	      \"\" using 1:19 with lines, \\\n"
+		"	      \"\" using 1:20 with lines, \\\n"
+		"	      \"\" using 1:21 with lines, \\\n"
+		"	      \"\" using 1:22 with lines\n", (double) SAMPLE_RATE);
 	fclose(of);
 	exit(0);
 }
