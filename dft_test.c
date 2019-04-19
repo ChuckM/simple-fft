@@ -75,9 +75,6 @@ main(int argc, char *argv[])
 				20*log10(cmag(dft->data[i])));
 	}
 	fprintf(of, "EOD\n");
-	fprintf(of, "set term png font arial 14 size 800,480 #ffffff #000000 #1010ff\n");
-	/* display as a PNG image (can be saved from the display) */
-	fprintf(of, "set output '| display png:-'\n");
 	fprintf(of, "set xlabel \"Frequency (kHz)\"\n");
 	fprintf(of, "set ylabel \"Magnitude (dB)\"\n");
 	fprintf(of, "set grid\n");

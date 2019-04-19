@@ -92,9 +92,6 @@ main(int argc, char *argv[])
 			creal(wave->data[i]), cimag(wave->data[i]));
 	}
 	fprintf(of, "EOD\n");
-	fprintf(of, "set term png font arial 14 size 800,480\n");
-	/* display as a PNG image (can be saved from the display) */
-	fprintf(of, "set output '| display png:-'\n");
 	fprintf(of, "set xlabel \"Period\"\n");
 	fprintf(of, "set ylabel \"Amplitude\"\n");
 	fprintf(of, "set grid\n");
