@@ -25,15 +25,20 @@
 extern char *optarg;
 extern int optind, opterr, optopt;
 
+enum wavetype {
+	COS, COS_R, TRIANGLE, TRIANGLE_R,
+	SAWTOOTH, SAWTOOTH_R, SQUARE, SQUARE_R };
+
 int
 main(int argc, char *argv[])
 {
 	FILE *of;
 	sample_buffer	*wave;
-	int	wave_type = 0;
+	enum wavetype	wave_type = COS;
 	char name[48];
+	int	make_it_real = 0;
 	char opt;
-	const char *optstring = "w:";
+	const char *optstring = "rw:";
 
 	wave = alloc_buf(800, 800);
 	if (! wave) {
@@ -46,35 +51,54 @@ main(int argc, char *argv[])
 			case '?':
 				fprintf(stderr, "Usage: waves [-w sin|cos|tri|saw|sqr]\n");
 				exit(1);
+			case 'r':
+				make_it_real = 1;
+				break;
 			case 'w':
 				if (strncasecmp("tri", optarg, 3) == 0) {
-					wave_type = 2;
+					wave_type = TRIANGLE;
 				} else if (strncasecmp("saw", optarg, 3) == 0) {
-					wave_type = 1;
+					wave_type = SAWTOOTH;
 				} else if (strncasecmp("sqr", optarg, 3) == 0) {
-					wave_type = 3;
+					wave_type = SQUARE;
 				} else {
-					wave_type = 0;
+					wave_type = COS;
 				}
 				break;
 		}
 	}
 	switch (wave_type) {
 		default:
-		case 0:
-			add_cos(wave, 2.0, 1.0);
+		case COS:
+			if (make_it_real) {
+				add_cos_real(wave, 2.0, 1.0);
+			} else {
+				add_cos(wave, 2.0, 1.0);
+			}
 			snprintf(name, 48, "plots/wave_cosine.data");
 			break;
-		case 1:
-			add_sawtooth(wave, 2.0, 1.0);
+		case SAWTOOTH:
+			if (make_it_real) {
+				add_sawtooth_real(wave, 2.0, 1.0);
+			} else {
+				add_sawtooth(wave, 2.0, 1.0);
+			}
 			snprintf(name, 48, "plots/wave_sawtooth.data");
 			break;
-		case 2:
-			add_triangle(wave, 2.0, 1.0);
+		case TRIANGLE:
+			if (make_it_real) {
+				add_triangle_real(wave, 2.0, 1.0);
+			} else {
+				add_triangle(wave, 2.0, 1.0);
+			}
 			snprintf(name, 48, "plots/wave_triangle.data");
 			break;
-		case 3:
-			add_square(wave, 2.0, 1.0);
+		case SQUARE:
+			if (make_it_real) {
+				add_square_real(wave, 2.0, 1.0);
+			} else {
+				add_square(wave, 2.0, 1.0);
+			}
 			snprintf(name, 48, "plots/wave_square.data");
 			break;
 	}
@@ -86,17 +110,34 @@ main(int argc, char *argv[])
 		exit(1);
 	}
 	fprintf(of, "$plot_data << EOD\n");
-	fprintf(of, "period in-phase quadrature\n");
-	for (int i = 0; i < wave->n; i++) {
-		fprintf(of, "%f %f %f\n", 2.0 * (double) i / (double) wave->n,
-			creal(wave->data[i]), cimag(wave->data[i]));
+	if (make_it_real) {
+		fprintf(of, "period in-phase\n");
+	} else {
+		fprintf(of, "period in-phase quadrature\n");
 	}
-	fprintf(of, "EOD\n");
-	fprintf(of, "set xlabel \"Period\"\n");
-	fprintf(of, "set ylabel \"Amplitude\"\n");
-	fprintf(of, "set grid\n");
-	fprintf(of, "set key outside autotitle columnheader\n");
-	fprintf(of, "plot [0:2] $plot_data using 1:2 with lines lt rgb \"#1010ff\" lw 2, \\\n");
-	fprintf(of, "           \"\" using 1:3 with lines lt rgb \"#ff1010\" lw 2\n");
+	for (int i = 0; i < wave->n; i++) {
+		if (make_it_real) {
+			fprintf(of, "%f %f\n", 2.0 * (double) i / (double) wave->n,
+			creal(wave->data[i]));
+		} else {
+			fprintf(of, "%f %f %f\n", 2.0 * (double) i / (double) wave->n,
+			creal(wave->data[i]), cimag(wave->data[i]));
+		}
+	}
+	fprintf(of, 
+		"EOD\n"
+		"set xlabel \"Period\"\n"
+		"set ylabel \"Amplitude\"\n"
+		"set grid\n"
+		"set key outside autotitle columnheader\n"
+		"plot [0:2] $plot_data \\\n");
+	if (make_it_real == 0) {
+		fprintf(of, 
+		"              using 1:2 with lines lt rgb \"#1010ff\" lw 2,\\\n"
+		"         \"\" using 1:3 with lines lt rgb \"#ff1010\" lw 2\n");
+	} else {
+		fprintf(of, 
+		"              using 1:2 with lines lt rgb \"#1010ff\" lw 2\n");
+	}
 	fclose(of);
 }
