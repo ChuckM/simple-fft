@@ -1,3 +1,4 @@
+TITLE = "Experiments"
 set term png font arial 14 size 1280,768
 set output '| display png:-' 
 set xlabel "frequency"

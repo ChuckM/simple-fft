@@ -21,7 +21,7 @@
 #include <complex.h>
 #include <string.h>
 #include "signal.h"
-#include "fft.h"
+#include "dft.h"
 
 /*
  * compute_dft( ... )
@@ -68,7 +68,7 @@ compute_dft(sample_buffer *src, double min_freq, double max_freq, int steps)
  * Simple bins calculator for the DFT
  */
 sample_buffer *
-calc_dft(sample_buffer *s, int bins)
+simple_dft(sample_buffer *s, int bins)
 {
 	complex double t;
 	int	i, k;
@@ -101,4 +101,5 @@ calc_dft(sample_buffer *s, int bins)
 		}
 
 	}
+	return result;
 }

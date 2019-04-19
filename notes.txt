@@ -49,4 +49,5 @@ So article outline:
 		The Blackman-Harris 4 element window
 	Conclusions and next steps.
 
-
+I'm thinking I should move the window functions to their own .c and .h
+files.

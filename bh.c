@@ -20,6 +20,8 @@
 #include <stdlib.h>
 #include <math.h>
 #include <complex.h>
+#include "signal.h"
+#include "dft.h"
 
 static const double __a[4] = { 0.35875, 0.48829, 0.14128, 0.01168 };
 
@@ -29,6 +31,8 @@ int
 main(int argc, char *argv[]) {
 	double	bh;
 	int		q, bins;
+	sample_buffer	*buf;
+	sample_buffer	*dft;
 	FILE	*of;
 
 	bins = BINS;
@@ -39,16 +43,22 @@ main(int argc, char *argv[]) {
 		}
 	}
 
+	buf = alloc_buf(bins, bins);
 	printf("Generating Blackman-Harris window (%d bins) ... ", bins);
 	fflush(stdout);
-	of = fopen("plot-bh.data", "w");
     for (int i = 0; i < bins; i++) {
         bh = __a[0] -
              __a[1] * cos((2.0 * M_PI * (double) i) / (double) bins) +
              __a[2] * cos((4.0 * M_PI * (double) i) / (double) bins) -
              __a[3] * cos((6.0 * M_PI * (double) i) / (double) bins);
-		fprintf(of, "%d %f\n", i , bh);
+		buf->data[i] = bh;
     }
+	dft = simple_dft(buf, bins);
+	of = fopen("plot-bh.data", "w");
+	for (int i = 0; i < bins; i++) {
+		fprintf(of, "%d %f %f\n", i , creal(buf->data[i]),
+				20 * log10(cmag(dft->data[i])));
+	}
 	fclose(of);
 	printf("Done.\n");
 }
