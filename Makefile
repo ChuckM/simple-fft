@@ -1,14 +1,19 @@
 
-BINS = main tp tp2 waves hann bh
+BINS = main tp tp2 waves hann bh dft_test
 
 LDFLAGS = -lm
 
 OBJS = signal.o plot.o fft.o dft.o
 
+HEADERS = signal.h fft.h dft.h
+
 all: $(BINS)
 
 clean:
 	rm -f $(BINS)
+
+dft_test: dft_test.c ${OBJS}
+	cc -g -O0 -o $@ $< ${OBJS} ${LDFLAGS}
 
 hann: hann.c ${OBJS}
 	cc -g -O0 -o $@ $< ${OBJS} ${LDFLAGS}
@@ -39,3 +44,5 @@ plot.o: plot.c plot.h
 
 dft.o: dft.c
 	cc -g -fPIC -c dft.c
+
+${OBJS}:	${HEADERS}

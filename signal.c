@@ -186,6 +186,62 @@ add_test_real(sample_buffer *b, double freq, double amp)
 }
 
 /*
+ * add_sawtooth( ... )
+ *
+ * Add a sawtooth wave to the sample buffer.
+ * Note it goes from -1/2a to +1/2a to avoid
+ * having a DC component.
+ */
+void
+add_sawtooth(sample_buffer *s, double f, double a)
+{
+	int i;
+	double level = a / 2.0;
+	double t;
+
+	for (i = 0; i < s->n; i++) {
+		s->data[i] += (sample_t) (a * (__i_index(i, s->r, f) - (a/2.0))) + 
+								 (a * (__q_index(i, s->r, f) - (a/2.0))) * I;
+	}
+}
+
+/*
+ * add_sawtooth_real( ... )
+ *
+ * Add a sawtooth wave to the sample buffer.
+ * Note it goes from -1/2a to +1/2a to avoid
+ * having a DC component.
+ */
+void
+add_sawtooth_real(sample_buffer *s, double f, double a)
+{
+	int i;
+	double level = a / 2.0;
+	double t;
+
+	for (i = 0; i < s->n; i++) {
+		s->data[i] += (sample_t) (a * (__i_index(i, s->r, f) - (a/2.0)));
+	}
+}
+
+/* Triangle wave, 
+ *  1.0   +
+ *       / \
+ *  0.0 +   \   +
+ *           \ /
+ * -1.0       +
+ */
+double static __triangle(double index) {
+	if (index < 0.25) {
+		return (index * 2.0);
+	} else if (index < 0.75) {
+		return (0.5 - (index - 0.25) * 2.0);
+	} else {
+		return (-0.5 + (index - 0.75) * 2.0);
+	}
+}
+
+/*
  * add_triangle( ... )
  *
  * Add a triangle wave to the sample buffer.
@@ -195,13 +251,12 @@ add_test_real(sample_buffer *b, double freq, double amp)
 void
 add_triangle(sample_buffer *s, double f, double a)
 {
-	int i;
-	double level = a / 2.0;
-	double t;
+	double i_amp, q_amp;
 
-	for (i = 0; i < s->n; i++) {
-		s->data[i] += (sample_t) (a * (__i_index(i, s->r, f) - (a/2.0))) + 
-								 (a * (__q_index(i, s->r, f) - (a/2.0))) * I;
+	for (int i = 0; i < s->n; i++) {
+		i_amp = __triangle(__i_index(i, s->r, f)) * a;
+		q_amp = __triangle(__q_index(i, s->r, f)) * a;
+		s->data[i] += (sample_t) i_amp + q_amp * I;
 	}
 }
 
@@ -215,12 +270,12 @@ add_triangle(sample_buffer *s, double f, double a)
 void
 add_triangle_real(sample_buffer *s, double f, double a)
 {
-	int i;
-	double level = a / 2.0;
-	double t;
+	double i_amp, q_amp;
 
-	for (i = 0; i < s->n; i++) {
-		s->data[i] += (sample_t) (a * (__i_index(i, s->r, f) - (a/2.0)));
+	for (int i = 0; i < s->n; i++) {
+		i_amp = __triangle(__i_index(i, s->r, f)) * a;
+		q_amp = __triangle(__q_index(i, s->r, f)) * a;
+		s->data[i] += (sample_t) i_amp;
 	}
 }
 

@@ -71,6 +71,10 @@ void add_cos_real(sample_buffer *, double, double);
 void add_triangle(sample_buffer *, double, double);
 void add_triangle_real(sample_buffer *, double, double);
 
+/* add a sawtooth wave, with both I & Q, or just I (_real()) */
+void add_sawtooth(sample_buffer *, double, double);
+void add_sawtooth_real(sample_buffer *, double, double);
+
 /* add a square wave, with both I & Q, or just I (_real()) */
 void add_square(sample_buffer *, double, double);
 void add_square_real(sample_buffer *, double, double);
