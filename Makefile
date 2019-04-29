@@ -1,5 +1,5 @@
 
-BINS = main tp tp2 waves hann bh dft_test
+BINS = main tp tp2 waves hann bh dft_test corr corr-plot multi-corr-plot
 
 LDFLAGS = -lm
 
@@ -10,19 +10,28 @@ HEADERS = signal.h fft.h dft.h windows.h
 all: $(BINS)
 
 clean:
-	rm -f $(BINS)
+	rm -f $(BINS) *.o plots/*.data
 
 dft_test: dft_test.c ${OBJS}
-	cc -g -O0 -o $@ $< ${OBJS} ${LDFLAGS}
+	cc -g -o $@ $< ${OBJS} ${LDFLAGS}
+
+multi-corr-plot: multi-corr-plot.c signal.o
+	cc -g -o $@ $< ${OBJS} ${LDFLAGS}
+
+corr: corr.c signal.o
+	cc -g -o $@ $< ${OBJS} ${LDFLAGS}
+
+corr-plot: corr-plot.c signal.o
+	cc -g -o $@ $< ${OBJS} ${LDFLAGS}
 
 hann: hann.c ${OBJS}
-	cc -g -O0 -o $@ $< ${OBJS} ${LDFLAGS}
+	cc -g -o $@ $< ${OBJS} ${LDFLAGS}
 
 bh: bh.c ${OBJS}
-	cc -g -O0 -o $@ $< ${OBJS} ${LDFLAGS}
+	cc -g -o $@ $< ${OBJS} ${LDFLAGS}
 
 waves: waves.c ${OBJS}
-	cc -g -O0 -o $@ $< ${OBJS} ${LDFLAGS}
+	cc -g -o $@ $< ${OBJS} ${LDFLAGS}
 
 tp2: tp2.c ${OBJS}
 	cc -g -O0 -o $@ $< ${OBJS} ${LDFLAGS}

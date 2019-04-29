@@ -91,6 +91,55 @@ add_cos(sample_buffer *s, double f, double a)
 }
 
 /*
+ * add_cos_phase( ... )
+ *
+ * Add in a signal (complex) at this frequency and amplitude into
+ * the sample buffer and set the phase to p.
+ */
+void
+add_cos_phase(sample_buffer *s, double f, double a, double ph)
+{
+	int	i;
+
+	/*
+	 * ph is phase
+	 * n is samples
+	 * r is rate (samples per second)
+	 * f is frequency (cycles per second)
+	 * what span is (n / r) seconds / f = cyles /n is cycles per sample?
+	 */
+	for (i = 0; i < s->n; i++ ) {
+		s->data[i] += (sample_t) (a * (cos(((2 * M_PI * f * i) / s->r) + ph) +
+								   sin((2 * M_PI * f * i / s->r) + ph) * I));
+		set_minmax(s, i);
+	}
+}
+
+/*
+ * add_cos_phase_real( ... )
+ *
+ * Add in a signal (real) at this frequency and amplitude into
+ * the sample buffer and set the phase to p.
+ */
+void
+add_cos_phase_real(sample_buffer *s, double f, double a, double ph)
+{
+	int	i;
+
+	/*
+	 * ph is phase
+	 * n is samples
+	 * r is rate (samples per second)
+	 * f is frequency (cycles per second)
+	 * what span is (n / r) seconds / f = cyles /n is cycles per sample?
+	 */
+	for (i = 0; i < s->n; i++ ) {
+		s->data[i] += (sample_t) (a * cos((2 * M_PI  * f * i / s->r)+ph));
+		set_minmax(s, i);
+	}
+}
+
+/*
  * add_cos_real( ... )
  *
  * Add in a signal (real) at this frequency and amplitude into

@@ -64,8 +64,10 @@ void add_test(sample_buffer *, double, double);
 void add_test_real(sample_buffer *, double, double);
 
 /* add a cosine wave, with both I & Q, or just I (_real()) */
-void add_cos(sample_buffer *, double, double);
-void add_cos_real(sample_buffer *, double, double);
+void add_cos(sample_buffer *, double f, double a);
+void add_cos_phase(sample_buffer *, double f, double a, double p);
+void add_cos_real(sample_buffer *, double f, double a);
+void add_cos_phase_real(sample_buffer *, double f, double a, double p);
 
 /* add a triangle wave, with both I & Q, or just I (_real()) */
 void add_triangle(sample_buffer *, double, double);

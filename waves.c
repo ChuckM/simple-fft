@@ -34,13 +34,18 @@ main(int argc, char *argv[])
 {
 	FILE *of;
 	sample_buffer	*wave;
+	sample_buffer	*wave_phase;
 	enum wavetype	wave_type = COS;
 	char name[48];
+	char plot_title[80];
 	int	make_it_real = 0;
+	double phase = 0;
+	const char *optstring = "rw:p:";
+	int showphase = 0;
 	char opt;
-	const char *optstring = "rw:";
 
 	wave = alloc_buf(800, 800);
+	wave_phase = alloc_buf(800, 800);
 	if (! wave) {
 		fprintf(stderr, "Unable to allocate wave buffer\n");
 		exit(1);
@@ -65,38 +70,69 @@ main(int argc, char *argv[])
 					wave_type = COS;
 				}
 				break;
+			case 'p':
+				phase = atof(optarg);
+				if ((phase < 0) || (phase > (2 * M_PI))) {
+					fprintf(stderr, "phase value must be between 0 and 2*pi\n");
+					exit(1);
+				}
+				showphase++;
+				break;
 		}
+		
 	}
 	switch (wave_type) {
 		default:
 		case COS:
 			if (make_it_real) {
+				snprintf(plot_title, sizeof(plot_title)-1, 
+						"Real Cosine Waveform");
 				add_cos_real(wave, 2.0, 1.0);
+				add_cos_phase_real(wave_phase, 2.0, 1.0, phase);
 			} else {
+				snprintf(plot_title, sizeof(plot_title)-1, 
+						"Complex Cosine Waveform");
 				add_cos(wave, 2.0, 1.0);
+				add_cos_phase(wave_phase, 2.0, 1.0, phase);
 			}
-			snprintf(name, 48, "plots/wave_cosine.data");
+			if (showphase) {
+				snprintf(name, 48, "plots/wave_cosine_phase.data");
+			} else {
+				snprintf(name, 48, "plots/wave_cosine.data");
+			}
 			break;
 		case SAWTOOTH:
 			if (make_it_real) {
+				snprintf(plot_title, sizeof(plot_title)-1, 
+						"Real Sawtooth (Ramp) Waveform");
 				add_sawtooth_real(wave, 2.0, 1.0);
 			} else {
+				snprintf(plot_title, sizeof(plot_title)-1, 
+						"Complex Sawtooth (Ramp) Waveform");
 				add_sawtooth(wave, 2.0, 1.0);
 			}
 			snprintf(name, 48, "plots/wave_sawtooth.data");
 			break;
 		case TRIANGLE:
 			if (make_it_real) {
+				snprintf(plot_title, sizeof(plot_title)-1, 
+						"Real Triangle Waveform");
 				add_triangle_real(wave, 2.0, 1.0);
 			} else {
+				snprintf(plot_title, sizeof(plot_title)-1, 
+						"Complex Triangle Waveform");
 				add_triangle(wave, 2.0, 1.0);
 			}
 			snprintf(name, 48, "plots/wave_triangle.data");
 			break;
 		case SQUARE:
 			if (make_it_real) {
+				snprintf(plot_title, sizeof(plot_title)-1, 
+						"Real Square Waveform");
 				add_square_real(wave, 2.0, 1.0);
 			} else {
+				snprintf(plot_title, sizeof(plot_title)-1, 
+						"Complex Square Waveform");
 				add_square(wave, 2.0, 1.0);
 			}
 			snprintf(name, 48, "plots/wave_square.data");
@@ -111,17 +147,34 @@ main(int argc, char *argv[])
 	}
 	fprintf(of, "$plot_data << EOD\n");
 	if (make_it_real) {
-		fprintf(of, "period in-phase\n");
+		if (showphase) {
+			fprintf(of, "period I I_{phase}\n");
+		} else {
+			fprintf(of, "period I\n");
+		}
 	} else {
-		fprintf(of, "period in-phase quadrature\n");
+		if (showphase) {
+			fprintf(of, "period I Q I_{phase} Q_{phase}\n");
+		} else {
+			fprintf(of, "period I Q\n");
+		}
 	}
 	for (int i = 0; i < wave->n; i++) {
 		if (make_it_real) {
-			fprintf(of, "%f %f\n", 2.0 * (double) i / (double) wave->n,
+			fprintf(of, "%f %f", 2.0 * (double) i / (double) wave->n,
 			creal(wave->data[i]));
+			if (showphase) {
+				fprintf(of, " %f", creal(wave_phase->data[i]));
+			}
+			fprintf(of, "\n");
 		} else {
-			fprintf(of, "%f %f %f\n", 2.0 * (double) i / (double) wave->n,
+			fprintf(of, "%f %f %f", 2.0 * (double) i / (double) wave->n,
 			creal(wave->data[i]), cimag(wave->data[i]));
+			if (showphase) {
+				fprintf(of, " %f %f", creal(wave_phase->data[i]),
+						cimag(wave_phase->data[i]));
+			}
+			fprintf(of, "\n");
 		}
 	}
 	fprintf(of, 
@@ -129,15 +182,38 @@ main(int argc, char *argv[])
 		"set xlabel \"Period\"\n"
 		"set ylabel \"Amplitude\"\n"
 		"set grid\n"
+		"set title \"%s\"\n"
+		"set xtics border in scale 1,0.5 offset character 0,0,0\\\n"
+		"	norangelimit \\\n"
+		"	(\"{/Symbol p}/2\" 0.25,\\\n"
+		"	 \"{/Symbol p}\" .5, \\\n"
+		"	 \"3{/Symbol p}/2\" .75, \\\n"
+		"	 \"2{/Symbol p}\" 1, \\\n"
+		"	 \"5{/Symbol p}/2\" 1.25,\\\n"
+		"	 \"3{/Symbol p}\" 1.5, \\\n"
+		"	 \"5{/Symbol p}/2\" 1.75, \\\n"
+		"	 \"4{/Symbol p}\" 2)\n"
 		"set key outside autotitle columnheader\n"
-		"plot [0:2] $plot_data \\\n");
+		"plot [0:2] $plot_data \\\n", plot_title);
 	if (make_it_real == 0) {
 		fprintf(of, 
-		"              using 1:2 with lines lt rgb \"#1010ff\" lw 2,\\\n"
-		"         \"\" using 1:3 with lines lt rgb \"#ff1010\" lw 2\n");
+		"              using 1:2 with lines lt rgb \"#1010ff\" lw 1.5,\\\n"
+		"         \"\" using 1:3 with lines lt rgb \"#ff1010\" lw 1.5");
+		if (showphase) {
+			fprintf(of, ", \\\n"
+		"         \"\" using 1:4 with lines lt rgb \"#c0c0c0\" lw 1.5, \\\n"
+		"         \"\" using 1:5 with lines lt rgb \"#101010\" lw 1.5");
+		
+		}
+
 	} else {
 		fprintf(of, 
-		"              using 1:2 with lines lt rgb \"#1010ff\" lw 2\n");
+		"              using 1:2 with lines lt rgb \"#1010ff\" lw 1.5");
+		if (showphase) {
+			fprintf(of, ", \\\n"
+		"              \"\" using 1:3 with lines lt rgb \"#ff1010\" lw 1.5");
+		}
 	}
+	fprintf(of, "\n");
 	fclose(of);
 }
