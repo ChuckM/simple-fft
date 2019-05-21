@@ -1,12 +1,12 @@
 /*
  * Signal.c - "generate" various signals
  *
- * I wanted some sample data where I knew what the answer "should" be, so I wrote
- * some simple functions for generating waveforms of the standard types (sin,
- * triangle, ramp, and square) and adding them into a buffer.
+ * I wanted some sample data where I knew what the answer "should" be, so 
+ * I wrote some simple functions for generating waveforms of the standard
+ * types (sin, triangle, ramp, and square) and adding them into a buffer.
  *
- * The ones with the _real suffix generate data with only a real component even
- * though it is stored in a complex variable (cimag == 0). 
+ * The ones with the _real suffix generate data with only a real 
+ * component even though it is stored in a complex variable (cimag == 0). 
  *
  * Written September 2018 by Chuck McManis
  *

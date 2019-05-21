@@ -191,7 +191,7 @@ main(int argc, char *argv[])
 		"	 \"2{/Symbol p}\" 1, \\\n"
 		"	 \"5{/Symbol p}/2\" 1.25,\\\n"
 		"	 \"3{/Symbol p}\" 1.5, \\\n"
-		"	 \"5{/Symbol p}/2\" 1.75, \\\n"
+		"	 \"7{/Symbol p}/2\" 1.75, \\\n"
 		"	 \"4{/Symbol p}\" 2)\n"
 		"set key outside autotitle columnheader\n"
 		"plot [0:2] $plot_data \\\n", plot_title);

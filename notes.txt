@@ -62,4 +62,17 @@ So article outline:
 I'm thinking I should move the window functions to their own .c and .h
 files. *DONE*
 
+Down sampling to get IQ data from REAL data.
+
+Tasks:
+	Generate 4x data
+	Take the FFT and show it with the images on the "other" side.
+	Downsample x4
+		low pass filter
+		decimate
+	Take the FFT and show only our desired waveforms have come through.
+
+This taken from Chapter 6 on Practical Applications in DSP.
+Show frequencies over the passband target are eliminated
+Show frequenices near the passband are passed.
 
