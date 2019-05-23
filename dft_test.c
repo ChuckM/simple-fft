@@ -31,7 +31,7 @@
 #include "signal.h"
 #include "dft.h"
 
-#define BINS 1024
+#define BINS 10240
 #define SAMPLE_RATE 10240	/* 10.24 kHz */
 
 int
@@ -56,7 +56,15 @@ main(int argc, char *argv[])
 	add_cos(test, 3000.0, 1.0); 	// 3 kHz
 
 	/* Now compute the DFT */
+#ifdef MINE
 	dft = simple_dft(test, BINS);	/* dft will use same sample rate as test */
+#else
+	/* Exp 1: Try 1024 bins: that works */
+	/* Exp 2: Try 32 bins: that works too (as well as can be expected) */
+	/* Exp 3: Zoom to 1000 bins */
+	dft = compute_dft_complex(test, test->n);
+#endif
+
 	if (! dft) {
 		fprintf(stderr, "DFT was not calculated.\n");
 		exit(1);

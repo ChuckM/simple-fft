@@ -76,3 +76,24 @@ This taken from Chapter 6 on Practical Applications in DSP.
 Show frequencies over the passband target are eliminated
 Show frequenices near the passband are passed.
 
+----------------
+DFT questions
+
+New dft code from the internet. Looking to see if we can "zoom" it so that
+we can compute the DFT for a filter and have the expected result.
+
+First, verify it works as we expect for a sample rate width sample.
+Then, verify it works for a 34 element sample.
+Then, zoom it too 100 points for the 34 element sample.
+Finally, zoom it to 500 points for the 34 element sample.
+
+Other FIR notes
+
+An average of 'n' bins is essentially and array of taps each
+holding the value 1/n. 
+
+The impulse response is to smear an impulse over 'n' bins. 
+
+Starting from that lets see if we can work up filters a different
+way.
+
