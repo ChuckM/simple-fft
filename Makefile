@@ -12,6 +12,9 @@ all: $(BINS)
 clean:
 	rm -f $(BINS) *.o plots/*.data
 
+filt-resp: filt-resp.c ${OBJS}
+	cc -g -o $@ $< ${OBJS} ${LDFLAGS}
+
 iq-demo: iq-demo.c ${OBJS}
 	cc -g -o $@ $< ${OBJS} ${LDFLAGS}
 

@@ -107,27 +107,25 @@ simple_dft(sample_buffer *s, int bins)
 }
 
 /* 
+ *  Original source:
  *  * Discrete Fourier transform (C)
  *   * by Project Nayuki, 2017. Public domain.
  *    * https://www.nayuki.io/page/how-to-implement-the-discrete-fourier-transform
- *     */
-
-
-/* 
- *  * Computes the discrete Fourier transform (DFT) of the given complex vector.
- *   * All the array arguments must be non-NULL and have a length equal to n.
- *    */
+ * 
+ * Modified to use my sample_buffers and to zero fill if the input was shorter
+ * than the desired number of bins.
+ *
+ */
 sample_buffer *
 compute_dft_complex(sample_buffer *input, int bins) {
 	sample_buffer *res = alloc_buf(bins, input->r);
-	/* this should be the normalized frequency */
-	double bin_incr = (double) input->n / (double) bins;
 
 	for (int k = 0; k < bins; k++) {  // For each output element
 		complex double sum = 0.0;
-		for (int t = 0; t < input->n; t++) {  // For each input element
+		for (int t = 0; t < bins; t++) {  // For each input element
 			double angle = 2 * M_PI * t * k / bins;
-			sum += input->data[t] * cexp(-angle * I);
+			complex double sample = (t < input->n) ? input->data[t] : 0;
+			sum += sample * cexp(-angle * I);
 		}
 		res->data[k] = sum;
 	}
