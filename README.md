@@ -41,18 +41,20 @@ When I get a chance I've been writing up my experiences on
 
 ## The Different Modules
 
-  *  __signal.c__ - This module has some simple signal generation
-    code that I use to create test signals.
   * __dft.c__ - This is the Discrete Fourier Transform which lets
     me see the process in action using correlation of sinusoids and
     gives arbitrary precision in its output.
+  * __filter.c__ - This module can apply a FIR filter to a signal. It
+    is also used to read in a filter description from a text file.
   * __fft.c__ - This is a module that implements the fast Fourier
     transform and, when you have the same parameters as the DFT,
     can really demonstrate how much faster it is.
-  * __filter.c__ - This module can apply a FIR filter to a signal. It
-    is also used to read in a filter description from a text file.
+  *  __signal.c__ - This module has some simple signal generation
+    code that I use to create test signals.
   * __waves.c__ - This module plots out the various signal waveforms
     for easy visualizing.
+  * __windows.c__ - This module applys a window function to the signal
+    to minimize spectral leakage.
 
 Documentation for [GNUPlot](http://www.gnuplot.info/docs_5.3/gnuplot.pdf). And
 there are a couple of scripts in the **plots** directory that I use. `show-x11`
