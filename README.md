@@ -35,7 +35,7 @@ some of them over to embedded systems in the future) and using
 When I get a chance I've been writing up my experiences on 
 [my website](https://robotics.mcmanis.com).
 
-##The Different Modules
+## The Different Modules
 
   *  __signal.c__ - This module has some simple signal generation
     code that I use to create test signals.
