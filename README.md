@@ -26,6 +26,10 @@ you can read it online for 30 days for free.
 recommended by many and if you hunt around you can often find a PDF
 of an older revision out there. Richard Lyons does a great job of explaining
 key concepts and I owe my understanding of FIR filters to him.
+  * [ARRL Software Defined Radio](http://www.arrl.org/software-defined-radio) --
+    a collection of material from the ARRL's QST and other sources.
+  * [SDR: Software Defined Radio](http://www.arrl.org/shop/Software-Defined-Radio/) -- 
+    The ARRL resources in book form.
 
 I have been reading these references and writing small snippets of code
 (in C, partly because I like the language, and partly because I want to move
@@ -47,4 +51,19 @@ When I get a chance I've been writing up my experiences on
     can really demonstrate how much faster it is.
   * __filter.c__ - This module can apply a FIR filter to a signal. It
     is also used to read in a filter description from a text file.
+  * __waves.c__ - This module plots out the various signal waveforms
+    for easy visualizing.
 
+Documentation for [GNUPlot](http://www.gnuplot.info/docs_5.3/gnuplot.pdf). And
+there are a couple of scripts in the **plots** directory that I use. `show-x11`
+is used to put the output up into an X11 window, `show-png` is used to create
+a PNG file which I then use on the web site.
+
+## A Word of Caution
+
+If you are trying to do your homework this code may not be a good reference
+for you. I commit things to it as I get to a good stopping point, but at
+any moment in time, there are things that I don't understand and am working
+through and that can be reflected in the code. So treating the code as a
+__solution__ to a question is probably risky, but if you want to look over
+it and see what I tried, and help you on your journey, go for it! 
