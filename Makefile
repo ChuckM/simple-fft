@@ -3,9 +3,9 @@ BINS = main tp tp2 waves hann bh dft_test corr corr-plot multi-corr-plot
 
 LDFLAGS = -lm
 
-OBJS = signal.o plot.o fft.o dft.o windows.o
+OBJS = filter.o signal.o plot.o fft.o dft.o windows.o
 
-HEADERS = signal.h fft.h dft.h windows.h
+HEADERS = filter.h signal.h fft.h dft.h windows.h
 
 all: $(BINS)
 
@@ -62,5 +62,8 @@ windows.o: windows.c windows.h
 
 dft.o: dft.c dft.h
 	cc -g -fPIC -c dft.c
+
+filter.o: filter.c filter.h
+	cc -g -fPIC -c filter.c
 
 ${OBJS}:	${HEADERS}

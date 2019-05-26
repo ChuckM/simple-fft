@@ -128,6 +128,8 @@ compute_dft_complex(sample_buffer *input, int bins) {
 			sum += sample * cexp(-angle * I);
 		}
 		res->data[k] = sum;
+		res->sample_min = min(sum, res->sample_min);
+		res->sample_max = max(sum, res->sample_max);
 	}
 	return res;
 }

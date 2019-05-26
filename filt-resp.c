@@ -21,52 +21,17 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <ctype.h>
+#include <strings.h>
+#include <getopt.h>
 #include <math.h>
 #include <complex.h>
 #include "signal.h"
 #include "dft.h"
+#include "filter.h"
 
-/*
- * filter(...)
- *
- * This function takes an input signal (sig) and generates
- * an output signal (res) by convolving the Finite Impulse
- * Response filter (fir) against the input signal. This
- *                  k < fir->n
- *                  ----
- *                   \
- * does : y(n) =      >  fir(k) * sig(n - k)
- *                   /
- *                  ----
- *                 k = 0
- *
- * And it zero pads sig by n samples to get the last bit of juice
- * out of the FIR filter.
- */
-sample_buffer *
-filter(sample_buffer *signal, sample_buffer *fir)
-{
-	sample_buffer *res;
-	int	ndx;
-	res = alloc_buf(signal->n + fir->n, signal->r);
-	if (res == NULL) {
-		fprintf(stderr, "filter: Failed to allocate result buffer\n");
-		return NULL;
-	}
-
-	for (int i = fir->n; i < res->n; i++) {
-		ndx = i - fir->n;
-		for (int k = 0; k < fir->n; k++)  {
-			complex double sig;
-			/* fill zeros once we run out of signal */
-			sig = ((i - k - 1) < signal->n) ? signal->data[i - k - 1] : 0;
-			res->data[ndx] += sig * fir->data[k];
-		}
-	}
-	return res;
-}
-
-double f_taps[34] = {
+/* define a sample filter */
+double sample_taps[34] = {
 	 0.00057940,
 	-0.00143848,
 	-0.00199142,
@@ -103,30 +68,139 @@ double f_taps[34] = {
 	 19
 };
 
+struct fir_filter sample1 = {
+	"34 Tap Test Filter",
+	34,
+	sample_taps
+};
+
 #define SAMPLE_RATE	128000
 #define BINS	1024
 
+extern char *optarg;
+extern int optind, opterr, optopt;
+
+#define MAG_NORMALIZE	1
+#define MAG_DECIBEL		2
+
+/*
+ *  Plot the frequency response of a filter
+ *  usage: filt-resp [-h] [filter-file]
+ *  Where -h means only plot the postive half (0 -> Fs/2)
+ *  And the optional filter-file contains the name and
+ *  tap coefficients for a filter file. See 'avg.filter' for
+ *  an example.
+ */
 int
 main(int argc, char *argv[])
 {
 	FILE *of;
+	FILE *inp;
 	sample_buffer	*filt;
 	sample_buffer	*signal;
 	sample_buffer	*dft;
+	int half_band = 0;
+	int	n_taps;
+	int mag = MAG_NORMALIZE;
+	int sample_rate = SAMPLE_RATE;
+	int bins = BINS;
+	struct fir_filter	*test;
+	char filter_name[256];
+	const char *optstring = "hm:";
+	double *taps;
+	char opt;
 
-	filt = alloc_buf(34, 128000);
-	for (int i = 0; i < 34; i++) {
-		filt->data[i] = f_taps[i];
+	while ((opt = getopt(argc, argv, optstring)) != -1) {
+		switch (opt) {
+			case ':':
+			case '?':
+				fprintf(stderr, 
+						"Usage: filt-resp [-h] [-m db|norm] [filter]\n");
+				exit(1);
+			case 'h':
+				half_band++;
+				break;
+			case 'm':
+				if (strncasecmp(optarg, "db", 2) == 0) {
+					mag = MAG_DECIBEL;
+				} else if (strncasecmp(optarg, "norm", 4) == 0) {
+					mag = MAG_NORMALIZE;
+				} else {
+					fprintf(stderr, 
+							"Magnitude must be either 'db' or 'norm'\n");
+					exit(1);
+				}
+		}
+	}
+	if (optind != argc) {
+		inp = fopen(argv[optind], "r");
+		if (inp == NULL) {
+			fprintf(stderr, "Tried to open '%s' as filter file.\n", argv[1]);
+			exit(1);
+		}
+		test = parse_filter(inp);
+		if (test == NULL) {
+			exit(1);
+		}
+	} else {
+		test = &sample1;
+	}
+	filt = alloc_buf(test->n_taps, sample_rate);
+	for (int i = 0; i < test->n_taps; i++) {
+		filt->data[i] = test->taps[i];
 	}
 
-	signal = alloc_buf(8192, 128000);
-	dft = compute_dft_complex(filt, BINS);
+	signal = alloc_buf(8192, sample_rate);
+	dft = compute_dft_complex(filt, bins);
 	of = fopen("./plots/filter-response.plot", "w");
 	fprintf(of, "$my_plot<<EOF\n");
-	for (int i = 0; i < dft->n; i++) {
-		fprintf(of, "%f %f\n", (double) i / (double) dft->n  , 20.0 * log10(creal(dft->data[i])));
+	if (half_band == 0) {
+		double y, x;
+		for (int i = (dft->n / 2); i < dft->n; i++) {
+			x = 0.5 * ((double) (i - (dft->n / 2)) / (double) (dft->n / 2.0));
+			if (mag == MAG_NORMALIZE) {
+				y = (cmag(dft->data[i]) - dft->sample_min) / 
+					(dft->sample_max - dft->sample_min);
+			} else {
+				y = 20.0 * log10(cmag(dft->data[i]));
+			}
+			fprintf(of, "%f %f\n", x, y);
+		}
+	}
+	for (int i = 0; i < dft->n/2; i++) {
+		double x, y;
+		if (half_band) {
+			x = (double) i / (double) (dft->n / 2.0);
+		} else {
+			x = 0.5 + 0.5 * ((double) (i) / (double) (dft->n / 2.0));
+		}
+		if (mag == MAG_NORMALIZE) {
+			y = (cmag(dft->data[i]) - dft->sample_min) / 
+				(dft->sample_max - dft->sample_min);
+		} else {
+			y = 20.0 * log10(cmag(dft->data[i]));
+		}
+		fprintf(of, "%f %f\n", x, y);
 	}
 	fprintf(of, "EOF\n");
+	fprintf(of, "set title \"Filter Response: %s\"\n", test->name);
+	fprintf(of, "set grid\n");
+	if (mag == MAG_NORMALIZE) {
+		fprintf(of, "set ylabel \"Magnitude (normalized)\"\n");
+	} else {
+		fprintf(of, "set ylabel \"Magnitude (dB)\"\n");
+	}
+	if (half_band) {
+		fprintf(of, "set xlabel \"Frequency (normalized to 0 to F_s/2)\"\n");
+	} else {
+		fprintf(of, "set xlabel \"Frequency (normalized to -F_s/2 to F_s/2)\"\n");
+	}
+	fprintf(of, "set nokey\n");
+	if (half_band) {
+		fprintf(of, "set xtics (\"0\" 0, \"F_s/8\" .25, \"F_s/4\" .5, \"3F_s/8\" .75, \"F_s/2\" 1.0)\n");
+	} else {
+		fprintf(of, "set xtics (\"-F_s/2\" 0, \"-F_s/4\" .25, \"0\" .5, \"F_s/4\" .75, \"F_s/2\" 1.0)\n");
+	}
 	fprintf(of, "plot [0:1.0] $my_plot using 1:2 with lines\n");
 	fclose(of);
 }
