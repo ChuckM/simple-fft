@@ -97,3 +97,23 @@ The impulse response is to smear an impulse over 'n' bins.
 Starting from that lets see if we can work up filters a different
 way.
 
+DFT Summary - Fill with zeros don't upsample. Taking the impulse response
+of a filter and computing the DFT (adding zeros after you run out of tap
+values) plots the frequency response of the filter, normalized to sample
+rate. 
+
+My DFT code, and the internet DFT code is identical, caveat I split the
+e^-jwkt/n term into sin and cos terms for the complex number. The internet
+code uses the complex exponential (which I didn't realize we had!) Mine
+saves multiplies.
+
+Two ways to write it:
+1) the complex exponential e^-jwkt/bins
+2) the incremental angle cos(wt*k/bins) - sin(wt*k/bins) I
+
+They should be identical, and one way leads to a lot less work.
+So a quick test program to see if we can prove this numerically.
+
+And they are, as I've proven to myself. So now to make "slightly"
+faster DFT code.
+

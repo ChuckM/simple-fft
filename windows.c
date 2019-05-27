@@ -92,3 +92,17 @@ bh_window_buffer(sample_buffer *b, int bins)
 	}
 }
 
+double
+rect_window_function(int i, int k)
+{
+	return 1.0;
+}
+
+/* rect_window_function( ... )
+ *
+ * The rectangle function is a constant 1.0
+ */
+void
+rect_window_buffer(sample_buffer *b, int bins)
+{
+}

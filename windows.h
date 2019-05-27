@@ -29,3 +29,6 @@ void hann_window_buffer(sample_buffer *b, int bins);
 double bh_window_function(int k, int N);
 void bh_window_buffer(sample_buffer *b, int bins);
 
+double rect_window_function(int k, int N);
+void rect_window_buffer(sample_buffer *b, int bins);
+

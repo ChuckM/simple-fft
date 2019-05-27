@@ -153,10 +153,10 @@ fetch_line(FILE *f, char *buf, int bufsize)
 			*t = 0;
 			t--;
 		}
-		for (int i = 0; i < strlen(buf); i++) {
-			if ((*(buf+i) != '#') && (! isspace(*(buf+i)))) {
-				return buf+i;
-			}
+		for (t = buf; isspace(*t) && (*t != 0); t++) {
+		}
+		if ((*t != 0) && (*t != '#')) {
+			return t;
 		}
 	}
 }

@@ -117,11 +117,56 @@ simple_dft(sample_buffer *s, int bins)
  *
  */
 sample_buffer *
-compute_dft_complex(sample_buffer *input, int bins) {
+compute_dft_complex(sample_buffer *input, int bins, window_function win) {
 	sample_buffer *res = alloc_buf(bins, input->r);
+	complex double root, rotation;
+	double	(*win_func)(int, int);
+	switch (win) {
+		default:
+		case W_RECT:
+			win_func = rect_window_function;
+			break;
+		case W_BH:
+			win_func = bh_window_function;
+			break;
+		case W_HANN:
+			win_func = hann_window_function;
+			break;
+	}
 
 	for (int k = 0; k < bins; k++) {  // For each output element
 		complex double sum = 0.0;
+	
+		root = 1.0;
+		rotation = cos(2.0 * M_PI * k / bins) - sin(2.0 * M_PI * k / bins) * I;
+		for (int t = 0; t < bins; t++) {  // For each input element
+			complex double sample = (t < input->n) ? input->data[t] : 0;
+			double wf = win_func(t, bins);
+			
+			/* apply the window function */
+			sample = wf * creal(sample) + wf * cimag(sample) * I;
+
+			sum += sample * root;
+			root = root * rotation;
+		}
+		res->data[k] = sum;
+		res->sample_min = min(sum, res->sample_min);
+		res->sample_max = max(sum, res->sample_max);
+	}
+	return res;
+}
+
+#ifdef ALTERNATE_DFT
+sample_buffer *
+compute_dft_complex(sample_buffer *input, int bins) {
+	sample_buffer *res = alloc_buf(bins, input->r);
+	complex double ur, uri;
+
+	for (int k = 0; k < bins; k++) {  // For each output element
+		complex double sum = 0.0;
+		double angle = (2.0 * M_PI * (double) k) / (double) bins;
+		ur = 1.0;
+		uri = cos(angle) - sin(angle) * I;
 		for (int t = 0; t < bins; t++) {  // For each input element
 			double angle = 2 * M_PI * t * k / bins;
 			complex double sample = (t < input->n) ? input->data[t] : 0;
@@ -133,4 +178,4 @@ compute_dft_complex(sample_buffer *input, int bins) {
 	}
 	return res;
 }
-
+#endif
