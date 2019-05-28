@@ -21,6 +21,7 @@
 #include <math.h>
 #include <complex.h>
 #include "signal.h"
+#include "windows.h"
 #include "dft.h"
 
 static const double __a[4] = { 0.35875, 0.48829, 0.14128, 0.01168 };
@@ -53,7 +54,7 @@ main(int argc, char *argv[]) {
              __a[3] * cos((6.0 * M_PI * (double) i) / (double) bins);
 		buf->data[i] = bh;
     }
-	dft = simple_dft(buf, bins);
+	dft = compute_dft(buf, bins, W_RECT);
 	of = fopen("plot-bh.data", "w");
 	for (int i = 0; i < bins; i++) {
 		fprintf(of, "%d %f %f\n", i , creal(buf->data[i]),

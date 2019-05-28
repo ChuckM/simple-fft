@@ -28,6 +28,7 @@
 #include <complex.h>
 #include "signal.h"
 #include "dft.h"
+#include "windows.h"
 #include "filter.h"
 
 /* define a sample filter */
@@ -106,7 +107,7 @@ main(int argc, char *argv[])
 	int bins = BINS;
 	struct fir_filter	*test;
 	char filter_name[256];
-	const char *optstring = "hm:";
+	const char *optstring = "hm:b:";
 	double *taps;
 	char opt;
 
@@ -130,6 +131,10 @@ main(int argc, char *argv[])
 							"Magnitude must be either 'db' or 'norm'\n");
 					exit(1);
 				}
+				break;
+			case 'b':
+				bins = atoi(optarg);
+				break;
 		}
 	}
 	if (optind != argc) {
@@ -151,7 +156,7 @@ main(int argc, char *argv[])
 	}
 
 	signal = alloc_buf(8192, sample_rate);
-	dft = compute_dft_complex(filt, bins);
+	dft = compute_dft(filt, bins, W_RECT);
 	of = fopen("./plots/filter-response.plot", "w");
 	fprintf(of, "$my_plot<<EOF\n");
 	if (half_band == 0) {
