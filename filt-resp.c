@@ -98,7 +98,6 @@ main(int argc, char *argv[])
 	FILE *of;
 	FILE *inp;
 	sample_buffer	*filt;
-	sample_buffer	*signal;
 	sample_buffer	*dft;
 	int half_band = 0;
 	int	n_taps;
@@ -155,7 +154,6 @@ main(int argc, char *argv[])
 		filt->data[i] = test->taps[i];
 	}
 
-	signal = alloc_buf(8192, sample_rate);
 	dft = compute_dft(filt, bins, W_RECT);
 	of = fopen("./plots/filter-response.plot", "w");
 	fprintf(of, "$my_plot<<EOF\n");

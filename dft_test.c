@@ -40,7 +40,7 @@ main(int argc, char *argv[])
 	sample_buffer	*test;
 	sample_buffer	*dft;
 	FILE			*of;
-	window_function wf = W_BH;
+	window_function wf = W_RECT;
 	int bins = BINS;
 
 	printf("Running a simple DFT test\n");

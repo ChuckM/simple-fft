@@ -1,16 +1,24 @@
 
-BINS = main tp tp2 waves hann bh dft_test corr corr-plot multi-corr-plot
+BINS = main tp tp2 waves hann bh dft_test \
+	   corr corr-plot multi-corr-plot filt-resp \
+	   filt-design
 
 LDFLAGS = -lm
 
-OBJS = filter.o signal.o plot.o fft.o dft.o windows.o
+OBJS = signal.o plot.o fft.o dft.o windows.o filter.o
 
-HEADERS = filter.h signal.h fft.h dft.h windows.h
+HEADERS = signal.h fft.h dft.h windows.h
 
 all: $(BINS)
 
 clean:
 	rm -f $(BINS) *.o plots/*.data
+
+filt-design: filt-design.c remez.o remez.h
+	cc -o $@ $< remez.o -lm
+
+remez.o: remez.c remez.h
+	cc -c remez.c -o $@
 
 filt-resp: filt-resp.c ${OBJS}
 	cc -g -o $@ $< ${OBJS} ${LDFLAGS}
@@ -64,6 +72,6 @@ dft.o: dft.c dft.h
 	cc -g -fPIC -c dft.c
 
 filter.o: filter.c filter.h
-	cc -g -fPIC -c filter.c
+	cc -g -fPIC -c $<
 
 ${OBJS}:	${HEADERS}
