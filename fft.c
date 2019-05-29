@@ -47,8 +47,9 @@ sample_buffer *
 compute_fft(sample_buffer *iq, int bins, window_function window)
 {
 	int i, j, k;
-	int q;
+	int bits;
 	double t;
+	double (*win_func)(int, int);
 	complex double alpha, uri, ur;
 	complex double *iq_data;
 	complex double *fft_result;
@@ -56,13 +57,12 @@ compute_fft(sample_buffer *iq, int bins, window_function window)
 
 	/* and they must be a power of 2 */
 	t = log(bins) / log(2);
+	bits = (int) t;
+#ifdef DEBUG_C_FFT
+	printf("Bits per index is %d\n", bits);
+#endif
 	if (modf(t, &t) > 0) {
 		fprintf(stderr, "compute_fft: %d is not a power of 2\n", bins);
-		return NULL;
-	}
-
-	if (iq->n < bins) {
-		fprintf(stderr, "compute_fft: Input buffer doesn't have enough samples.\n");
 		return NULL;
 	}
 
@@ -73,11 +73,19 @@ compute_fft(sample_buffer *iq, int bins, window_function window)
 	result = alloc_buf(bins, iq->r);
 	iq_data = iq->data;
 	fft_result = result->data;
-	q = (int) t;
+	switch (window) {
+		case W_RECT:
+		default:
+			win_func = rect_window_function;
+			break;
+		case W_HANN:
+			win_func = hann_window_function;
+			break;
+		case W_BH:
+			win_func = bh_window_function;
+			break;
+	}
 
-#ifdef DEBUG_C_FFT
-	printf("Bits per index is %d\n", q);
-#endif
 
 	/* This first bit is a reflection sort,
 	 * Most people do a 'sort in place' of
@@ -90,28 +98,18 @@ compute_fft(sample_buffer *iq, int bins, window_function window)
 	 * from its sibling.
 	 */
 	for (i = 0; i < bins; i++) {
+		complex double tmp;
 		/* compute reflected index */
-		for (k = 0, j = 0; j < q; j++) {
+		for (k = 0, j = 0; j < bits; j++) {
 			k = (k << 1) | ((i >> j) & 1);
 		}
 #ifdef DEBUG_SWAP_SORT
 		printf("index %d gets index %d, value (%f, %fi)\n", i, k, 
 						creal(iq_data[k]), cimag(iq_data[k]));
 #endif
-		switch (window) {
-			case W_RECT:
-			default:
-				t = 1.0;
-				break;
-			case W_HANN:
-				t = hann_window_function(k, bins);
-				break;
-			case W_BH:
-				t = bh_window_function(k, bins);
-				break;
-		}
-
-		fft_result[i] = t * creal(iq_data[k]) + t * cimag(iq_data[k]) * I;
+		tmp = (k < iq->n) ? iq_data[k] : 0;
+		t = win_func(k, bins);
+		fft_result[i] = t * creal(tmp) + t * cimag(tmp) * I;
 	}
 
 	/*
@@ -124,7 +122,7 @@ compute_fft(sample_buffer *iq, int bins, window_function window)
 	printf("FFT Calc: %d stage bufferfly calculation\n", q);
 #endif
 
-	for (i = 1; i <= q; i++) {
+	for (i = 1; i <= bits; i++) {
 		int bfly_len = 1 << i;			/* Butterfly elements */
 		int half_bfly = bfly_len / 2;		/* Half-the butterfly */
 
