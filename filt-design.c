@@ -33,15 +33,15 @@
 int
 main(int argc, char *argv[])
 {
-	double	taps[34];
-	int		n_taps = 34;
+	double	taps[35];
+	int		n_taps = 35;
 	int		n_bands = 2; 	/* low pass */
 	double	bands[4] = {0, 0.2, 0.3, 0.5};		/* band edges */
 	double	des[2] = {1.0, 0};			/* band response [1, 0] */
 	double 	weight[2] = {1.0, 1.2};		/* ripple */
 	FILE	*of;
 
-	remez(taps, 34, 2, bands, des, weight, BANDPASS);
+	remez(taps, n_taps, 2, bands, des, weight, BANDPASS);
 	of = fopen("sample.filter", "w");
 	printf("Sample Filter Design\n");
 	fprintf(of, "# Derived filter design, parameters :\n");
