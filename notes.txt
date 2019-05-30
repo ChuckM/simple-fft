@@ -21,6 +21,8 @@ New problem: Changing the sample rate to 10000 generates a *very* odd FFT
 plot. It looks very much like something with very wide skirts. Although
 the phase noise should not be that bad.
 
+ANSWER: This is spectral leakage.
+
 With an 8912 sample rate I get the expected FFT, with a 10000 sample
 rate, I get a very weird FFT. What is more, the frequency along the
 bottom doesn't seem to change (but that might be part of the problem)
@@ -36,7 +38,7 @@ Frequency and sample rate are interacting in a very very weird way. I
 expect I'm using sample rate when I should be using bins in my FFT
 calculation.
 
-Answer: This creates spectral "leakage" when the frequency doesn't land
+ANSWER: This creates spectral "leakage" when the frequency doesn't land
 completely within the FFT bin. Its spillage raises everything. Can be
 remediated somewhat with windows.
 
