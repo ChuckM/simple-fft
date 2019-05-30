@@ -6,3 +6,14 @@ tp
 *.data
 *.png
 *.plot
+bh
+corr
+corr-plot
+dft_test
+fft_test
+filt-design
+filt-resp
+hann
+multi-corr-plot
+tp2
+waves
