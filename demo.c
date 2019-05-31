@@ -48,7 +48,7 @@ main(int argc, char *argv[])
 	sample_buffer	*sig;
 	sample_buffer	*ft;			// fourier transform
 	window_function wf = W_BH;
-	int sample_rate = SAMPLE_RATE;
+	double sample_rate = SAMPLE_RATE;
 	int	algo = USE_FFT;
 	int freq = USE_NORMALIZED_FREQ;
 	int ampl = USE_DB_AMPLITUDE;
@@ -60,9 +60,8 @@ main(int argc, char *argv[])
 	char	filename[128];
 	char opt;
 
-	printf("bins has %d in it\n", bins);
+	printf("Simple DSP Toolbox demonstration program.\n");
 	snprintf(filename, 128, "./plots/%s", def_file);
-	printf(".. now bins has %d in it\n", bins);
 	
 	while ((opt = getopt(argc, argv, optstring)) != -1) {
 		switch (opt) {
@@ -116,6 +115,11 @@ main(int argc, char *argv[])
 					exit(1);
 					break;
 				}
+				if (index(optarg, 'k')) {
+					sample_rate *= 1000.0;
+				} else if (index(optarg, 'M')) {
+					sample_rate *= 1000000.0;
+				}
 				break;
 			case 'a':
 				if (strncasecmp("dft", optarg, 3) == 0) {
@@ -130,7 +134,7 @@ main(int argc, char *argv[])
 			case 'b':
 				bins = atoi(optarg);
 				if (bins < 16) {
-					fprintf(stderr, "Err: Bins number must be 16 or more bins\n");
+					fprintf(stderr, "Err: Bins number (%s) must be 16 or more bins\n", optarg);
 					exit(1);
 				}
 				break;
@@ -139,6 +143,24 @@ main(int argc, char *argv[])
 	if (optind == argc) {
 		fprintf(stderr, "Must specifiy at least one frequency to add to test signal\n");
 		exit(1);
+	} else if (*(argv[optind]) == '?') {
+		printf(
+			"This is a simple demonstrator for the toolbox.\n\n"
+		    "usage: demo <options> freq0 ... freqn\n\n"
+			"Frequencies are in Hz with optional suffix of 'k', 'M' for kHz, or MHz\n\n"
+			"Options (all options are preceded by '-'):\n"
+			"                -h -- show only first half of the transform\n"
+			"      -m {db|norm} -- set magnitude scale to dB or normalized 0 - 1.0\n"
+			"  -f {sample|norm} -- set frequency scale to normalize (-Fs/2 to Fs/2)\n"
+			"                      or by sample frequency.\n"
+			"         -s <rate> -- Set the sample rate to <rate> Hz.\n"
+			"      -a {fft|dft} -- Algorithm to use, fft is faster but requires\n"
+			"                      the number of bins to be a power of 2\n"
+			"         -b <bins> -- Use <bins> bins for the transform.\n"
+			" -w {bh|hann|rect} -- Window function, choices are Blackman-Harris,\n"
+			"                      Hann, or rectangle.\n"
+		);
+		exit(0);
 	}
 	n_freqs = argc - optind;
 	freqs = malloc(n_freqs * sizeof(double));
@@ -147,7 +169,17 @@ main(int argc, char *argv[])
 		exit(1);
 	}
 	for (int i = 0; i < n_freqs; i++) {
-		freqs[i] = atoi(argv[i + optind]);
+		freqs[i] = atof(argv[i + optind]);
+		if (freqs[i] == 0) {
+			fprintf(stderr, "Frequencies of 0 Hz are not allowed.\n");
+			exit(1);
+		}
+		if (index(argv[i + optind], 'k')) {
+			freqs[i] *= 1000.0;
+		}
+		if (index(argv[i + optind], 'M')) {
+			freqs[i] *= 1000000.0;
+		}
 	}
 	printf("Calculating %s with %d bins on a signal composed of %d frequencies:\n",
 		(algo == USE_FFT) ? "FFT" : "DFT", bins, n_freqs);
@@ -206,6 +238,9 @@ main(int argc, char *argv[])
 		fprintf(of, "%f %f\n", f, m);
 	}
 	fprintf(of, "EOD\n");
+	fprintf(of, "set title '%s Plot'\n",
+			(algo == USE_FFT) ? "FFT" : "DFT");
+	fprintf(of, "set grid\n");
 	fprintf(of, "set xlabel '%s'\n", (freq == USE_SAMPLE_RATE_FREQ) ?
 			"Frequency (Hz)" : "Frequency (Normalized)");
 	fprintf(of, "set ylabel '%s'\n", (ampl == USE_NORMALIZED_AMPLITUDE) ?
