@@ -206,6 +206,9 @@ compute_fft(sample_buffer *iq, int bins, window_function window)
 		printf("\n");
 #endif
 	}
+	for (int i = 0; i < result->n; i++) {
+		set_minmax(result, i);
+	}
 #ifdef DEBUG_C_FFT
 	printf("\nDone.\n");
 #endif

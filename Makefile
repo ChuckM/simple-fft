@@ -1,5 +1,5 @@
 
-BINS = main tp tp2 waves hann bh dft_test fft_test \
+BINS = demo tp tp2 waves hann bh dft_test fft_test \
 	   corr corr-plot multi-corr-plot filt-resp \
 	   filt-design
 
@@ -56,7 +56,7 @@ tp2: tp2.c ${OBJS}
 tp: tp.c ${OBJS}
 	cc -g -O0 -o $@ $< ${OBJS} ${LDFLAGS}
 
-main: main.c ${OBJS}
+demo: demo.c ${OBJS}
 	cc -o $@ $< ${OBJS} ${LDFLAGS}
 
 fft.o:	fft.c fft.h

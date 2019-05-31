@@ -48,8 +48,8 @@ typedef struct {
 #define min(x, y)	((cmag(x) < cmag(y)) ? cmag(x) : cmag(y))
 #define max(x, y)	((cmag(x) > cmag(y)) ? cmag(x) : cmag(y))
 
-#define set_minmax(s, ndx)	{ s->sample_min = min(s->sample_min, s->data[ndx]); \
-				  s->sample_max = max(s->sample_max, s->data[ndx]); }
+#define set_minmax(s, ndx)	{ s->sample_min = min(s->sample_min, cmag((s)->data[ndx])); \
+				  s->sample_max = max(s->sample_max, cmag((s)->data[ndx])); }
 
 #define reset_minmax(s)		s->sample_min = s->sample_max = 0
 #define clear_samples(s)	memset(s->data, 0, sizeof(sample_t) * s->n)
