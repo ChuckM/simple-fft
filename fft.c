@@ -37,11 +37,7 @@
  * fft( ... )
  *
  * Compute the complex FFT in 'n' bins given the sample
- * buffer. Note that sample_buffer must have at least
- * 'bins' samples in the buffer to make this computation.
- *
- * Note: that sample_buffer is defined in signal.h
- *
+ * buffer. 
  */
 sample_buffer *
 compute_fft(sample_buffer *iq, int bins, window_function window)
@@ -107,13 +103,19 @@ compute_fft(sample_buffer *iq, int bins, window_function window)
 		printf("index %d gets index %d, value (%f, %fi)\n", i, k, 
 						creal(iq_data[k]), cimag(iq_data[k]));
 #endif
+		/* if sample length is less than bins, pad with 0 */
 		tmp = (k < iq->n) ? iq_data[k] : 0;
+		/* apply the window function */
 		t = win_func(k, bins);
 		fft_result[i] = t * creal(tmp) + t * cimag(tmp) * I;
 	}
 
 	/*
-	 * now synthesize the frequency domain, 1 thru n
+	 * At this point the fft buffer has the signal in it
+	 * that has been both windowed, and sorted via the
+	 * reflection sort.
+	 * 
+	 * Synthesize the frequency domain, 1 thru n
 	 * frequency domain 0 is easy, its just the value
 	 * in the bin because a 1 bin DFT is the spectrum
 	 * of that DFT.
@@ -206,6 +208,7 @@ compute_fft(sample_buffer *iq, int bins, window_function window)
 		printf("\n");
 #endif
 	}
+	/* This sets the min and maximum magnitude values in the result */
 	for (int i = 0; i < result->n; i++) {
 		set_minmax(result, i);
 	}
@@ -214,4 +217,3 @@ compute_fft(sample_buffer *iq, int bins, window_function window)
 #endif
 	return result;
 }
-

@@ -119,3 +119,11 @@ So a quick test program to see if we can prove this numerically.
 And they are, as I've proven to myself. So now to make "slightly"
 faster DFT code.
 
+Signals
+-------
+
+So for the tool box I've just been generating signals, but it might
+be nice to be able to read in an iq file, if I had a standard format
+that I could use, and perhaps a directory 'signals' ? Something to
+consider.
+
