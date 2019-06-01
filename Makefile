@@ -1,80 +1,57 @@
+#
+# A makefile to build all of this stuff. The object files
+# for the utility functions are stored in ./obj the binaries
+# for the tools are stored in ./bin. 
+#
+# Copyright (c) 2019, Chuck McManis, all rights reserved.
+#
+# Written May 2019 by Chuck McManis
+# Copyright (c) 2019, Charles McManis
+#
+# I hereby grant permission for anyone to use this software for any 
+# purpose that they choose, I do not warrant the software to be
+# functional or even correct. It was written as part of an educational
+# exercise and is not "product grade" as far as the author is concerned.
+#
+# NO WARRANTY, EXPRESS OR IMPLIED ACCOMPANIES THIS SOFTWARE. USE IT AT
+# YOUR OWN RISK.
 
-BINS = demo tp tp2 waves hann bh dft_test fft_test \
+OBJ_DIR = obj
+
+BIN_DIR = bin
+
+PROGRAMS = demo tp tp2 waves hann bh dft_test fft_test \
 	   corr corr-plot multi-corr-plot filt-resp \
 	   filt-design
 
 LDFLAGS = -lm
 
-OBJS = signal.o plot.o fft.o dft.o windows.o filter.o
+TOOL_SRC = signal.c plot.c fft.c dft.c windows.c filter.c
+
+OBJECTS = $(TOOL_SRC:%.c=$(OBJ_DIR)/%.o)
+
+BINS = $(PROGRAMS:%=$(BIN_DIR)/%)
 
 HEADERS = signal.h fft.h dft.h windows.h
 
-all: $(BINS)
+all: dirs $(OBJECTS) $(BINS)
 
 clean:
-	rm -f $(BINS) *.o plots/*.data
+	rm -f $(BINS) $(OBJECTS) $(OBJ_DIR)/remez.o plots/*.data
 
-filt-design: filt-design.c remez.o remez.h
-	cc -o $@ $< remez.o -lm
+dirs:
+	mkdir -p $(BIN_DIR)
+	mkdir -p $(OBJ_DIR)
 
-remez.o: remez.c remez.h
-	cc -c remez.c -o $@
+$(OBJ_DIR)/%.o: %.c %.h
+	cc -g -fPIC -c $< -o $@
 
-filt-resp: filt-resp.c ${OBJS}
-	cc -g -o $@ $< ${OBJS} ${LDFLAGS}
+$(BIN_DIR)/%: %.c $(OBJECTS)
+	cc -o $@ $< ${OBJECTS} ${LDFLAGS}
 
-iq-demo: iq-demo.c ${OBJS}
-	cc -g -o $@ $< ${OBJS} ${LDFLAGS}
+$(OBJ_DIR)/remez.o: remez.c remez.h
+	cc -o $@ -c remez.c
 
-fft_test: fft_test.c ${OBJS}
-	cc -g -o $@ $< ${OBJS} ${LDFLAGS}
+$(BIN_DIR)/filt-design: filt-design.c $(OBJ_DIR)/remez.o
+	cc -o $@ $< ${OBJECTS} $(OBJ_DIR)/remez.o ${LDFLAGS}
 
-dft_test: dft_test.c ${OBJS}
-	cc -g -o $@ $< ${OBJS} ${LDFLAGS}
-
-multi-corr-plot: multi-corr-plot.c signal.o
-	cc -g -o $@ $< ${OBJS} ${LDFLAGS}
-
-corr: corr.c signal.o
-	cc -g -o $@ $< ${OBJS} ${LDFLAGS}
-
-corr-plot: corr-plot.c signal.o
-	cc -g -o $@ $< ${OBJS} ${LDFLAGS}
-
-hann: hann.c ${OBJS}
-	cc -g -o $@ $< ${OBJS} ${LDFLAGS}
-
-bh: bh.c ${OBJS}
-	cc -g -o $@ $< ${OBJS} ${LDFLAGS}
-
-waves: waves.c ${OBJS}
-	cc -g -o $@ $< ${OBJS} ${LDFLAGS}
-
-tp2: tp2.c ${OBJS}
-	cc -g -O0 -o $@ $< ${OBJS} ${LDFLAGS}
-
-tp: tp.c ${OBJS}
-	cc -g -O0 -o $@ $< ${OBJS} ${LDFLAGS}
-
-demo: demo.c ${OBJS}
-	cc -o $@ $< ${OBJS} ${LDFLAGS}
-
-fft.o:	fft.c fft.h
-	cc -g -fPIC -c fft.c
-
-signal.o: signal.c signal.h
-	cc -g -fPIC -c signal.c
-
-plot.o: plot.c plot.h
-	cc -g -fPIC -c plot.c
-
-windows.o: windows.c windows.h
-	cc -g -fPIC -c windows.c
-
-dft.o: dft.c dft.h
-	cc -g -fPIC -c dft.c
-
-filter.o: filter.c filter.h
-	cc -g -fPIC -c $<
-
-${OBJS}:	${HEADERS}
