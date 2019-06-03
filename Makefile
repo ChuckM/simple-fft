@@ -22,7 +22,7 @@ BIN_DIR = bin
 
 PROGRAMS = demo tp tp2 waves hann bh dft_test fft_test \
 	   corr corr-plot multi-corr-plot filt-resp \
-	   filt-design
+	   filt-design sig-test
 
 LDFLAGS = -lm
 

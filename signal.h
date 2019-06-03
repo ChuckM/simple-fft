@@ -54,7 +54,7 @@ typedef struct {
 					sample_max;		/* max value in buffer */
 	int				n;				/* number of samples */
 	int				r;				/* sample rate in Hz */
-	sample_buffer	*nxt;			/* chained buffer */
+	struct sample_buffer *nxt;		/* chained buffer */
 	sample_t	*data;				/* sample data */
 } sample_buffer;
 
@@ -105,3 +105,4 @@ void add_sawtooth_real(sample_buffer *, double, double);
 void add_square(sample_buffer *, double, double);
 void add_square_real(sample_buffer *, double, double);
 
+int store_signal(sample_buffer *signal, signal_format fmt, char *filename);
