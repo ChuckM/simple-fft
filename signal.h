@@ -25,6 +25,22 @@
 #include <math.h>
 #include <complex.h>
 
+/*
+ * Formats for storing and loading signals from files.
+ */
+typedef enum { 
+	FMT_IQ_D,		// IQ data as double [default]
+	FMT_IQ_F,		// IQ data as float
+	FMT_IQ_I8,		// IQ data as 8 bit ints
+	FMT_IQ_I16,		// IQ data as 16 bit ints
+	FMT_IQ_I32,		// IQ data as 32 bit ints
+	FMT_IX_D,		// Real only data as double
+	FMT_IX_F,		// Real only data as float
+	FMT_IX_I8,		// Real only data as 8 bit int
+	FMT_IX_I16,		// Real only data as 16 bit int
+	FMT_IX_I32		// Real only data as 32 bit int
+} signal_format;
+
 /* this is the sample type for the sample buffer */
 typedef complex double sample_t;
 
@@ -34,10 +50,12 @@ typedef complex double sample_t;
  * second. So a total of n / r seconds worth of signal.
  */
 typedef struct {
-	double	sample_min, sample_max;
-	int		n;	/* number of samples */
-	int		r;	/* sample rate in Hz */
-	sample_t	*data;
+	double			sample_min,		/* min value in buffer */
+					sample_max;		/* max value in buffer */
+	int				n;				/* number of samples */
+	int				r;				/* sample rate in Hz */
+	sample_buffer	*nxt;			/* chained buffer */
+	sample_t	*data;				/* sample data */
 } sample_buffer;
 
 /*
@@ -54,10 +72,16 @@ typedef struct {
 #define reset_minmax(s)		s->sample_min = s->sample_max = 0
 #define clear_samples(s)	memset(s->data, 0, sizeof(sample_t) * s->n)
 
+/* the oft maligned multi-character constant */
+#define MCC(a, b, c, d)	( (((a) & 0xff) << 24) |\
+						  (((b) & 0xff) << 16) |\
+						  (((c) & 0xff) << 8) |\
+						   ((d) & 0xff) )
+
 
 /* sample buffer management */
 sample_buffer *alloc_buf(int size, int sample_rate);
-void free_buf(sample_buffer *buf);
+sample_buffer *free_buf(sample_buffer *buf);
 
 /* validate the way I and Q are calculated */
 void add_test(sample_buffer *, double, double);

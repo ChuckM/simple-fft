@@ -28,7 +28,15 @@
 #include <string.h>
 #include <math.h>
 #include <complex.h>
+#include <arpa/inet.h>
 #include "signal.h"
+
+/* the oft maligned multi-character constant */
+#define MCC(a, b, c, d)	( (((a) & 0xff) << 24) |\
+						  (((b) & 0xff) << 16) |\
+						  (((c) & 0xff) << 8) |\
+						   ((d) & 0xff) )
+
 
 /*
  * alloc_buf( ... )
@@ -43,6 +51,7 @@ alloc_buf(int size, int sample_rate) {
 	res->data = malloc(sizeof(sample_t) * size);
 	res->n = size;
 	res->r = sample_rate;
+	res->nxt = NULL;
 	/* clear it to zeros */
 	reset_minmax(res);
 	clear_samples(res);
@@ -54,16 +63,21 @@ alloc_buf(int size, int sample_rate) {
 /*
  * free_buf(...)
  *
- * Free a buffer allocated with alloc_buf().
+ * Free a buffer allocated with alloc_buf(). If it has a chained
+ * buffer linked in, return that pointer.
  */
-void
+sample_buf *
 free_buf(sample_buffer *sb)
 {
-	free(sb->data);
+	sample_buffer *nxt = sb->nxt;
+	if (sb->data != NULL) {
+		free(sb->data);
+	}
 	sb->data = 0x0;
 	sb->n = 0;
+	sb->nxt = NULL;
 	free(sb);
-	return;
+	return (nxt);
 }
 
 /*
@@ -363,4 +377,157 @@ add_square_real(sample_buffer *s, double f, double a)
 	for (i = 0; i < s->n; i++) {
 		s->data[i] += (sample_t) ((__i_index(i, s->r, f) >= .5) ? level : -level);
 	}
+}
+
+/*
+ * this is a helper function so that I didn't screw up writing this
+ * code again and again for each format case
+ */
+static inline void
+sig_header(char *fmt, int sr, FILE *f)
+{
+	uint32_t	fmt[3];
+	fmt[0] = htonl(MCC(fmt[0], fmt[1], fmt[2], fmt[3]));
+	/* skip the space between labels */
+	fmt[1] = htonl(MCC(fmt[5], fmt[6], fmt[7], fmt[8]));
+	fmt[3] = htonl(sr);
+	fwrite(fmt, sizeof(uint32_t), 3, of);
+}
+
+/* serialize as a  double precision float */
+static inline uint8_t *
+encode_double(uint8_t *buf, double v) {
+	uint8_t		*tbuf;
+	tbuf = (uint8_t *)(&v);
+	for (int i = 0; i < sizeof(double); i++) {
+		*buf = tbuf[i];
+		buf++;
+	}
+	return buf;
+}
+
+/* serialize as a single precision float */
+static inline uint8_t *
+encode_float(uint8_t *buf, double v) {
+	uint8_t		*tbuf;
+	float	t = (float) v;
+	tbuf = (uint8_t *)(&v);
+	for (int i = 0; i < sizeof(float); i++) {
+		*buf = tbuf[i];
+		buf++;
+	}
+	return buf;
+}
+
+/* serialize as an 8 bit signed integer */
+static inline uint8_t *
+encode_int8(uint8_t *buf, double v) {
+	int8_t		t = (int8_t) v;
+	*buf = (uint8_t) t;
+	buf++;
+	return buf;
+}
+
+/* serialize as a 16 bit signed integer */
+static inline uint8_t *
+encode_int16(uint8_t *buf, double v) {
+	uint8_t		*tbuf;
+	int16_t		t = (int16_t) v;
+	tbuf = (uint8_t *)&t;
+	*buf = *tbuf;
+	buf++; tbuf++;
+	*buf = *tbuf;
+	buf++;
+	return buf;
+}
+
+/* serialize as a 32 bit signed integer */
+static inline uint8_t *
+encode_int32(uint8_t *buf, double v) {
+	uint8_t		*tbuf;
+	int32_t		t = (int32_t) v;
+	tbuf = (uint8_t *)&t;
+	for (int i = 0; i < 4; i++) {
+		*buf = *tbuf;
+		buf++; tbuf++;
+	}
+	return buf;
+}
+
+int
+store_signal(sample_buffer *sig, signal_format fmt, char *filename)
+{
+	uint32_t fmt[3];
+	FILE	*of;
+	size_t		buf_size, unit_size;
+	uint8_t		*data_buf;
+
+	
+	of = fopen(filename, "w");
+	if (of == NULL) {
+		return 0;
+	}
+	switch (fmt) {
+		case FMT_IQ_D:
+			/* write the header */
+			sig_header("SGIQ RF64", sig->r, of);
+			/* convert the data */
+			buf_size = sig->n * 2 * sizeof(double);
+			unit_size = sizeof(double) / sizeof(uint32_t);
+			data_buf = malloc(buf_size);
+			if (data_buf == NULL) {
+				fprintf(stderr, "Unable to allocate memory\n");
+				return 0;
+			}
+			for (int i = 0, ndx = 0; i < sig->n; i++, ndx += ) {
+	
+			}
+			/* write the data */
+			fwrite(fmt, sizeof(complex double), sig->n, of);
+			fclose(of);
+			return 1;
+
+		case FMT_IQ_F:
+			/* write the header */
+			sig_header("SGIQ RF32", sig->r, of);
+			/* convert data to floats */
+			/* allocate a buffer of floats for I and Q */
+			float_data = malloc(sig->n * 2 * sizeof(float));
+			if (float_data == NULL) {
+				fprintf(stderr, "Unable to allocate memory\n");
+				fclose(of);
+				return 0;
+			}
+			for (int i = 0; i < sig->n; i++) {
+				*(float_data + i * 2) = (float) creal(sig->data[i]);
+				*(float_data + i * 2 + 1) = (float) cimag(sig->data[i]);
+			}
+			/* write the data */
+			fwrite(float_data, sizeof(float), sig->n * 2, of);
+			fclose(of);
+			free(int8_data);
+			return 1;
+
+		case FMT_IQ_I8:
+			/* write the header */
+			sig_header("SGIQ SI08", sig->r, of);
+			/* convert the data */
+			int8_data = malloc(sig->n * 2 * sizeof(int8_t));
+			if (int8_data == NULL) {
+				fprintf(stderr, "Unable to allocate memory\n");
+				fclose(of);
+				return 0;
+			}
+			for (int i = 0; i < sig->n; i++) {
+				*(int8_data + i * 2) = (int8_t) creal(sig->data[i]);
+				*(int8_data + i * 2 + 1) = (int8_t) cimag(sig->data[i]);
+			}
+			/* write the data */
+			fwrite(int8_data, sizeof(int8_t), sig->n * 2, of);
+			fclose(of);
+			free(int8_data);
+			return 1;
+
+
+			
 }
