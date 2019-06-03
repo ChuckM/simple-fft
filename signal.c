@@ -527,7 +527,5 @@ store_signal(sample_buffer *sig, signal_format fmt, char *filename)
 			fclose(of);
 			free(int8_data);
 			return 1;
-
-
 			
 }
