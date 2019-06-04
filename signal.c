@@ -29,6 +29,9 @@
 #include <math.h>
 #include <complex.h>
 #include <arpa/inet.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <sys/unistd.h>
 #include "signal.h"
 
 /* the oft maligned multi-character constant */
@@ -69,7 +72,7 @@ alloc_buf(int size, int sample_rate) {
 sample_buffer *
 free_buf(sample_buffer *sb)
 {
-	sample_buffer *nxt = sb->nxt;
+	sample_buffer *nxt = (sample_buffer *) sb->nxt;
 	if (sb->data != NULL) {
 		free(sb->data);
 	}
@@ -454,6 +457,49 @@ encode_int32(uint8_t *buf, double v) {
 	return buf;
 }
 
+/* de-serialize as a  double precision float */
+static inline double
+decode_double(FILE *f) {
+	double		res;
+	int			l;
+
+	l = fread(&res, sizeof(double), 1, f);
+	return res;
+}
+
+/* de-serialize as a single precision float */
+static inline double
+decode_float(FILE *f) {
+	float	t;
+
+	fread(&t, sizeof(float), 1, f);
+	return (double) t;
+}
+
+/* de-serialize as an 8 bit signed integer */
+static inline double
+decode_int8(FILE *f) {
+	int8_t		res;
+	fread(&res, sizeof(int8_t), 1, f);
+	return (double) res;
+}
+
+/* de-serialize as a 16 bit signed integer */
+static inline double
+decode_int16(FILE *f) {
+	int16_t		res;
+	fread(&res, sizeof(int16_t), 1, f);
+	return (double) res;
+}
+
+/* de-serialize as a 32 bit signed integer */
+static inline double
+decode_int32(FILE *f) {
+	int32_t		res;
+	fread(&res, sizeof(int32_t), 1, f);
+	return (double) res;
+}
+
 int
 store_signal(sample_buffer *sig, signal_format fmt, char *filename)
 {
@@ -461,231 +507,203 @@ store_signal(sample_buffer *sig, signal_format fmt, char *filename)
 	size_t		buf_size;
 	uint8_t		*data_buf;
 	uint8_t		*buf_ptr;
-
+	char		*header;
+	int			iq = 1;
+	uint8_t		*(*encode)(uint8_t *, double);
 	
-	of = fopen(filename, "w");
-	if (of == NULL) {
-		return 0;
-	}
+	/* set up how we're going to run */
 	switch (fmt) {
 		case FMT_IQ_D:
-			/* write the header */
-			sig_header("SGIQ RF64", sig->r, of);
-			/* convert the data */
-			buf_size = sig->n * 2 * sizeof(double);
-			data_buf = malloc(buf_size);
-			if (data_buf == NULL) {
-				fprintf(stderr, "Unable to allocate memory\n");
-				fclose(of);
-				return 0;
-			}
-			buf_ptr = data_buf;
-			for (int i = 0; i < sig->n; i++) {
-				buf_ptr = encode_double(buf_ptr, creal(sig->data[i]));
-				buf_ptr = encode_double(buf_ptr, cimag(sig->data[i]));
-
-			}
-			/* write the data */
-			fwrite(data_buf, 1, buf_size, of);
-			fclose(of);
-			free(data_buf);
-			return 1;
-
-		case FMT_IQ_F:
-			/* write the header */
-			sig_header("SGIQ RF32", sig->r, of);
-			/* convert data to floats */
-			buf_size = sig->n * 2 * sizeof(float);
-			data_buf = malloc(buf_size);
-			if (data_buf == NULL) {
-				fprintf(stderr, "Unable to allocate memory\n");
-				fclose(of);
-				return 0;
-			}
-			buf_ptr = data_buf;
-			for (int i = 0; i < sig->n; i++) {
-				buf_ptr = encode_float(buf_ptr, (float) creal(sig->data[i]));
-				buf_ptr = encode_float(buf_ptr, (float) cimag(sig->data[i]));
-			}
-			/* write the data */
-			fwrite(data_buf, 1, buf_size, of);
-			fclose(of);
-			free(data_buf);
-			return 1;
-
-		case FMT_IQ_I8:
-			/* write the header */
-			sig_header("SGIQ SI08", sig->r, of);
-			/* convert the data */
-			buf_size = sig->n * 2 * sizeof(int8_t);
-			data_buf = malloc(buf_size);
-			if (data_buf == NULL) {
-				fprintf(stderr, "Unable to allocate memory\n");
-				fclose(of);
-				return 0;
-			}
-			buf_ptr = data_buf;
-			for (int i = 0; i < sig->n; i++) {
-				buf_ptr = encode_int8(buf_ptr, (int8_t) creal(sig->data[i]));
-				buf_ptr = encode_int8(buf_ptr, (int8_t) cimag(sig->data[i]));
-			}
-			/* write the data */
-			fwrite(data_buf, 1, buf_size, of);
-			fclose(of);
-			free(data_buf);
-			return 1;
-
-		case FMT_IQ_I16:
-			/* write the header */
-			sig_header("SGIQ SI16", sig->r, of);
-			/* convert the data */
-			buf_size = sig->n * 2 * sizeof(int16_t);
-			data_buf = malloc(buf_size);
-			if (data_buf == NULL) {
-				fprintf(stderr, "Unable to allocate memory\n");
-				fclose(of);
-				return 0;
-			}
-			buf_ptr = data_buf;
-			for (int i = 0; i < sig->n; i++) {
-				buf_ptr = encode_int16(buf_ptr, (int16_t) creal(sig->data[i]));
-				buf_ptr = encode_int16(buf_ptr, (int16_t) cimag(sig->data[i]));
-			}
-			/* write the data */
-			fwrite(data_buf, 1, buf_size, of);
-			fclose(of);
-			free(data_buf);
-			return 1;
-
-		case FMT_IQ_I32:
-			/* write the header */
-			sig_header("SGIQ SI16", sig->r, of);
-			/* convert the data */
-			buf_size = sig->n * 2 * sizeof(int32_t);
-			data_buf = malloc(buf_size);
-			if (data_buf == NULL) {
-				fprintf(stderr, "Unable to allocate memory\n");
-				fclose(of);
-				return 0;
-			}
-			buf_ptr = data_buf;
-			for (int i = 0; i < sig->n; i++) {
-				buf_ptr = encode_int32(buf_ptr, (int32_t) creal(sig->data[i]));
-				buf_ptr = encode_int32(buf_ptr, (int32_t) cimag(sig->data[i]));
-			}
-			/* write the data */
-			fwrite(data_buf, 1, buf_size, of);
-			fclose(of);
-			free(data_buf);
-			return 1;
-
+				header = "SGIQ RF64";
+				buf_size = sig->n * 2 * sizeof(double);
+				encode = encode_double;
+				iq = 1;
+				break;
 		case FMT_IX_D:
-			/* write the header */
-			sig_header("SGIX RF64", sig->r, of);
-			/* convert the data */
-			buf_size = sig->n * sizeof(double);
-			data_buf = malloc(buf_size);
-			if (data_buf == NULL) {
-				fprintf(stderr, "Unable to allocate memory\n");
-				fclose(of);
-				return 0;
-			}
-			buf_ptr = data_buf;
-			for (int i = 0; i < sig->n; i++) {
-				buf_ptr = encode_double(buf_ptr, creal(sig->data[i]));
-			}
-			/* write the data */
-			fwrite(data_buf, 1, buf_size, of);
-			fclose(of);
-			free(data_buf);
-			return 1;
-
+				header = "SGIX RF64";
+				buf_size = sig->n * sizeof(double);
+				encode = encode_double;
+				iq = 0;
+				break;
+		case FMT_IQ_F:
+				header = "SGIQ RF32";
+				buf_size = sig->n * 2 * sizeof(float);
+				encode = encode_float;
+				iq = 1;
+				break;
 		case FMT_IX_F:
-			/* write the header */
-			sig_header("SGIX RF32", sig->r, of);
-			/* convert data to floats */
-			buf_size = sig->n * sizeof(float);
-			data_buf = malloc(buf_size);
-			if (data_buf == NULL) {
-				fprintf(stderr, "Unable to allocate memory\n");
-				fclose(of);
-				return 0;
-			}
-			buf_ptr = data_buf;
-			for (int i = 0; i < sig->n; i++) {
-				buf_ptr = encode_float(buf_ptr, (float) creal(sig->data[i]));
-			}
-			/* write the data */
-			fwrite(data_buf, 1, buf_size, of);
-			fclose(of);
-			free(data_buf);
-			return 1;
-
+				header = "SGIX RF32";
+				buf_size = sig->n * sizeof(float);
+				encode = encode_float;
+				iq = 0;
+				break;
+		case FMT_IQ_I8:
+				header = "SGIQ SI08";
+				buf_size = sig->n * 2 * sizeof(int8_t);
+				encode = encode_int8;
+				iq = 1;
+				break;
 		case FMT_IX_I8:
-			/* write the header */
-			sig_header("SGIX SI08", sig->r, of);
-			/* convert the data */
-			buf_size = sig->n * sizeof(int8_t);
-			data_buf = malloc(buf_size);
-			if (data_buf == NULL) {
-				fprintf(stderr, "Unable to allocate memory\n");
-				fclose(of);
-				return 0;
-			}
-			buf_ptr = data_buf;
-			for (int i = 0; i < sig->n; i++) {
-				buf_ptr = encode_int8(buf_ptr, (int8_t) creal(sig->data[i]));
-			}
-			/* write the data */
-			fwrite(data_buf, 1, buf_size, of);
-			fclose(of);
-			free(data_buf);
-			return 1;
-
+				header = "SGIX SI08";
+				buf_size = sig->n * sizeof(int8_t);
+				encode = encode_int8;
+				iq = 0;
+				break;
+		case FMT_IQ_I16:
+				header = "SGIQ SI16";
+				buf_size = sig->n * 2 * sizeof(int16_t);
+				encode = encode_int16;
+				iq = 1;
+				break;
 		case FMT_IX_I16:
-			/* write the header */
-			sig_header("SGIX SI16", sig->r, of);
-			/* convert the data */
-			buf_size = sig->n * sizeof(int16_t);
-			data_buf = malloc(buf_size);
-			if (data_buf == NULL) {
-				fprintf(stderr, "Unable to allocate memory\n");
-				fclose(of);
-				return 0;
-			}
-			buf_ptr = data_buf;
-			for (int i = 0; i < sig->n; i++) {
-				buf_ptr = encode_int16(buf_ptr, (int16_t) creal(sig->data[i]));
-			}
-			/* write the data */
-			fwrite(data_buf, 1, buf_size, of);
-			fclose(of);
-			free(data_buf);
-			return 1;
-
+				header = "SGIX SI16";
+				buf_size = sig->n * sizeof(int16_t);
+				encode = encode_int16;
+				iq = 0;
+				break;
+		case FMT_IQ_I32:
+				header = "SGIQ SI32";
+				buf_size = sig->n * 2 * sizeof(int32_t);
+				encode = encode_int32;
+				iq = 1;
+				break;
 		case FMT_IX_I32:
-			/* write the header */
-			sig_header("SGIX SI16", sig->r, of);
-			/* convert the data */
-			buf_size = sig->n * sizeof(int32_t);
-			data_buf = malloc(buf_size);
-			if (data_buf == NULL) {
-				fprintf(stderr, "Unable to allocate memory\n");
-				fclose(of);
-				return 0;
-			}
-			buf_ptr = data_buf;
-			for (int i = 0; i < sig->n; i++) {
-				buf_ptr = encode_int32(buf_ptr, (int32_t) creal(sig->data[i]));
-			}
-			/* write the data */
-			fwrite(data_buf, 1, buf_size, of);
-			fclose(of);
-			free(data_buf);
-			return 1;
+				header = "SGIX SI32";
+				buf_size = sig->n * sizeof(int32_t);
+				encode = encode_int32;
+				iq = 0;
+				break;
 		default:
-			fprintf(stderr, "Unknown format\n");
-			return 0;
+				fprintf(stderr, "Unknown signal format.\n");
+				return 0;
 	}
-	return 0;
+	/* open the file */
+	of = fopen(filename, "w");
+	if (of == NULL) {
+		fprintf(stderr, "Unable to open file '%s' for writing.\n", filename);
+		return 0;
+	}
+	/* write the initial header into it */
+	sig_header(header, sig->r, of);
+	/* allocate a buffer for our encoded signal */
+	data_buf = malloc(buf_size);
+	if (data_buf == NULL) {
+		fprintf(stderr, "Unable to allocate memory.\n");
+		fclose(of);
+		return 0;
+	}
+	buf_ptr = data_buf;
+	/* use the encoding function to serialize the data */
+	for (int i = 0; i < sig->n; i++) {
+		buf_ptr = encode(buf_ptr, creal(sig->data[i]));
+		if (iq != 0) {
+			buf_ptr = encode(buf_ptr, cimag(sig->data[i]));
+		}
+	}
+	/* write the data */
+	fwrite(data_buf, 1, buf_size, of);
+	fclose(of);
+	free(data_buf);
+	return 1;
+}
+
+struct signal_header {
+	signal_format	fmt;
+	uint32_t		sample_rate;
+};
+
+struct signal_header *
+read_header(FILE *f) {
+	static struct signal_header res; /* not re-entrant */
+	uint32_t head[3];
+	uint8_t	head1[4];
+	uint8_t	head2[4];
+	int		is_int = 0;
+	int		has_q = 1;
+	int		bit_width;
+
+	fread(head, sizeof(uint32_t), 3, f);
+	head1[0] = (header[0] >> 24) & 0xff;
+	head1[1] = (header[0] >> ) & 0xff;
+	head1[2] = (header[0] >> 8) & 0xff;
+	head1[3] = header[0] & 0xff;
+	head2[0] = (header[1] >> 24) & 0xff;
+	head2[1] = (header[1] >> ) & 0xff;
+	head2[2] = (header[1] >> 8) & 0xff;
+	head2[3] = header[1] & 0xff;
+	res.sample_rate = head[2];
+	if ((head1[0] != 'S') || (head1[1] != 'G')) {
+		fprintf(stderr, "Not a signal file.\n");
+		return NULL;
+	}
+	if (head[2] == 'X') {
+		has_q = 0;
+	} else if (head[2] == 'Q') {
+		has_q = 1;
+	} else {
+		fprintf(stderr, "Unrecognized signal file\n");
+		return NULL;
+	}
+	if (head2[0] == 'S') {
+		is_int = 1;
+	} else if (head2[0] == 'R') {
+		is_int = 0;
+	} else {
+		fprintf(stderr, "Unrecognized signal file\n");
+		return NULL;
+	}
+	switch (head2[3]) {
+		case '4':
+			if (! is_int) {
+				res.fmt = (has_q) ? FMT_IQ_D : FMT_IX_D;
+				return &res;
+			}
+			break;
+		case '2':
+			if (is_int) {
+				res.fmt = (has_q) ? FMT_IQ_SI32 : FMT_IX_SI32;
+				return &res;
+			} else {
+				res.fmt = (has_q) ? FMT_IQ_F : FMT_IX_F;
+				return &res;
+			}
+			break;
+		case '6':
+			if (is_int) {
+				res.fmt = (has_q) ? FMT_IQ_S16 : FMT_IX_S16;
+				return &res;
+			}
+			break;
+		case '8':
+			if (is_int) {
+				res.fmt = (has_q) ? FMT_IQ_S08 : FMT_IX_S08;
+				return &res;
+			}
+			break;
+		default:
+			break;
+	}
+	fprintf(stderr, "Unrecognized signal file.\n");
+	return NULL;
+}
+
+/*
+ * load_signal( ... )
+ *
+ * Read in a signal from a file.
+ */
+sample_buffer *
+load_signal(char *filename)
+{
+	sample_buffer	*res;
+	struct stat	s;
+	FILE		*f;
+
+	f = fopen(filename, "r");
+	if (f == NULL) {
+		fprintf(stderr, "Unable to open file '%s'\n", filename);
+		return NULL;
+	}
+
+	
 }
