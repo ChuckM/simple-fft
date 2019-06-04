@@ -610,73 +610,81 @@ store_signal(sample_buffer *sig, signal_format fmt, char *filename)
 struct signal_header {
 	signal_format	fmt;
 	uint32_t		sample_rate;
+	int				has_q;
+	int				is_int;
+	int				bit_width;
 };
 
 struct signal_header *
 read_header(FILE *f) {
 	static struct signal_header res; /* not re-entrant */
-	uint32_t head[3];
+	uint32_t header[3];
 	uint8_t	head1[4];
 	uint8_t	head2[4];
-	int		is_int = 0;
-	int		has_q = 1;
-	int		bit_width;
 
-	fread(head, sizeof(uint32_t), 3, f);
-	head1[0] = (header[0] >> 24) & 0xff;
-	head1[1] = (header[0] >> ) & 0xff;
-	head1[2] = (header[0] >> 8) & 0xff;
-	head1[3] = header[0] & 0xff;
-	head2[0] = (header[1] >> 24) & 0xff;
-	head2[1] = (header[1] >> ) & 0xff;
-	head2[2] = (header[1] >> 8) & 0xff;
-	head2[3] = header[1] & 0xff;
-	res.sample_rate = head[2];
+	fread(header, sizeof(uint32_t), 3, f);
+	head1[3] = (header[0] >> 24) & 0xff;	// 'S'
+	head1[2] = (header[0] >> 16) & 0xff;	// 'G'
+	head1[1] = (header[0] >> 8) & 0xff;		// 'I'
+	head1[0] = header[0] & 0xff;			// 'X' | 'Q'
+	head2[3] = (header[1] >> 24) & 0xff;	// 'R' | 'S'
+	head2[2] = (header[1] >> 16) & 0xff;	// 'F' | 'I'
+	head2[1] = (header[1] >> 8) & 0xff;		// '0' | '1' | '3' | '6'
+	head2[0] = header[1] & 0xff;			// '8' | '6' | '2' | '4'
+	res.sample_rate = ntohl(header[2]);
+
+	printf("read_header: '%c', '%c', '%c', '%c' -- '%c' '%c' '%c' '%c'\n",
+		head1[0], head1[1], head1[2], head1[3],
+		head2[0], head2[1], head2[2], head2[3]);
 	if ((head1[0] != 'S') || (head1[1] != 'G')) {
 		fprintf(stderr, "Not a signal file.\n");
 		return NULL;
 	}
-	if (head[2] == 'X') {
-		has_q = 0;
-	} else if (head[2] == 'Q') {
-		has_q = 1;
+	if (head1[3] == 'X') {
+		res.has_q = 0;
+	} else if (head1[3] == 'Q') {
+		res.has_q = 1;
 	} else {
 		fprintf(stderr, "Unrecognized signal file\n");
 		return NULL;
 	}
 	if (head2[0] == 'S') {
-		is_int = 1;
+		res.is_int = 1;
 	} else if (head2[0] == 'R') {
-		is_int = 0;
+		res.is_int = 0;
 	} else {
 		fprintf(stderr, "Unrecognized signal file\n");
 		return NULL;
 	}
 	switch (head2[3]) {
 		case '4':
-			if (! is_int) {
-				res.fmt = (has_q) ? FMT_IQ_D : FMT_IX_D;
+			if (! res.is_int) {
+				res.fmt = (res.has_q) ? FMT_IQ_D : FMT_IX_D;
+				res.bit_width = 64;
 				return &res;
 			}
 			break;
 		case '2':
-			if (is_int) {
-				res.fmt = (has_q) ? FMT_IQ_SI32 : FMT_IX_SI32;
+			res.bit_width = 32;
+			if (res.is_int) {
+				res.fmt = (res.has_q) ? FMT_IQ_I32 : FMT_IX_I32;
 				return &res;
 			} else {
-				res.fmt = (has_q) ? FMT_IQ_F : FMT_IX_F;
+				res.fmt = (res.has_q) ? FMT_IQ_F : FMT_IX_F;
 				return &res;
 			}
 			break;
 		case '6':
-			if (is_int) {
-				res.fmt = (has_q) ? FMT_IQ_S16 : FMT_IX_S16;
+			res.bit_width = 16;
+			if (res.is_int) {
+				res.fmt = (res.has_q) ? FMT_IQ_I16 : FMT_IX_I16;
 				return &res;
 			}
 			break;
 		case '8':
-			if (is_int) {
-				res.fmt = (has_q) ? FMT_IQ_S08 : FMT_IX_S08;
+			res.bit_width = 8;
+			if (res.is_int) {
+				res.fmt = (res.has_q) ? FMT_IQ_I8 : FMT_IX_I8;
 				return &res;
 			}
 			break;
@@ -698,6 +706,17 @@ load_signal(char *filename)
 	sample_buffer	*res;
 	struct stat	s;
 	FILE		*f;
+	struct signal_header *head;
+	double	(*decode)(FILE *);
+	int			n_samples;
+	int			sample_size;
+
+	if (stat(filename, &s)) {
+		fprintf(stderr, "Unable to stat file '%s'\n", filename);
+		return NULL;
+	} else {
+		printf("Signal file %s has length : %d\n", filename, s.st_size);
+	}
 
 	f = fopen(filename, "r");
 	if (f == NULL) {
@@ -705,5 +724,51 @@ load_signal(char *filename)
 		return NULL;
 	}
 
-	
+	head = read_header(f);
+	if (head == NULL) {
+		fclose(f);
+		return NULL;
+	}
+	if (head->is_int) {
+		switch (head->bit_width) {
+			case 8:
+				decode = decode_int8;
+				sample_size = sizeof(int8_t);
+				break;
+			case 16:
+				decode = decode_int16;
+				sample_size = sizeof(int16_t);
+				break;
+			case 32:
+				decode = decode_int32;
+				sample_size = sizeof(int32_t);
+		}
+	} else {
+		if (head->bit_width == 64) {
+			decode = decode_double;
+			sample_size = sizeof(double);
+		} else {
+			decode = decode_float;
+			sample_size = sizeof(float);
+		}
+	}
+	if (head->has_q) {
+		sample_size = sample_size * 2;
+	}
+	n_samples = (s.st_size - (3 * sizeof(uint32_t))) / sample_size;
+	if ((n_samples * sample_size + 3 * sizeof(uint32_t)) != s.st_size) {
+		fprintf(stderr, "Warning: Signal file / sample_size mismatch.\n");
+	}
+	res = alloc_buf(n_samples, head->sample_rate);
+	for (int i = 0; i < n_samples; i++) {
+		complex double s;
+
+		if (head->has_q) {
+			res->data[i] = decode(f) + decode(f) * I;
+		} else {
+			res->data[i] = decode(f);
+		}
+	}
+	fclose(f);
+	return res;
 }
