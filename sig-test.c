@@ -7,7 +7,7 @@
 #include <stdlib.h>
 #include "signal.h"
 
-#define SIGNAL_FILE		"test.signal"
+#define SIGNAL_FILE		"./signals/test.signal"
 
 int
 main(int argc, char *argv[]) {

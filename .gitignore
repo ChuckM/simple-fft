@@ -7,6 +7,9 @@ tp
 *.png
 *.plot
 bh
+bin/*
+obj/*
+signals/*
 corr
 corr-plot
 demo
