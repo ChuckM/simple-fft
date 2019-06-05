@@ -8,6 +8,7 @@
 #include "signal.h"
 
 #define SIGNAL_FILE		"./signals/test.signal"
+#define TEST_SIGNAL_FILE		"./signals/re-test.signal"
 
 int
 main(int argc, char *argv[]) {
@@ -30,6 +31,10 @@ main(int argc, char *argv[]) {
 	if (test_signal == NULL) {
 		printf("that failed.\n");
 	} else {
+		if (! store_signal(test_signal, FMT_IQ_D, TEST_SIGNAL_FILE)) {
+			fprintf(stderr, "Could not store test signal\n");
+			exit(1);
+		}
 		printf("Signal stats: sample_rate: %d, length %d\n", 
 			test_signal->r, test_signal->n);
 		if (test_signal->n != signal->n) {

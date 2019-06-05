@@ -461,9 +461,16 @@ encode_int32(uint8_t *buf, double v) {
 static inline double
 decode_double(FILE *f) {
 	double		res;
-	int			l;
+	uint8_t		tbuf[sizeof(double)];
+	uint8_t		l;
 
-	l = fread(&res, sizeof(double), 1, f);
+	l = fread(tbuf, 1, sizeof(double),f);
+	for (int i = 0; i < sizeof(uint32_t); i++) {
+		l = tbuf[i];
+		tbuf[i] = tbuf[i + sizeof(uint32_t)];
+		tbuf[i + sizeof(uint32_t)] = l;
+	}
+	res = *((double *) tbuf);
 	return res;
 }
 
