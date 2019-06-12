@@ -400,10 +400,13 @@ sig_header(char *fmt, int sr, FILE *f)
 /* serialize as a  double precision float */
 static inline uint8_t *
 encode_double(uint8_t *buf, double v) {
-	uint8_t		*tbuf;
-	tbuf = (uint8_t *)(&v);
+	union {
+		double	a;
+		uint8_t	buf[sizeof(double)];
+	} x;
+	x.a = v;
 	for (int i = 0; i < sizeof(double); i++) {
-		*buf = tbuf[i];
+		*buf = x.buf[i];
 		buf++;
 	}
 	return buf;
@@ -460,18 +463,22 @@ encode_int32(uint8_t *buf, double v) {
 /* de-serialize as a  double precision float */
 static inline double
 decode_double(FILE *f) {
-	double		res;
-	uint8_t		tbuf[sizeof(double)];
+	union {
+		double		res;
+		uint8_t		tbuf[sizeof(double)];
+	} x;
 	uint8_t		l;
 
-	l = fread(tbuf, 1, sizeof(double),f);
+	l = fread(x.tbuf, 1, sizeof(double),f);
+#if 0
 	for (int i = 0; i < sizeof(uint32_t); i++) {
 		l = tbuf[i];
 		tbuf[i] = tbuf[i + sizeof(uint32_t)];
 		tbuf[i + sizeof(uint32_t)] = l;
 	}
 	res = *((double *) tbuf);
-	return res;
+#endif
+	return x.res;
 }
 
 /* de-serialize as a single precision float */

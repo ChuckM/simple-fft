@@ -127,3 +127,5 @@ be nice to be able to read in an iq file, if I had a standard format
 that I could use, and perhaps a directory 'signals' ? Something to
 consider.
 
+The TP3 experiment was a failure, The image signal persists.
+
