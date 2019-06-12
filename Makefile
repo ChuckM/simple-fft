@@ -47,10 +47,10 @@ $(OBJ_DIR)/%.o: %.c %.h
 	cc -g -fPIC -c $< -o $@
 
 $(BIN_DIR)/%: %.c $(OBJECTS)
-	cc -o $@ $< ${OBJECTS} ${LDFLAGS}
+	cc -g -o $@ $< ${OBJECTS} ${LDFLAGS}
 
 $(OBJ_DIR)/remez.o: remez.c remez.h
-	cc -o $@ -c remez.c
+	cc -g -fPIC -o $@ -c remez.c
 
 $(BIN_DIR)/filt-design: filt-design.c $(OBJ_DIR)/remez.o
 	cc -o $@ $< ${OBJECTS} $(OBJ_DIR)/remez.o ${LDFLAGS}

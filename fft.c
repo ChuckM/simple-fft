@@ -47,7 +47,6 @@ compute_fft(sample_buffer *iq, int bins, window_function window)
 	double t;
 	double (*win_func)(int, int);
 	complex double alpha, uri, ur;
-	complex double *iq_data;
 	complex double *fft_result;
 	sample_buffer *result;
 
@@ -67,7 +66,6 @@ compute_fft(sample_buffer *iq, int bins, window_function window)
 	 * source data.
 	 */
 	result = alloc_buf(bins, iq->r);
-	iq_data = iq->data;
 	fft_result = result->data;
 	switch (window) {
 		case W_RECT:
@@ -101,10 +99,10 @@ compute_fft(sample_buffer *iq, int bins, window_function window)
 		}
 #ifdef DEBUG_SWAP_SORT
 		printf("index %d gets index %d, value (%f, %fi)\n", i, k, 
-						creal(iq_data[k]), cimag(iq_data[k]));
+						creal(iq->data[k]), cimag(iq->data[k]));
 #endif
 		/* if sample length is less than bins, pad with 0 */
-		tmp = (k < iq->n) ? iq_data[k] : 0;
+		tmp = (k < iq->n) ? iq->data[k] : 0;
 		/* apply the window function */
 		t = win_func(k, bins);
 		fft_result[i] = t * creal(tmp) + t * cimag(tmp) * I;

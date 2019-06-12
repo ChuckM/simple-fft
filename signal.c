@@ -729,7 +729,7 @@ load_signal(char *filename)
 		fprintf(stderr, "Unable to stat file '%s'\n", filename);
 		return NULL;
 	} else {
-		printf("Signal file %s has length : %d\n", filename, s.st_size);
+		printf("Signal file %s has length : %ld\n", filename, s.st_size);
 	}
 
 	f = fopen(filename, "r");

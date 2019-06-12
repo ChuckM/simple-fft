@@ -36,7 +36,7 @@ main(int argc, char *argv[])
 	double	taps[35];
 	int		n_taps = 35;
 	int		n_bands = 2; 	/* low pass */
-	double	bands[4] = {0, 0.2, 0.3, 0.5};		/* band edges */
+	double	bands[4] = {0, 0.25, 0.27, 0.5};		/* band edges */
 	double	des[2] = {1.0, 0};			/* band response [1, 0] */
 	double 	weight[2] = {1.0, 1.2};		/* ripple */
 	FILE	*of;
@@ -51,7 +51,7 @@ main(int argc, char *argv[])
 			bands[i*2], bands[i*2+1], des[i],
 			20.0 * log10(weight[i] + 1));
 	}
-	fprintf(of, "name: Sample Filter\n");
+	fprintf(of, "name: Half Band Filter\n");
 	fprintf(of, "taps: %d\n", n_taps);
 	for (int i = 0; i < n_taps; i++) {
 		fprintf(of,"%f # h%d\n", taps[i], i);
