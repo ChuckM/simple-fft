@@ -107,3 +107,5 @@ void add_square_real(sample_buffer *, double, double);
 
 int store_signal(sample_buffer *signal, signal_format fmt, char *filename);
 sample_buffer *load_signal(char *filename);
+void dump_signal(sample_buffer *signal, signal_format fmt, char *filename);
+sample_buffer *load_signal(char *filename);

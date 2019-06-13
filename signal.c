@@ -774,15 +774,150 @@ load_signal(char *filename)
 		fprintf(stderr, "Warning: Signal file / sample_size mismatch.\n");
 	}
 	res = alloc_buf(n_samples, head->sample_rate);
-	for (int i = 0; i < n_samples; i++) {
+	for (int k = 0; k < n_samples; k++) {
 		complex double s;
-
+		double i, q;
+		q = 0.0;
+		i = decode(f);
 		if (head->has_q) {
-			res->data[i] = decode(f) + decode(f) * I;
-		} else {
-			res->data[i] = decode(f);
+			q = decode(f);
 		}
+		res->data[k] = i + q * I;
 	}
 	fclose(f);
 	return res;
+}
+
+/*
+ * dump_signal( ... )
+ *
+ * Dump out the contents of a signal buffer's data in hexadecimal
+ * for debugging. If 'f' is non-NULL also write the dump to that file.
+ */
+static uint8_t	dump_data_buf[8192];
+
+void
+dump_signal(sample_buffer *sig, signal_format fmt, char *filename)
+{
+	FILE	*of;
+	size_t		buf_size;
+	uint8_t		*data_buf;
+	uint8_t		*buf_ptr;
+	uint8_t		*tmp_ptr;
+	char		*header;
+	uint32_t	h_data[3];
+	int			iq = 1;
+	uint8_t		*(*encode)(uint8_t *, double);
+	
+	/* set up how we're going to run */
+	switch (fmt) {
+		case FMT_IQ_D:
+				header = "SGIQ RF64";
+				buf_size = sig->n * 2 * sizeof(double);
+				encode = encode_double;
+				iq = 1;
+				break;
+		case FMT_IX_D:
+				header = "SGIX RF64";
+				buf_size = sig->n * sizeof(double);
+				encode = encode_double;
+				iq = 0;
+				break;
+		case FMT_IQ_F:
+				header = "SGIQ RF32";
+				buf_size = sig->n * 2 * sizeof(float);
+				encode = encode_float;
+				iq = 1;
+				break;
+		case FMT_IX_F:
+				header = "SGIX RF32";
+				buf_size = sig->n * sizeof(float);
+				encode = encode_float;
+				iq = 0;
+				break;
+		case FMT_IQ_I8:
+				header = "SGIQ SI08";
+				buf_size = sig->n * 2 * sizeof(int8_t);
+				encode = encode_int8;
+				iq = 1;
+				break;
+		case FMT_IX_I8:
+				header = "SGIX SI08";
+				buf_size = sig->n * sizeof(int8_t);
+				encode = encode_int8;
+				iq = 0;
+				break;
+		case FMT_IQ_I16:
+				header = "SGIQ SI16";
+				buf_size = sig->n * 2 * sizeof(int16_t);
+				encode = encode_int16;
+				iq = 1;
+				break;
+		case FMT_IX_I16:
+				header = "SGIX SI16";
+				buf_size = sig->n * sizeof(int16_t);
+				encode = encode_int16;
+				iq = 0;
+				break;
+		case FMT_IQ_I32:
+				header = "SGIQ SI32";
+				buf_size = sig->n * 2 * sizeof(int32_t);
+				encode = encode_int32;
+				iq = 1;
+				break;
+		case FMT_IX_I32:
+				header = "SGIX SI32";
+				buf_size = sig->n * sizeof(int32_t);
+				encode = encode_int32;
+				iq = 0;
+				break;
+		default:
+				fprintf(stderr, "Unknown signal format.\n");
+	}
+	/* open the file */
+	if (filename != NULL) {
+		of = fopen(filename, "w");
+		if (of == NULL) {
+			fprintf(stderr, "Unable to open file '%s' for writing.\n", filename);
+		}
+	} else {
+		of = NULL;
+	}
+
+	/* write the initial header into it */
+	h_data[0] = htonl(MCC(header[0], header[1], header[2], header[3]));
+	/* skip the space between labels */
+	h_data[1] = htonl(MCC(header[5], header[6], header[7], header[8]));
+	h_data[2] = htonl(sig->r);
+	tmp_ptr = (uint8_t *)(h_data);
+	for (int k = 0; k < (3 * sizeof(uint32_t)); k += sizeof(uint32_t)) {
+		for (int m = 0; m < sizeof(uint32_t); m++) {
+			printf("%02X ", *(tmp_ptr + k + m));
+		}
+		if (k < (2 * sizeof(uint32_t))) {
+			for (int m = 0; m < sizeof(int32_t); m++) {
+				printf("'%c' ", *(tmp_ptr + k + m));
+			}
+		}
+		printf("\n");
+	}
+	
+	/* allocate a buffer for our encoded signal */
+	buf_ptr = dump_data_buf;
+
+	/* use the encoding function to serialize the data */
+	for (int i = 0; (i < sig->n) && ((buf_ptr - dump_data_buf) < 8192); i++) {
+		buf_ptr = encode(buf_ptr, creal(sig->data[i]));
+		if (iq != 0) {
+			buf_ptr = encode(buf_ptr, cimag(sig->data[i]));
+		}
+	}
+	/* write the data */
+	buf_ptr = dump_data_buf;
+	for (int k = 0; k < 256; k+= sizeof(double)) {
+		for (int m = 0; m < sizeof(double); m++) {
+			printf("%02X ", *(buf_ptr + k + m));
+		}
+		printf("%f\n", *(double *)(buf_ptr + k));
+	}
 }

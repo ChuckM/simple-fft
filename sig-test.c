@@ -21,6 +21,8 @@ main(int argc, char *argv[]) {
 	add_cos(signal, 1000.0, 1.0);
 	add_cos(signal, 1200.0, 1.0);
 	add_cos(signal, 1400.0, 1.0);
+	printf("Base signal: \n");
+	dump_signal(signal, FMT_IQ_D, NULL);
 	if (! store_signal(signal, FMT_IQ_D, SIGNAL_FILE)) {
 		fprintf(stderr, "That failed\n");
 		exit(1);
@@ -31,6 +33,8 @@ main(int argc, char *argv[]) {
 	if (test_signal == NULL) {
 		printf("that failed.\n");
 	} else {
+		printf("Reloaded signal:\n");
+		dump_signal(test_signal, FMT_IQ_D, NULL);
 		if (! store_signal(test_signal, FMT_IQ_D, TEST_SIGNAL_FILE)) {
 			fprintf(stderr, "Could not store test signal\n");
 			exit(1);
