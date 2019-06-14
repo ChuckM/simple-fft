@@ -50,9 +50,9 @@ main(int argc, char *argv[])
 	sample_buffer 	*sig2;
 	struct fir_filter	*filt;
 	double	i_data[SAMPLE_RATE * 4];
-	double	i_filtered[SAMPLE_RATE * 4];
+	double	*i_filtered;
 	double	q_data[SAMPLE_RATE * 4];
-	double	q_filtered[SAMPLE_RATE * 4];
+	double	*q_filtered;
 
 	sample_buffer 	*test;
 	sample_buffer	*test_fft;
@@ -64,7 +64,7 @@ main(int argc, char *argv[])
 		fprintf(stderr, "Can't find half band filter.\n");
 		exit(1);
 	}
-	filt = parse_filter(of);
+	filt = load_filter(of);
 	if (filt == NULL) {
 		fprintf(stderr, "Can't parse filter\n");
 		fclose(of);
@@ -78,23 +78,38 @@ main(int argc, char *argv[])
 	add_cos(sig1, 1024.0, 1.0);
 	add_cos_real(sig2, 1024.0, 1.0);
 	/* step 1, mix with an Fs/4 complex sinusoid */
+#define DEBUG
+#ifdef DEBUG
+	printf("Sinusoids :\n");
+	printf(" I:");
+	for (int k = 0; k < 3; k++) {
+		printf(" %f,", mix[k][0]);
+	}
+	printf(" %f\n", mix[3][0]);
+	printf(" Q:");
+	for (int k = 0; k < 3; k++) {
+		printf(" %f,", mix[k][1]);
+	}
+	printf(" %f\n", mix[3][1]);
+#endif
 	for (int k = 0; k < sig2->n; k++) {
-		i_data[k] = creal(sig2->data[k]) * mix[0][k%4];
-		q_data[k] = creal(sig2->data[k]) * mix[1][k%4];
+		i_data[k] = creal(sig2->data[k]) * mix[k%4][0];
+		q_data[k] = creal(sig2->data[k]) * mix[k%4][1];
 	}
 	/* step 2, apply a Fs/2 low pass filter over I and Q */
-	for (int k = 0; k < sig2->n; k++) {
-		for (int m = 0; m < filt->n_taps; m++) {
-			if ((k - m) < 0) {
-				break;
-			}
-			i_filtered[k] += i_data[k - m] * filt->taps[m];
-			q_filtered[k] += q_data[k - m] * filt->taps[m];
-		}
+	i_filtered = filter_real(i_data, sig2->n, filt);
+	if (i_filtered == NULL) {
+		fprintf(stderr, "Filtering I failed\n");
+		exit(1);
+	}
+	q_filtered = filter_real(q_data, sig2->n, filt);
+	if (q_filtered == NULL) {
+		fprintf(stderr, "Filtering Q failed\n");
+		exit(1);
 	}
 	/* step 3, decimate by 4 and create a signal buffer */
 	for (int k = 0; k < BUF_SIZE; k++) {
-		test->data[k] = i_filtered[k*4] + q_filtered[k*4] * I;
+		test->data[k] = *(i_filtered+k*4) + *(q_filtered + k*4) * I;
 	}
 
 	/* Now look at the two FFTs to see how they compare */

@@ -32,5 +32,8 @@ struct fir_filter {
 /* Apply a filter to a signal */
 sample_buffer * filter(sample_buffer *signal, struct fir_filter *fir);
 
+/* Apply a filter to an array of real values */
+double * filter_real(double signal[], int n, struct fir_filter *fir);
+
 /* Parse a FIR filter descriptor file. */
-struct fir_filter *parse_filter(FILE *f);
+struct fir_filter *load_filter(FILE *f);

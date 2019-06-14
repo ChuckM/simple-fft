@@ -175,7 +175,7 @@ fetch_line(FILE *f, char *buf, int bufsize)
  *     <double>
  */
 struct fir_filter *
-parse_filter(FILE *f)
+load_filter(FILE *f)
 {
 	char				buf[256];	/* line buffer */
 	char				*line;		/* interesting bit in the line buffer */
@@ -268,3 +268,41 @@ filter(sample_buffer *signal, struct fir_filter *fir)
 	return res;
 }
 
+/*
+ * filter_real(...)
+ *
+ * A variation on filter above, takes an array of double and filters it
+ * based on the passed filter.
+ *                  
+ *                  k < fir->n
+ *                  ----
+ *                   \
+ * does : y(n) =      >  fir(k) * sig(n - k)
+ *                   /
+ *                  ----
+ *                 k = 0
+ *
+ * And it zero pads sig by n samples to get the last bit of juice
+ * out of the FIR filter.
+ */
+double *
+filter_real(double signal[], int n, struct fir_filter *fir)
+{
+	double *res;
+
+	res = malloc(sizeof(double) * n);
+	if (res == NULL) {
+		fprintf(stderr, "filter_real: Failed to allocate result buffer\n");
+		return NULL;
+	}
+
+	for (int i = 0; i < n; i++) {
+		for (int k = 0; k < fir->n_taps; k++)  {
+			double sig;
+			/* fill zeros (transient response) at start */
+			sig = (i < k) ? signal[i - k] : 0;
+			res[i] += sig * fir->taps[k];
+		}
+	}
+	return res;
+}

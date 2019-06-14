@@ -142,7 +142,7 @@ main(int argc, char *argv[])
 			fprintf(stderr, "Tried to open '%s' as filter file.\n", argv[1]);
 			exit(1);
 		}
-		test = parse_filter(inp);
+		test = load_filter(inp);
 		if (test == NULL) {
 			exit(1);
 		}
