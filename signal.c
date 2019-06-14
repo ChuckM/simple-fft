@@ -469,7 +469,7 @@ decode_double(FILE *f) {
 	} x;
 	uint8_t		l;
 
-	l = fread(x.tbuf, 1, sizeof(double),f);
+	l = fread(x.tbuf, sizeof(double), 1 ,f);
 #if 0
 	for (int i = 0; i < sizeof(uint32_t); i++) {
 		l = tbuf[i];
