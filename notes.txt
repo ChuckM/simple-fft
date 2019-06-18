@@ -133,3 +133,7 @@ The TP4 experiment suggests I should be able to simply read and write
 doubles to disk. A good way to examin files is with
 hexdump -e '8/1 "%02X ""\n"' <file> | head -25 > <save.file>
 
+Signal storing and loading for anything other than doubles is
+broken horribly. I'm not sure exactly how I expected it to work
+but it doesn't work at all.
+
