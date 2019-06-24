@@ -24,10 +24,14 @@
 #include <stdlib.h>
 #include <math.h>
 #include <complex.h>
+#include <getopt.h>
 #include "signal.h"
 #include "filter.h"
 #include "windows.h"
 #include "fft.h"
+
+extern char *optarg;
+extern int	optind, opterr, optopt;
 
 /*
  * Derived filter design, parameters :
@@ -109,6 +113,7 @@ struct fir_filter my_filter = {
 };
 
 #define SAMPLE_RATE 8192
+#define BINS		1024
 #define SAMPLE_SIZE 2*SAMPLE_RATE
 #define OUTPUT "plots/filter-test.plot"
 
@@ -118,31 +123,86 @@ main(int argc, char *argv[])
 	sample_buffer	*sig;
 	sample_buffer	*filtered_sig;
 	sample_buffer	*fft_orig;
+	sample_buffer	*filt_resp;
+	sample_buffer	*filter_coefficients;
 	sample_buffer	*fft_filtered;
+	struct fir_filter	*filt = &my_filter;
+	int				normalized = 0;
+	char			*test_filter;
 	FILE			*of;
+	const char *options = "nf:";
+	char	opt;
 
+	printf("Filter Test\n");
+	while ((opt = getopt(argc, argv, options)) != -1) {
+		switch (opt) {
+			default:
+			case ':':
+			case '?':
+				fprintf(stderr, "Usages: filt-test [-n] [-f filter]\n");
+				exit(1);
+			case 'n':
+				normalized++;
+				break;
+			case 'f':
+				test_filter = optarg;
+				of = fopen(test_filter, "r");
+				if (of == NULL) {
+					fprintf(stderr, "Unable to open '%s'\n", test_filter);
+				}
+				filt = load_filter(of);
+				fclose(of);
+				if (filt == NULL) {
+					fprintf(stderr, "Unable to load filter '%s'\n", 
+							test_filter);
+					exit(1);
+				}
+		}
+	}
+	printf("Filtering with filter : %s\n", filt->name);
+	filter_coefficients = alloc_buf(filt->n_taps, SAMPLE_RATE);
+	for (int i = 0; i < filt->n_taps; i++) {
+		filter_coefficients->data[i] = filt->taps[i];
+	}
+	filt_resp = compute_fft(filter_coefficients, BINS, W_RECT);
 	sig = alloc_buf(SAMPLE_SIZE, SAMPLE_RATE);
 	add_cos(sig, SAMPLE_RATE / 8.0, 1.0);
 	add_cos(sig, 3.0 * SAMPLE_RATE / 8.0, 1.0);
-	filtered_sig = filter(sig, &my_filter);
-	fft_orig = compute_fft(sig, 1024, W_BH);
-	fft_filtered = compute_fft(filtered_sig, 1024, W_BH);
+	filtered_sig = filter(sig, filt);
+	fft_orig = compute_fft(sig, BINS, W_BH);
+	fft_filtered = compute_fft(filtered_sig, BINS, W_BH);
+	for (int i = 0; i < fft_orig->n; i++) {
+		set_minmax(fft_orig, i);
+		set_minmax(fft_filtered, i);
+		set_minmax(filt_resp, i);
+	}
 	of = fopen(OUTPUT, "w");
 	fprintf(of, "$plot << EOD\n");
-	fprintf(of, "frequency	'original signal'	'filtered signal'\n");
+	fprintf(of, 
+"frequency	\"original signal\" \"filtered signal\" \"filter freq response\"\n");
 	for (int i = 0; i < fft_orig->n / 2; i++) {
-		fprintf(of, "%f	%f %f\n", i * 2.0 / fft_orig->n,
-			20 * log10(cmag(fft_orig->data[i])),
-			20 * log10(cmag(fft_filtered->data[i])));
+		double orig, filtered, resp;
+		if (normalized) {
+			orig = cmag(fft_orig->data[i]) / fft_orig->sample_max;
+			filtered = cmag(fft_filtered->data[i]) / fft_filtered->sample_max;
+			resp = cmag(filt_resp->data[i]) / filt_resp->sample_max;
+		} else {
+			orig = 20 * log10(cmag(fft_orig->data[i])),
+			filtered = 20 * log10(cmag(fft_filtered->data[i]));
+			resp = 20 * log10(cmag(filt_resp->data[i]));
+		}
+
+		fprintf(of, "%f	%f %f %f\n", i * 2.0 / fft_orig->n, orig, filtered, resp);
 	}
 	fprintf(of,"EOD\n");
 	fprintf(of,
 "set xlabel 'Frequency (normalized)'\n"
 "set grid\n"
-"set ylabel 'Magnitude (dB)'\n"
+"set ylabel 'Magnitude (%s)'\n"
 "set key autotitle columnheader\n"
 "set multiplot layout 2, 1\n"
-"plot [0:1.0] $plot using 1:2 with lines\n"
-"plot [0:1.0] $plot using 1:3 with lines\n"
-"unset multiplot\n");
+"plot [0:1.0] $plot using 1:2 with lines lt rgb '#ff1010'\n"
+"plot [0:1.0] $plot using 1:3 with lines lt rgb '#ff1010',\\\n"
+"              \"\" using 1:4 with lines lt rgb '#1010ff'\n"
+"unset multiplot\n", (normalized != 0) ? "normalized" : "dB");
 }

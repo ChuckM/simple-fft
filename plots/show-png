@@ -1,2 +1,2 @@
-set term png font arial 14 size 800,480 #ffffff #000000 #1010ff #ff1010
+set term png font arial 14 size 800,640 #ffffff #000000 #1010ff #ff1010
 set output '| display png:-'

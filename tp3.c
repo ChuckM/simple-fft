@@ -18,8 +18,12 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <getopt.h>
 #include "fft.h"
 #include "filter.h"
+
+extern char *optarg;
+extern int optind, optopt, opterr;
 
 #define SAMPLE_RATE	8192
 #define BUF_SIZE	8192
@@ -53,6 +57,22 @@ main(int argc, char *argv[])
 	double	*i_filtered;
 	double	q_data[SAMPLE_RATE * 4];
 	double	*q_filtered;
+	const char *options = "n";
+	int			normalized = 0;
+	char		opt;
+
+	while ((opt = getopt(argc, argv, options)) != -1) {
+		switch (opt) {
+			case '?':
+			case ':':
+			default:
+				fprintf(stderr, "Usage: tp3 [-n]\n");
+				exit(1);
+			case 'n':
+				normalized++;
+				break;
+		}
+	}
 
 	sample_buffer 	*test;
 	sample_buffer	*test_fft;
@@ -119,14 +139,28 @@ main(int argc, char *argv[])
 	fprintf(of, "$plot<<EOD\n");
 	fprintf(of, "freq test sig\n");
 	for (int k = 0; k < test_fft->n; k++) {
+		set_minmax(test_fft, k);
+		set_minmax(sig_fft, k);
+	}
+	for (int k = 0; k < test_fft->n; k++) {
+		double proc, orig;
+
+		if (normalized) {
+			proc = cmag(test_fft->data[k]) / test_fft->sample_max;
+			orig = cmag(sig_fft->data[k]) / sig_fft->sample_max;
+		} else {
+			proc = 20 * log10(cmag(test_fft->data[k]));
+			orig = 20 * log10(cmag(sig_fft->data[k]));
+		}
+
 		fprintf(of,"%f %f %f\n", (double) k / test_fft->n,
-			20 * log10(cmag(test_fft->data[k])),
-			20 * log10(cmag(sig_fft->data[k])));
+			proc, orig);
 	}
 	fprintf(of,"EOD\n");
 	fprintf(of,"set xlabel 'Frequency'\n");
 	fprintf(of, "set grid\n");
-	fprintf(of,"set ylabel 'Magnitude (dB)'\n");
+	fprintf(of,"set ylabel 'Magnitude (%s)'\n", 
+					(normalized) ? "normalized" : "dB");
 	fprintf(of,"set multiplot layout 2, 1\n");
 	fprintf(of,"set key outside autotitle columnheader\n");
 	fprintf(of,"plot [0:1.0] $plot using 1:2 with lines\n");
