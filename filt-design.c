@@ -25,36 +25,101 @@
 #include <string.h>
 #include <math.h>
 #include <complex.h>
+#include <getopt.h>
 #include "signal.h"
 #include "windows.h"
 #include "remez.h"
 #include "fft.h"
 
+#define SAMPLE	"sample.filter"
+#define	TAPS	65
+
+extern char *optarg;
+extern int optind, opterr, optopt;
+
 int
 main(int argc, char *argv[])
 {
-	double	taps[35];
-	int		n_taps = 35;
+	double	*taps;
+	int		n_taps = TAPS;
 	int		n_bands = 2; 	/* low pass */
-	double	bands[4] = {0, 0.25, 0.27, 0.5};		/* band edges */
+	double	bands[4] = {0, 0.25, 0.29, 0.5};		/* band edges */
 	double	des[2] = {1.0, 0};			/* band response [1, 0] */
-	double 	weight[2] = {1.0, 1.2};		/* ripple */
+	double 	weight[2] = {1.0, 1.01};		/* ripple */
+	const char	*options = "t:n:o:c";
+	char	*file_name = SAMPLE;
+	char	*filter_name = "test filter";
+	int		cmode = 0;
+	char	*cmt = "# ";
+	char	opt;
 	FILE	*of;
 
-	remez(taps, n_taps, 2, bands, des, weight, BANDPASS);
-	of = fopen("sample.filter", "w");
-	printf("Sample Filter Design\n");
-	fprintf(of, "# Derived filter design, parameters :\n");
-	fprintf(of, "# Number of Bands: %d\n", n_bands);
-	for (int i = 0; i < n_bands; i++) {
-		fprintf(of, "# Band #%d - [ %f - %f ], %f, %f dB ripple\n", i+1, 
-			bands[i*2], bands[i*2+1], des[i],
-			20.0 * log10(weight[i] + 1));
+	while ((opt = getopt(argc, argv, options)) != -1) {
+		switch (opt) {
+			default:
+			case ':':
+			case '?':
+				fprintf(stderr,
+					"Usage: filt-design [-t taps] [-n name] [-f file] [-c]\n");
+				exit(1);
+			case 't':
+				n_taps = strtol(optarg, NULL, 10);
+				break;
+			case 'n':
+				filter_name = optarg;
+				break;
+			case 'o':
+				file_name = optarg;
+				break;
+			case 'c':
+				cmode++;
+				cmt = "// ";
+				break;
+			}
 	}
-	fprintf(of, "name: Half Band Filter\n");
-	fprintf(of, "taps: %d\n", n_taps);
-	for (int i = 0; i < n_taps; i++) {
-		fprintf(of,"%f # h%d\n", taps[i], i);
+	taps = malloc(n_taps * sizeof(double));
+	if (taps == NULL) {
+		fprintf(stderr, "memory allocation fail\n");
+		exit(1);
+	}
+	remez(taps, n_taps, 2, bands, des, weight, BANDPASS);
+	of = fopen(file_name, "w");
+	printf("Sample Filter Design\n");
+	
+	if (cmode) {
+		fprintf(of, "/*\n");
+		fprintf(of, " * Derived filter design, parameters :\n");
+		fprintf(of, " *  Number of Bands: %d\n", n_bands);
+		for (int i = 0; i < n_bands; i++) {
+			fprintf(of, " * Band #%d - [ %f - %f ], %f, %f dB ripple\n", i+1, 
+						bands[i*2], bands[i*2+1], des[i],
+						20.0 * log10(weight[i] + 1));
+		}
+		fprintf(of, " */\n");
+		fprintf(of, "static double __filter_taps[%d] = {\n", n_taps);
+		for (int i = 0; i < (n_taps - 1); i++) {
+			fprintf(of, "\t%f,\t// h%d\n", taps[i], i);
+		}
+		fprintf(of, "\t%f\t// h%d\n", taps[n_taps-1], n_taps-1);
+		fprintf(of, "};\n");
+		fprintf(of, "struct fir_filter my_filter = {\n");
+		fprintf(of, "	\"%s\",\n", filter_name);
+		fprintf(of, "	%d,\n", n_taps);
+		fprintf(of, "	__filter_taps\n");
+		fprintf(of, "};\n");
+	} else {
+		fprintf(of, "# Derived filter design, parameters :\n");
+		fprintf(of, "# Number of Bands: %d\n", n_bands);
+		for (int i = 0; i < n_bands; i++) {
+			fprintf(of, "# Band #%d - [ %f - %f ], %f, %f dB ripple\n", i+1, 
+						bands[i*2], bands[i*2+1], des[i],
+						20.0 * log10(weight[i] + 1));
+		}
+		fprintf(of, "name: Half Band Filter\n");
+		fprintf(of, "taps: %d\n", n_taps);
+		for (int i = 0; i < n_taps; i++) {
+			fprintf(of,"%f # h%d\n", taps[i], i);
+		}
 	}
 	fclose(of);
 }

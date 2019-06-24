@@ -257,12 +257,14 @@ filter(sample_buffer *signal, struct fir_filter *fir)
 		return NULL;
 	}
 
+	printf("Filtering signal with %d tap filter\n", fir->n_taps);
 	for (int i = 0; i < res->n; i++) {
 		for (int k = 0; k < fir->n_taps; k++)  {
 			complex double sig;
 			/* fill zeros (transient response) at start */
-			sig = (i <= k) ? signal->data[i - k] : 0;
-			res->data[i] += sig * fir->taps[k];
+			sig = ((i-k) >= 0) ? signal->data[i - k] : 0;
+			res->data[i] += creal(sig) * fir->taps[k] +
+							cimag(sig) * fir->taps[k] * I;
 		}
 	}
 	return res;
@@ -300,7 +302,7 @@ filter_real(double signal[], int n, struct fir_filter *fir)
 		for (int k = 0; k < fir->n_taps; k++)  {
 			double sig;
 			/* fill zeros (transient response) at start */
-			sig = (i < k) ? signal[i - k] : 0;
+			sig = ((i-k) >= 0) ? signal[i - k] : 0;
 			res[i] += sig * fir->taps[k];
 		}
 	}

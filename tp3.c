@@ -75,7 +75,7 @@ main(int argc, char *argv[])
 	sig2 = alloc_buf(BUF_SIZE*4, SAMPLE_RATE*4);
 	test = alloc_buf(BUF_SIZE, SAMPLE_RATE);
 	
-	add_cos(sig1, 1024.0, 1.0);
+	add_cos_real(sig1, 1024.0, 1.0);
 	add_cos_real(sig2, 1024.0, 1.0);
 	/* step 1, mix with an Fs/4 complex sinusoid */
 #define DEBUG
