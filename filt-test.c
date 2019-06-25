@@ -178,8 +178,8 @@ main(int argc, char *argv[])
 	}
 	of = fopen(OUTPUT, "w");
 	fprintf(of, "$plot << EOD\n");
-	fprintf(of, 
-"frequency	\"original signal\" \"filtered signal\" \"filter freq response\"\n");
+	fprintf(of, "Frequency	\"Original Signal\" \"Filtered Signal\""
+				" \"Filter Frequency Response\"\n");
 	for (int i = 0; i < fft_orig->n / 2; i++) {
 		double orig, filtered, resp;
 		if (normalized) {
@@ -199,7 +199,9 @@ main(int argc, char *argv[])
 "set xlabel 'Frequency (normalized)'\n"
 "set grid\n"
 "set ylabel 'Magnitude (%s)'\n"
-"set key autotitle columnheader\n"
+"set xtics font \"Arial,10\"\n"
+"set ytics font \"Arial,10\"\n"
+"set key box font \"Inconsolata,10\" autotitle columnheader\n"
 "set multiplot layout 2, 1\n"
 "plot [0:1.0] $plot using 1:2 with lines lt rgb '#ff1010'\n"
 "plot [0:1.0] $plot using 1:3 with lines lt rgb '#ff1010',\\\n"
