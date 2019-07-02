@@ -32,7 +32,7 @@
 #include "fft.h"
 
 #define SAMPLE	"sample.filter"
-#define	TAPS	65
+#define	TAPS	127
 
 extern char *optarg;
 extern int optind, opterr, optopt;
@@ -43,12 +43,12 @@ main(int argc, char *argv[])
 	double	*taps;
 	int		n_taps = TAPS;
 	int		n_bands = 2; 	/* low pass */
-	double	bands[4] = {0, 0.25, 0.29, 0.5};		/* band edges */
+	double	bands[4] = {0, 0.23, 0.27, 0.5};		/* band edges */
 	double	des[2] = {1.0, 0};			/* band response [1, 0] */
-	double 	weight[2] = {1.0, 1.01};		/* ripple */
-	const char	*options = "t:n:o:c";
+	double 	weight[2] = {1.0, 1.0};		/* ripple */
+	const char	*options = "b:t:n:o:c";
 	char	*file_name = SAMPLE;
-	char	*filter_name = "test filter";
+	char	*filter_name = "Test Filter";
 	int		cmode = 0;
 	char	*cmt = "# ";
 	char	opt;
@@ -62,6 +62,9 @@ main(int argc, char *argv[])
 				fprintf(stderr,
 					"Usage: filt-design [-t taps] [-n name] [-f file] [-c]\n");
 				exit(1);
+			case 'b':
+				fprintf(stderr, "Note bands not implemented yet\n");
+				break;
 			case 't':
 				n_taps = strtol(optarg, NULL, 10);
 				break;

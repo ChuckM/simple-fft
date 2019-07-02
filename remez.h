@@ -29,7 +29,7 @@
 #define POSITIVE       1
 
 #define GRIDDENSITY    16
-#define MAXITERATIONS  40
+#define MAXITERATIONS  400
 
 /* Function prototype for remez() - the only function that should need be
  * called from external code

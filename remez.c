@@ -21,6 +21,7 @@
 
 
 #include "remez.h"
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
@@ -314,20 +315,26 @@ void Search(int r, int Ext[],
 {
    int i, j, k, l, extra;     /* Counters */
    int up, alt;
+	long	rsize;
    int *foundExt;             /* Array of found extremals */
 
+	printf("Search: r = %d\n", r);
 /*
  * Allocate enough space for found extremals.
  */
-   foundExt = (int *)malloc((2*r) * sizeof(int));
+	rsize = 2 * r;
+	printf("foundExt size: %ld\n", rsize);
+   foundExt = (int *)malloc(10 * rsize * sizeof(int));
    k = 0;
 
 /*
  * Check for extremum at 0.
  */
    if (((E[0]>0.0) && (E[0]>E[1])) ||
-       ((E[0]<0.0) && (E[0]<E[1])))
+       ((E[0]<0.0) && (E[0]<E[1]))) {
+		assert(k < rsize);
       foundExt[k++] = 0;
+	}
 
 /*
  * Check for extrema inside dense grid
@@ -336,6 +343,7 @@ void Search(int r, int Ext[],
    {
       if (((E[i]>=E[i-1]) && (E[i]>E[i+1]) && (E[i]>0.0)) ||
           ((E[i]<=E[i-1]) && (E[i]<E[i+1]) && (E[i]<0.0)))
+		assert(k < rsize);
          foundExt[k++] = i;
    }
 
@@ -344,8 +352,10 @@ void Search(int r, int Ext[],
  */
    j = gridsize-1;
    if (((E[j]>0.0) && (E[j]>E[j-1])) ||
-       ((E[j]<0.0) && (E[j]<E[j-1])))
+       ((E[j]<0.0) && (E[j]<E[j-1]))) {
+		assert(k < rsize);
       foundExt[k++] = j;
+	}
 
 
 /*
@@ -391,6 +401,7 @@ void Search(int r, int Ext[],
 
       for (j=l; j<k; j++)        /* Loop that does the deletion */
       {
+		assert(j+1 < rsize);
          foundExt[j] = foundExt[j+1];
       }
       k--;
@@ -572,7 +583,7 @@ void remez(double h[], int numtaps,
    {
       gridsize--;
    }
-
+	printf("Gridsize is %d\n", gridsize);
 /*
  * Dynamically allocate memory for arrays with proper sizes
  */
@@ -591,6 +602,7 @@ void remez(double h[], int numtaps,
  */
    CreateDenseGrid(r, numtaps, numband, bands, des, weight,
                    &gridsize, Grid, D, W, symmetry);
+	printf("New grid size: %d\n", gridsize);
    InitialGuess(r, Ext, gridsize);
 
 /*

@@ -137,3 +137,23 @@ Signal storing and loading for anything other than doubles is
 broken horribly. I'm not sure exactly how I expected it to work
 but it doesn't work at all.
 
+Plotting
+--------
+
+I really need a plotter. I am thinking something like:
+int plot(FILE *file, char *name, signal_buffer *b, Y_NORM/Y_DB, X_NORM/X_FREQ/X_TIME);
+
+This then writes into file :
+$plot_%d << EOD
+[normalized|frequency|time] name
+<value> <value>
+...
+EOD
+
+Returns a number of the plot, so that later it can be referred to
+as 'plot $plot_<n> using 1:2 with lines'
+
+Negative frequency shifting
+---------------------------
+The complex frequency -fs/4 = [1 + 0i, 0 + -1i, -1 + 0i, 0 + 1i]
+

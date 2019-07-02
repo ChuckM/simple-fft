@@ -27,12 +27,16 @@ extern int optind, optopt, opterr;
 
 #define SAMPLE_RATE	8192
 #define BUF_SIZE	8192
+#define BINS		1024
+
+/* The complex frequency -fs/4 = [1 + 0i, 0 + -1i, -1 + 0i, 0 + 1i] */
+complex double fs4[4] = {1, -1*I, -1, 0};
 
 const double mix[4][2] = {
 	{ 1,  0},
-	{ 0,  1},
+	{ 0, -1},
 	{-1,  0},
-	{ 0, -1}
+	{ 0,  1}
 };
 
 /* some notes */
@@ -52,6 +56,8 @@ main(int argc, char *argv[])
 {
 	sample_buffer 	*sig1;
 	sample_buffer 	*sig2;
+	sample_buffer	*fft1;
+	sample_buffer	*fft2;
 	struct fir_filter	*filt;
 	double	i_data[SAMPLE_RATE * 4];
 	double	*i_filtered;
@@ -59,6 +65,11 @@ main(int argc, char *argv[])
 	double	*q_filtered;
 	const char *options = "n";
 	int			normalized = 0;
+	sample_buffer 	*test;
+	sample_buffer	*test_fft;
+	sample_buffer	*sig_fft;
+	sample_buffer	*filtered;
+	FILE	*of;
 	char		opt;
 
 	while ((opt = getopt(argc, argv, options)) != -1) {
@@ -74,11 +85,6 @@ main(int argc, char *argv[])
 		}
 	}
 
-	sample_buffer 	*test;
-	sample_buffer	*test_fft;
-	sample_buffer	*sig_fft;
-	FILE	*of;
-
 	of = fopen("filters/half-band.filter", "r");
 	if (of == NULL) {
 		fprintf(stderr, "Can't find half band filter.\n");
@@ -92,12 +98,25 @@ main(int argc, char *argv[])
 	}
 
 	sig1 = alloc_buf(BUF_SIZE, SAMPLE_RATE);
+	sig2 = alloc_buf(BUF_SIZE, SAMPLE_RATE);
+#if 0
+	/* this is temporarily all cut out */
 	sig2 = alloc_buf(BUF_SIZE*4, SAMPLE_RATE*4);
-	test = alloc_buf(BUF_SIZE, SAMPLE_RATE);
+	test = alloc_buf(BUF_SIZE*2, SAMPLE_RATE*2);
 	
-	add_cos_real(sig1, 1024.0, 1.0);
+	/*
+	 * This is our example, a complex signal we want to have when
+     * we are done.
+     */
+	add_cos(sig1, 1024.0, 1.0);
+
+	/*
+	 * we start with a real only signal, in our buffer which is
+	 * over sampled by 4.
+	 */
 	add_cos_real(sig2, 1024.0, 1.0);
-	/* step 1, mix with an Fs/4 complex sinusoid */
+
+	/* step 1, mix with an -Fs/4 complex sinusoid */
 #define DEBUG
 #ifdef DEBUG
 	printf("Sinusoids :\n");
@@ -112,11 +131,19 @@ main(int argc, char *argv[])
 	}
 	printf(" %f\n", mix[3][1]);
 #endif
+#ifdef OLD_WAY
 	for (int k = 0; k < sig2->n; k++) {
 		i_data[k] = creal(sig2->data[k]) * mix[k%4][0];
 		q_data[k] = creal(sig2->data[k]) * mix[k%4][1];
 	}
+#else
+	for (int k = 0; k < sig2->n; k++) {
+		sig2->data[k] *= mix[k%4][0] + mix[k%4][1] * I;
+	}
+#endif
+
 	/* step 2, apply a Fs/2 low pass filter over I and Q */
+#ifdef OLD_WAY 
 	i_filtered = filter_real(i_data, sig2->n, filt);
 	if (i_filtered == NULL) {
 		fprintf(stderr, "Filtering I failed\n");
@@ -127,34 +154,70 @@ main(int argc, char *argv[])
 		fprintf(stderr, "Filtering Q failed\n");
 		exit(1);
 	}
+#else
+	filtered = filter(sig2, filt);
+#endif
+
 	/* step 3, decimate by 4 and create a signal buffer */
+#ifdef OLD_WAY
 	for (int k = 0; k < BUF_SIZE; k++) {
 		test->data[k] = *(i_filtered+k*4) + *(q_filtered + k*4) * I;
 	}
+#else
+	/* decimate by 2 */
+	for (int k = 0; k < filtered->n; k+= 2) {
+		test->data[k/2] = filtered->data[k];
+	}
+#endif
 
 	/* Now look at the two FFTs to see how they compare */
 	test_fft = compute_fft(test, 1024, W_BH);
 	sig_fft = compute_fft(sig1, 1024, W_BH);
+#endif
+	/* Add a 'real' tone to the signal buffer */
+	add_cos_real(sig1, 512.0, 1.0);
+	
+	/* multiply it by -Fs/4 */
+	for (int k = 0; k < sig2->n; k++) {
+		sig2->data[k] = sig1->data[k] * fs4[k%4];
+	}
+	fft1 = compute_fft(sig1, BINS, W_BH);
+	fft2 = compute_fft(sig2, BINS, W_BH);
+
 	of = fopen("plots/tp3.plot", "w");
 	fprintf(of, "$plot<<EOD\n");
-	fprintf(of, "freq test sig\n");
-	for (int k = 0; k < test_fft->n; k++) {
-		set_minmax(test_fft, k);
-		set_minmax(sig_fft, k);
+	fprintf(of, "freq \"signal 1\" \"signal 2\"\n");
+	for (int k = 0; k < BINS; k++) {
+		set_minmax(fft1, k);
+		set_minmax(fft2, k);
 	}
-	for (int k = 0; k < test_fft->n; k++) {
+	for (int k = BINS/2; k < BINS; k++) {
 		double proc, orig;
 
 		if (normalized) {
-			proc = cmag(test_fft->data[k]) / test_fft->sample_max;
-			orig = cmag(sig_fft->data[k]) / sig_fft->sample_max;
+			orig = cmag(fft1->data[k]) / fft1->sample_max;
+			proc = cmag(fft2->data[k]) / fft2->sample_max;
 		} else {
-			proc = 20 * log10(cmag(test_fft->data[k]));
-			orig = 20 * log10(cmag(sig_fft->data[k]));
+			orig = 20 * log10(cmag(fft1->data[k]));
+			proc = 20 * log10(cmag(fft2->data[k]));
 		}
 
-		fprintf(of,"%f %f %f\n", (double) k / test_fft->n,
-			proc, orig);
+		fprintf(of,"%f %f %f\n", (double) -0.5 + (1.0*k/BINS - 0.50),
+			orig, proc);
+	}
+	for (int k = 0; k < BINS/2; k++) {
+		double proc, orig;
+
+		if (normalized) {
+			orig = cmag(fft1->data[k]) / fft1->sample_max;
+			proc = cmag(fft2->data[k]) / fft2->sample_max;
+		} else {
+			orig = 20 * log10(cmag(fft1->data[k]));
+			proc = 20 * log10(cmag(fft2->data[k]));
+		}
+
+		fprintf(of,"%f %f %f\n", (double) (k) / BINS,
+			orig, proc);
 	}
 	fprintf(of,"EOD\n");
 	fprintf(of,"set xlabel 'Frequency'\n");
@@ -163,8 +226,8 @@ main(int argc, char *argv[])
 					(normalized) ? "normalized" : "dB");
 	fprintf(of,"set multiplot layout 2, 1\n");
 	fprintf(of,"set key outside autotitle columnheader\n");
-	fprintf(of,"plot [0:1.0] $plot using 1:2 with lines\n");
-	fprintf(of,"plot [0:1.0] $plot using 1:3 with lines\n");
+	fprintf(of,"plot [-0.50:0.50] $plot using 1:2 with lines\n");
+	fprintf(of,"plot [-0.50:0.50] $plot using 1:3 with lines\n");
 	fprintf(of,"unset multiplot\n");
 	fclose(of);
 }
