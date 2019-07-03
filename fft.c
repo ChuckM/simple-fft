@@ -215,3 +215,90 @@ compute_fft(sample_buffer *iq, int bins, window_function window)
 #endif
 	return result;
 }
+
+/*
+ * Writes out the values of the FFT in a gnuplot compatible way, the output
+ * file should already be open. The output is appended to that file.
+ * Output takes the form:
+ *
+ * $plot_<name> << EOD
+ * <value> <value>
+ * <value> <value>
+ * ...
+ * <value> <value>
+ * EOD
+ *
+ * The number of FFT bins are in the signal buffer as ->n, the sample rate
+ * (hence the frequency) is in the ->r member.
+ */
+int
+plot_fft(FILE *of, sample_buffer *fft, char *name, enum fft_x_axis x, enum fft_y_axis y)
+{
+	fprintf(of,"$plot_%s << EOD\n", name);
+	if (y == FFT_Y_NORM) {
+		/* insure MIN and MAX are accurate */
+		fft->sample_max = 0;
+		fft->sample_min = 0;
+		for (int k = 0; k < fft->n; k++) {
+			set_minmax(fft, k);
+		}
+	}
+
+	if ((x == FFT_X_NORM) || (x == FFT_X_FREQ)) {
+		for (int k = fft->n / 2; k < fft->n; k++) {
+			double freq, mag;
+			freq = -0.5 + (double) (k - (fft->n / 2))/ (double) fft->n;
+			if (x == FFT_X_FREQ) {
+				freq *= (double) fft->r;
+			}
+			switch (y) {
+				default:
+				case FFT_Y_NORM:
+					mag = (cmag(fft->data[k]) - fft->sample_min) / 
+							(fft->sample_max - fft->sample_min);
+					break;
+				case FFT_Y_DB:
+					mag = 20 * log10(cmag(fft->data[k]));
+					break;
+				case FFT_Y_MAG:
+					mag = cmag(fft->data[k]);
+					break;
+			}
+			fprintf(of, "%f %f\n", freq, mag);
+		}
+	}
+	/*
+	 * Note: if X axis is "real" normalized, or "real" frequency then
+ 	 * only the DC -> N/2 half of the FFT is plotted.
+	 */
+	for (int k = 0; k < fft->n/2; k++) {
+		double freq, mag;
+		freq = (double) (k)/ (double) fft->n;
+		switch (x) {
+			default:
+			case FFT_X_NORM:
+			case FFT_X_REAL_NORM:
+				break;
+			case FFT_X_FREQ:
+			case FFT_X_REAL_FREQ:
+				freq = freq * fft->r;
+				break;
+		}
+		switch (y) {
+			default:
+			case FFT_Y_NORM:
+				mag = (cmag(fft->data[k]) - fft->sample_min) / 
+						(fft->sample_max - fft->sample_min);
+				break;
+			case FFT_Y_DB:
+				mag = 20 * log10(cmag(fft->data[k]));
+				break;
+			case FFT_Y_MAG:
+				mag = cmag(fft->data[k]);
+				break;
+		}
+		fprintf(of, "%f %f\n", freq, mag);
+	}
+	fprintf(of,	"EOD\n");
+	return 0;
+}

@@ -14,8 +14,7 @@
  * purpose that they choose, I do not warrant the software to be
  * functional or even correct. It was written as part of an educational
  * exercise and is not "product grade" as far as the author is concerned.
- *
- * NO WARRANTY, EXPRESS OR IMPLIED ACCOMPANIES THIS SOFTWARE. USE IT AT
+ * * NO WARRANTY, EXPRESS OR IMPLIED ACCOMPANIES THIS SOFTWARE. USE IT AT
  * YOUR OWN RISK.
  *
  */
@@ -79,6 +78,11 @@ typedef struct {
 						   ((d) & 0xff) )
 
 
+enum signal_x {
+	SIG_X_NORM,
+	SIG_X_TIME
+};
+
 /* sample buffer management */
 sample_buffer *alloc_buf(int size, int sample_rate);
 sample_buffer *free_buf(sample_buffer *buf);
@@ -107,3 +111,6 @@ void add_square_real(sample_buffer *, double, double);
 
 int store_signal(sample_buffer *signal, signal_format fmt, char *filename);
 sample_buffer *load_signal(char *filename);
+
+int plot_signal(FILE *of, char *name, sample_buffer *sig, int len, 
+			enum signal_x x);

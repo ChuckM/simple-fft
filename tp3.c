@@ -25,9 +25,9 @@
 extern char *optarg;
 extern int optind, optopt, opterr;
 
-#define SAMPLE_RATE	8192
+#define SAMPLE_RATE	40960
 #define BUF_SIZE	8192
-#define BINS		1024
+#define BINS		4096
 
 /* The complex frequency -fs/4 = [1 + 0i, 0 + -1i, -1 + 0i, 0 + 1i] */
 complex double fs4[4] = {1, -1*I, -1, 0};
@@ -175,11 +175,13 @@ main(int argc, char *argv[])
 	sig_fft = compute_fft(sig1, 1024, W_BH);
 #endif
 	/* Add a 'real' tone to the signal buffer */
-	add_cos_real(sig1, 512.0, 1.0);
+	add_cos_real(sig1, (double) (SAMPLE_RATE / 4.0) * 0.1, 1.0);
+	add_cos_real(sig1, (double) (SAMPLE_RATE / 4.0) * 0.2,  1.0);
+	add_cos_real(sig1, (double) (SAMPLE_RATE / 4.0) * 0.3, 1.0);
 	
 	/* multiply it by -Fs/4 */
 	for (int k = 0; k < sig2->n; k++) {
-		sig2->data[k] = sig1->data[k] * fs4[k%4];
+		sig2->data[k] = (sig1->data[k] * fs4[k%4]) - sig1->data[k];
 	}
 	fft1 = compute_fft(sig1, BINS, W_BH);
 	fft2 = compute_fft(sig2, BINS, W_BH);

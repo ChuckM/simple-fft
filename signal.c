@@ -787,3 +787,26 @@ load_signal(char *filename)
 	fclose(f);
 	return res;
 }
+
+int
+plot_signal(FILE *of, char *name, sample_buffer *sig, int len, enum signal_x x)
+{
+	fprintf(of, "$plot_%s << EOD\n", name);
+	for (int k = 0; k < len; k++) {
+		complex double sig_y;
+		double	dx, dy;
+
+		sig_y = (k < sig->n) ?  sig_y = sig->data[k] : 0;
+		switch (x) {
+			default:
+			case SIG_X_TIME:
+				dx = (double) k / (double) sig->r;
+				break;
+			case SIG_X_NORM:
+				dx = (double) k / (double) sig->n;
+				break;
+		}
+		fprintf(of, "%f %f %f %f\n", dx, cmag(sig_y), creal(sig_y), cimag(sig_y));
+	}
+	fprintf(of, "EOD\n");
+}
