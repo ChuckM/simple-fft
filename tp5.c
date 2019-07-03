@@ -40,7 +40,7 @@ main(int argc, char *argv[])
 	sig2 = alloc_buf(SAMPLE_RATE, SAMPLE_RATE);
 
 	printf("Building initial signal\n");
-	add_cos(sig1, SAMPLE_RATE * 0.20, 1.0);
+	add_cos(sig1, SAMPLE_RATE * 0.25, 1.0);
 	fft1 = compute_fft(sig1, BINS, W_BH);
 	printf("Now inverting it ... \n");
 	for (int k = 0; k < fft1->n; k++) {
