@@ -157,3 +157,5 @@ Negative frequency shifting
 ---------------------------
 The complex frequency -fs/4 = [1 + 0i, 0 + -1i, -1 + 0i, 0 + 1i]
 
+TP5 - gets the frequency back but it is the complex conjugate of the original
+which is kind of weird.

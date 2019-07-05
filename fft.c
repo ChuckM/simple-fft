@@ -217,6 +217,35 @@ compute_fft(sample_buffer *iq, int bins, window_function window)
 }
 
 /*
+ * compute_ifft(...)
+ *
+ * Computes the inverse FFT (the time domain signal) from the given
+ * FFT. This uses an algorithm described by Rick Lyons in his note
+ * "Four Ways to Compute and Inverse FFT USing the Forward FFT Algorithm"
+ */
+sample_buffer *
+compute_ifft(sample_buffer *fft)
+{
+	sample_buffer	*res;
+
+	res = compute_fft(fft, fft->n, W_RECT);
+	if (res == NULL) {
+		return NULL;
+	}
+
+	/* swap in place and divide by N */
+	res->data[0] = res->data[0] / (double) res->n;
+	res->data[res->n / 2] = res->data[res->n / 2] / (double) res->n;
+	for (int k = 1; k < (res->n / 2); k++) {
+		complex double td;
+		td = res->data[k] / (double) res->n;
+		res->data[k] = res->data[res->n - k] / (double) res->n;
+		res->data[res->n - k] = td;
+	}
+	return res;
+}
+
+/*
  * Writes out the values of the FFT in a gnuplot compatible way, the output
  * file should already be open. The output is appended to that file.
  * Output takes the form:

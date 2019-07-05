@@ -1,3 +1,6 @@
+/*
+ * fft.h - include file for the FFT functions
+ */
 #pragma once
 #include <stdint.h>
 #include <string.h> /* for memset */
@@ -19,8 +22,7 @@ enum fft_y_axis {
 
 int plot_fft(FILE *file, sample_buffer *fft, char *name,
 	enum fft_x_axis x, enum fft_y_axis y);
-/*
- * Some syntactic sugar to make this oft used code
- */
+
 sample_buffer *compute_fft(sample_buffer *s, int bins, window_function);
+sample_buffer *compute_ifft(sample_buffer *s);
 
