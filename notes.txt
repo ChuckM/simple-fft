@@ -153,9 +153,25 @@ EOD
 Returns a number of the plot, so that later it can be referred to
 as 'plot $plot_<n> using 1:2 with lines'
 
+implemented in FFT, now to add it to signal.
+
 Negative frequency shifting
 ---------------------------
 The complex frequency -fs/4 = [1 + 0i, 0 + -1i, -1 + 0i, 0 + 1i]
 
 TP5 - gets the frequency back but it is the complex conjugate of the original
 which is kind of weird.
+
+remez is still broken, found a couple of copies that had been worked on after
+the version I have, they still have problems. Mostly because I don't think
+anyone other than Parks and Mclellan understood what they were doing. The
+Approximation theory book is on order as I retrace their steps in order to
+understand how the Chebyshev approximations converge on a solution. Also
+looking at more modern (and memory hungry) solutions which might find a better
+filter solution.
+
+Deliverables:
+
+One a CMaj7th chord and its FFT, the other a "wonky" waveform where at
+one sample rate it is a sine wave but at a higher frequency it is not.
+

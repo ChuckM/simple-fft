@@ -789,10 +789,17 @@ load_signal(char *filename)
 }
 
 int
-plot_signal(FILE *of, char *name, sample_buffer *sig, int len, enum signal_x x)
+plot_signal(FILE *of, char *name, sample_buffer *sig, 
+			int start, int end, int len, enum signal_x x)
 {
 	fprintf(of, "$plot_%s << EOD\n", name);
-	for (int k = 0; k < len; k++) {
+	if (end <= start) {
+		end = start + len;
+	}
+	if (end >= sig->n) {
+		end = sig->n;
+	}
+	for (int k = start; k < end; k++) {
 		complex double sig_y;
 		double	dx, dy;
 
@@ -806,7 +813,9 @@ plot_signal(FILE *of, char *name, sample_buffer *sig, int len, enum signal_x x)
 				dx = (double) k / (double) sig->n;
 				break;
 		}
-		fprintf(of, "%f %f %f %f\n", dx, cmag(sig_y), creal(sig_y), cimag(sig_y));
+		/* prints real part, imaginary part, and magnitude */
+		fprintf(of, "%f %f %f %f\n", dx, creal(sig_y), cimag(sig_y), 
+									cmag(sig_y));
 	}
 	fprintf(of, "EOD\n");
 }
