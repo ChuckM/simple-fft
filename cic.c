@@ -74,9 +74,9 @@ cic_decimate(uint8_t *cur_sample, struct cic_filter *cic)
 	 *    4			   0xFFF		4095		R^N
 	 *    5			   0x7FFF		32767		R^N
 	 */
-	bitmask = cic->r;
 	for (int iter = 0; iter < cic->r; iter++) {
 		xn = ((*cur_sample & (0x1 << (iter % 8))) != 0) ? 1 : 0;
+		bitmask = cic->r;
 		for (int stage = 0; stage < cic->n; stage++) {
 			if (stage > 0) {
 				xn = cic->stages[stage-1].i;
@@ -182,7 +182,7 @@ main(int argc, char *argv[])
 	plot_fft(plot, fft, "cic", FFT_X_FREQ, FFT_Y_DB);
 	fprintf(plot, "$plot_time << EOD\n");
 	for (int i = 0; i < 8192; i++) {
-		fprintf(plot, "%f %f\n", (double) i / (double) sb->r, creal(sb->data[i]));
+		fprintf(plot, "%d %f\n", i, creal(sb->data[i]));
 	}
 	fprintf(plot, "EOD\n");
 	fprintf(plot,"set title '%s'\n", "CIC Test Data");
@@ -190,6 +190,6 @@ main(int argc, char *argv[])
 	fprintf(plot, "set grid\n");
 	fprintf(plot,"set ylabel 'Magnitude (%s)'\n", "dB");
 	fprintf(plot,"set key outside\n");
-	fprintf(plot,"plot [0:192000] $plot_cic using 1:2 with lines title 'CIC'\n");
+	fprintf(plot,"plot [0:8191] $plot_time using 1:2 with lines title 'CIC'\n");
 	fclose(plot);
 }

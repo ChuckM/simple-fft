@@ -22,7 +22,7 @@ BIN_DIR = bin
 
 PROGRAMS = demo tp tp2 tp3 tp4 waves hann bh dft_test fft_test \
 	   corr corr-plot multi-corr-plot filt-resp filt-test\
-	   filt-design sig-test tp5 cmaj7 cic
+	   filt-design sig-test tp5 cmaj7 cic cic-verify cic-test-data
 
 LDFLAGS = -lm
 
@@ -34,10 +34,13 @@ BINS = $(PROGRAMS:%=$(BIN_DIR)/%)
 
 HEADERS = signal.h fft.h dft.h windows.h
 
-all: dirs $(OBJECTS) $(BINS)
+all: dirs 3khz-tone-pdm.test $(OBJECTS) $(BINS)
 
 clean:
 	rm -f $(BINS) $(OBJECTS) $(OBJ_DIR)/remez.o plots/*.data
+
+3khz-tone-pdm.test: bin/cic-test-data
+	bin/cic-test-data
 
 dirs:
 	mkdir -p $(BIN_DIR)
