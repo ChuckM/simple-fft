@@ -179,7 +179,7 @@ main(int argc, char *argv[])
 	}
 	fft = compute_fft(sb, 8192, W_BH);
 	plot = fopen("plots/cic-data.plot", "w");
-	plot_fft(plot, fft, "cic", FFT_X_FREQ, FFT_Y_DB);
+	plot_fft(plot, fft, "cic"); /* XXX check this */
 	fprintf(plot, "$plot_time << EOD\n");
 	for (int i = 0; i < 8192; i++) {
 		fprintf(plot, "%d %f\n", i, creal(sb->data[i]));

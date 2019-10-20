@@ -20,8 +20,7 @@ enum fft_y_axis {
 	FFT_Y_MAG			/* Magnitude */
 };
 
-int plot_fft(FILE *file, sample_buffer *fft, char *name,
-	enum fft_x_axis x, enum fft_y_axis y);
+int plot_fft(FILE *file, sample_buffer *fft, char *name);
 
 sample_buffer *compute_fft(sample_buffer *s, int bins, window_function);
 sample_buffer *compute_ifft(sample_buffer *s);

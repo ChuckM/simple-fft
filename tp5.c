@@ -156,8 +156,8 @@ main(int argc, char *argv[])
 	fft2 = compute_fft(sig2, BINS, W_BH);
 	normalized = 1;
 	of = fopen("plots/tp5.plot", "w");
-	plot_fft(of, fft1, "fft1", FFT_X_NORM, FFT_Y_DB);
-	plot_fft(of, fft2, "fft2", FFT_X_NORM, FFT_Y_DB);
+	plot_fft(of, fft1, "fft1");
+	plot_fft(of, fft2, "fft2");
 	fprintf(of,"set title '%s'\n", title);
 	fprintf(of,"set xlabel 'Frequency'\n");
 	fprintf(of, "set grid\n");

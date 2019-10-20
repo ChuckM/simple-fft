@@ -102,7 +102,7 @@ main(int argc, char *argv[])
 						creal(sb->data[i]));
 	}
 	fprintf(of, "EOD\n");
-	plot_fft(of, fft, "fft", FFT_X_REAL_FREQ, FFT_Y_DB);
+	plot_fft(of, fft, "fft"); /* check this */
 	fprintf(of, "set multiplot layout 2,1\n");
 	fprintf(of, "set ylabel \"amplitude\"\n");
 	fprintf(of, "set xlabel \"Time (mS)\"\n");

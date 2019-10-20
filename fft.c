@@ -250,83 +250,62 @@ compute_ifft(sample_buffer *fft)
  * file should already be open. The output is appended to that file.
  * Output takes the form:
  *
- * $plot_<name> << EOD
- * <value> <value>
- * <value> <value>
+ * <name>_max = <value> 
+ * <name>_min = <value>
+ * <name>_freq = <value>
+ * <name>_nyquist = <value>
+ * $fft_<name> << EOD
+ * <f normalized> <f_hz> <mag_normalized> <mag_db> <mag_real>
+ * <f normalized> <f_hz> <mag_normalized> <mag_db> <mag_real>
  * ...
- * <value> <value>
+ * <f normalized> <f_hz> <mag_normalized> <mag_db> <mag_real>
  * EOD
  *
- * The number of FFT bins are in the signal buffer as ->n, the sample rate
- * (hence the frequency) is in the ->r member.
+ * The bins are output n/2 .. n (labeled as -0.5 to -0.0001)
+ *                     0 .. n/2 (labeled as 0 to 0.5)
+ *                     n/2 .. n (labeled as .50001 to 1.0)
+ *
+ * In that way you can plot it normalized or not, real or not by selecting
+ * the range to plot from the data.
+ *
+ * The number of FFT bins are in the signal buffer as buffer->n, the sample
+ * rate (hence the frequency) is in the buffer->r member.
+ *
  */
 int
-plot_fft(FILE *of, sample_buffer *fft, char *name, enum fft_x_axis x, enum fft_y_axis y)
+plot_fft(FILE *of, sample_buffer *fft, char *name)
 {
-	fprintf(of,"$plot_%s << EOD\n", name);
-	if (y == FFT_Y_NORM) {
-		/* insure MIN and MAX are accurate */
-		fft->sample_max = 0;
-		fft->sample_min = 0;
-		for (int k = 0; k < fft->n; k++) {
-			set_minmax(fft, k);
-		}
+	/* insure MIN and MAX are accurate */
+	fft->sample_max = 0;
+	fft->sample_min = 0;
+	for (int k = 0; k < fft->n; k++) {
+		set_minmax(fft, k);
+	}
+	fprintf(of, "%s_min = %f\n", name, fft->sample_min);
+	fprintf(of, "%s_max = %f\n", name, fft->sample_max);
+	fprintf(of, "%s_freq = %f\n", name, (double) fft->r);
+	fprintf(of, "%s_nyquist = %f\n", name, (double) fft->r / 2.0);
+	fprintf(of,"$fft_%s << EOD\n", name);
+	for (int k = fft->n / 2; k < fft->n; k++) {
+		double xnorm, freq, ynorm, db, mag;
+		xnorm = -0.5 + (double) (k - (fft->n / 2))/ (double) fft->n;
+		freq = xnorm * (double) fft->r;
+		ynorm = (cmag(fft->data[k]) - fft->sample_min) / 
+						(fft->sample_max - fft->sample_min);
+		db = 20 * log10(cmag(fft->data[k]));
+		mag = cmag(fft->data[k]);
+		fprintf(of, "%f %f %f %f %f\n", xnorm, freq, ynorm, db, mag);
 	}
 
-	if ((x == FFT_X_NORM) || (x == FFT_X_FREQ)) {
-		for (int k = fft->n / 2; k < fft->n; k++) {
-			double freq, mag;
-			freq = -0.5 + (double) (k - (fft->n / 2))/ (double) fft->n;
-			if (x == FFT_X_FREQ) {
-				freq *= (double) fft->r;
-			}
-			switch (y) {
-				default:
-				case FFT_Y_NORM:
-					mag = (cmag(fft->data[k]) - fft->sample_min) / 
-							(fft->sample_max - fft->sample_min);
-					break;
-				case FFT_Y_DB:
-					mag = 20 * log10(cmag(fft->data[k]));
-					break;
-				case FFT_Y_MAG:
-					mag = cmag(fft->data[k]);
-					break;
-			}
-			fprintf(of, "%f %f\n", freq, mag);
-		}
-	}
-	/*
-	 * Note: if X axis is "real" normalized, or "real" frequency then
- 	 * only the DC -> N/2 half of the FFT is plotted.
-	 */
-	for (int k = 0; k < fft->n/2; k++) {
-		double freq, mag;
-		freq = (double) (k)/ (double) fft->n;
-		switch (x) {
-			default:
-			case FFT_X_NORM:
-			case FFT_X_REAL_NORM:
-				break;
-			case FFT_X_FREQ:
-			case FFT_X_REAL_FREQ:
-				freq = freq * fft->r;
-				break;
-		}
-		switch (y) {
-			default:
-			case FFT_Y_NORM:
-				mag = (cmag(fft->data[k]) - fft->sample_min) / 
+	for (int k = 0; k < fft->n; k++) {
+		double xnorm, freq, ynorm, db, mag;
+		xnorm = (double) (k)/ (double) fft->n;
+		freq = xnorm * (double) fft->r;
+		ynorm = (cmag(fft->data[k]) - fft->sample_min) / 
 						(fft->sample_max - fft->sample_min);
-				break;
-			case FFT_Y_DB:
-				mag = 20 * log10(cmag(fft->data[k]));
-				break;
-			case FFT_Y_MAG:
-				mag = cmag(fft->data[k]);
-				break;
-		}
-		fprintf(of, "%f %f\n", freq, mag);
+		db = 20 * log10(cmag(fft->data[k]));
+		mag = cmag(fft->data[k]);
+		fprintf(of, "%f %f %f %f %f\n", xnorm, freq, ynorm, db, mag);
 	}
 	fprintf(of,	"EOD\n");
 	return 0;

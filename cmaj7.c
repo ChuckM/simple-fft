@@ -79,7 +79,7 @@ main(int argc, char *argv[])
 		fprintf(stderr, "FFT failed\n");
 		exit(1);
 	}
-	plot_fft(of, fft, "fft", FFT_X_REAL_FREQ, FFT_Y_DB);
+	plot_fft(of, fft, "fft");
 
 	fprintf(of,"set title 'CMaj7^{th} (Frequency Domain)' font \"Arial,14\"\n");
 	fprintf(of, "set xtics font \"Arial,10\"\n");
