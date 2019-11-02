@@ -286,6 +286,13 @@ plot_fft(FILE *of, sample_buffer *fft, char *name)
 	fprintf(of, "%s_freq = %f\n", name, (double) fft->r);
 	fprintf(of, "%s_nyquist = %f\n", name, (double) fft->r / 2.0);
 	fprintf(of,"$fft_%s << EOD\n", name);
+	fprintf(of, "#\n# Columns are:\n");
+	fprintf(of, "# 1. Normalized frequency (-.5 - 1.0)\n");
+	fprintf(of, "# 2. Frequency by sample rate (- nyquist, 2* nyquist)\n");
+	fprintf(of, "# 3. Normalized magnitude ( 0 - 1.0 )\n");
+	fprintf(of, "# 4. Magnitude in decibels\n");
+	fprintf(of, "# 5. Absolute magnitude\n");
+	fprintf(of, "#\n");
 	for (int k = fft->n / 2; k < fft->n; k++) {
 		double xnorm, freq, ynorm, db, mag;
 		xnorm = -0.5 + (double) (k - (fft->n / 2))/ (double) fft->n;

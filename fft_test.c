@@ -70,19 +70,12 @@ main(int argc, char *argv[])
 	}
 
 	/* And now put the data into a gnuplot compatible file */
-	of = fopen("plots/fft_test.data", "w");
+	of = fopen("plots/fft_test.plot", "w");
 	if (of == NULL) {
 		fprintf(stderr, "Unable to open ./plots/fft_test.data for writing.\n");
 		exit(1);
 	}
-	fprintf(of, "$plot_data << EOD\n");
-	fprintf(of, "index frequency magnitude\n");
-	for (int i = 0; i < fft->n; i++) {
-		fprintf(of, "%f %f %f\n", (double) i / (double) fft->n,
-		  (fft->r * (double) i / (double) (fft->n))/10.0,
-				20*log10(cmag(fft->data[i])));
-	}
-	fprintf(of, "EOD\n");
+	plot_fft(of, fft, "fft");
 	fprintf(of, "set title \"Fast Fourier Transform ");
 	switch (wf) {
 		default:
@@ -99,10 +92,10 @@ main(int argc, char *argv[])
 	fprintf(of, "set xlabel \"Frequency (kHz)\"\n");
 	fprintf(of, "set ylabel \"Magnitude (dB)\"\n");
 	fprintf(of, "set grid\n");
-	fprintf(of, "set xtics 0.1 0.05\n");
+/*	fprintf(of, "set xtics 0.1 0.05\n"); */
 	fprintf(of, "set nokey\n");
-	fprintf(of, "plot [%f:%f] $plot_data using 1:3 with lines lt rgb \"#1010ff\"\n", 0.0, 
-					(double) BINS / (double) fft->n);
+	fprintf(of, 
+	  "plot [0:fft_freq] $fft_fft using 2:4 with lines lt rgb \"#1010ff\"\n");
 	fclose(of);
 	printf("Done.\n");
 }
