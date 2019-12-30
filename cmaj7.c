@@ -38,12 +38,17 @@ extern char *optarg;
 
 /*
  * An illustrative plot of a CMaj7th chord
+ *
+ * Experiment: Try to get the notes without any other spectral noise
+ * by generating them using sines and going zero to zero crossing with
+ * and zero filling the rest.
  */
 int
 main(int argc, char *argv[])
 {
 	sample_buffer	*sig;
 	sample_buffer	*fft;
+	sample_buffer	*notes[4];
 	const char *options = "s:";
 	int		sr = SAMPLE_RATE;
 	FILE	*of;
@@ -61,11 +66,31 @@ main(int argc, char *argv[])
 	printf("Generating the figure for Cmaj7th chord\n");
 	printf("Sample rate: (%d)\n", sr);
 	sig = alloc_buf(sr, sr);
+	for (int i = 0; i < 4; i++) {
+		notes[i] = alloc_buf(sr, sr);
+	}
 	if (sig == NULL) {
 		fprintf(stderr, "Memory allocation failed\n");
 		exit(1);
 	}
 	/* C major 7th, C, E, G, Bb all from octave 4 */
+// #define EPSILON .00000000000000000000000000000000000000000000000000000000001
+#define EPSILON 0.01
+	add_cos_real(notes[0], C4, 1.0);
+	add_cos_real(notes[1], E4, 1.0);
+	add_cos_real(notes[2], G4, 1.0);
+	add_cos_real(notes[3], Bb4, 1.0);
+	for (int i = 0; i < notes[0]->n; i++) {
+		double sum;
+		sum = 0;
+		for (int k = 0; k < 4; k++) {
+			sum += creal(notes[k]->data[i]);
+		}
+		if (abs(sum) < EPSILON) {
+			printf("Convergence : %d\n", i);
+		}
+	}
+
 	add_cos(sig, C4, 0.50);
 	add_cos(sig, E4, 0.50);
 	add_cos(sig, G4, 0.50);
