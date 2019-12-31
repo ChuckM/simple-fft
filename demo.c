@@ -21,10 +21,10 @@
 #include <getopt.h>
 #include <math.h>
 #include <complex.h>
-#include "signal.h"
-#include "windows.h"
-#include "fft.h"
-#include "dft.h"
+#include <dsp/signal.h>
+#include <dsp/windows.h>
+#include <dsp/fft.h>
+#include <dsp/dft.h>
 
 extern int optind, opterr, optopt;
 extern char *optarg;

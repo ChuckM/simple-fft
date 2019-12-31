@@ -20,9 +20,9 @@
 #include <stdlib.h>
 #include <math.h>
 #include <complex.h>
-#include "signal.h"
-#include "windows.h"
-#include "dft.h"
+#include <dsp/signal.h>
+#include <dsp/windows.h>
+#include <dsp/dft.h>
 
 static const double __a[4] = { 0.35875, 0.48829, 0.14128, 0.01168 };
 

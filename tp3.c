@@ -19,8 +19,8 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <getopt.h>
-#include "fft.h"
-#include "filter.h"
+#include <dsp/fft.h>
+#include <dsp/filter.h>
 
 extern char *optarg;
 extern int optind, optopt, opterr;

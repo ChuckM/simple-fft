@@ -20,9 +20,9 @@
 #include <stdint.h>
 #include <math.h>
 #include <complex.h>
-#include "signal.h"
-#include "fft.h"
-#include "plot.h"
+#include <dsp/signal.h>
+#include <dsp/fft.h>
+#include <dsp/plot.h>
 
 #define BINS		1024		// 1024 FFT bins (must be power of 2)
 #define SAMPLE_RATE	10240		// 10.24 KHz sample rate

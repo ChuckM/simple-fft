@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
-#include "signal.h"
+#include <dsp/signal.h>
 
 void dump_signal(sample_buffer *sig1, sample_buffer *sig2, signal_format fmt);
 

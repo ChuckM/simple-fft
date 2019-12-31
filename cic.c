@@ -1,11 +1,10 @@
 /*
  * cic.c
  *
- * Implement an 'n' stage CIC filter to try out decoding pulse
- * modulated data and turning it into PCM data.
+ * Code to implement an 'n' stage CIC filters.
  *
  * Written September 2019 by Chuck McManis
- * Copyright (c) 2019, Charles McManis
+ * Copyright (c) 2019-2020, Charles McManis
  *
  * I hereby grant permission for anyone to use this software for any 
  * purpose that they choose, I do not warrant the software to be
@@ -20,12 +19,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
-#include "signal.h"
-#include "fft.h"
-#include "cic.h"
-
-uint8_t *cic_decimate(uint8_t *cur, struct cic_filter *cic);
-uint8_t *cic_interpolate(uint8_t *cur, struct cic_filter *cic);
+#include <dsp/signal.h>
+#include <dsp/fft.h>
+#include <dsp/cic.h>
 
 /*
  * uint8_t *cic_decimate( ... )
@@ -37,11 +33,17 @@ uint8_t *cic_interpolate(uint8_t *cur, struct cic_filter *cic);
  * The filter structure defines, 'R' (input to output sample ratio),
  * 'N' the number of stages, and 'M' for the combs (can be 1 or 2).
  */
-uint8_t *
-cic_decimate(uint8_t *cur_sample, struct cic_filter *cic)
+sample_buffer *
+cic_decimate(sample_buffer *inp, struct cic_filter_t *cic)
 {
 	uint32_t 	bitmask;	/* size of integrator accumulator */
 	uint32_t	xn;			/* input x(n) */
+	sample_buffer	*res;
+
+	/* allocate a buffer that is one n'th of the input buffer at a
+ 	 * sample rate that is also one n'th.
+	 */
+	res = alloc_buf(inp->n / cic->r, inp->r / cic->r);
 
 	/*
 	 * Integration phase: Each integrator stage is run in "parallel"

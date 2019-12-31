@@ -21,7 +21,7 @@
 
 #pragma once
 
-#include "signal.h"
+#include <dsp/signal.h>
 
 struct fir_filter {
 	char	*name;

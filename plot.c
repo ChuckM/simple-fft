@@ -17,7 +17,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <complex.h>
-#include "signal.h"
+#include <dsp/signal.h>
 
 /*
  * gen_plot

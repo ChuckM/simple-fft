@@ -28,8 +28,9 @@
 #include <stdlib.h>
 #include <math.h>
 #include <complex.h>
-#include "signal.h"
-#include "dft.h"
+#include <dsp/signal.h>
+#include <dsp/windows.h>
+#include <dsp/dft.h>
 
 #define BINS 1024
 #define SAMPLE_RATE	8192

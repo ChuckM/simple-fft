@@ -32,7 +32,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/unistd.h>
-#include "signal.h"
+#include <dsp/signal.h>
 
 /* the oft maligned multi-character constant */
 #define MCC(a, b, c, d)	( (((a) & 0xff) << 24) |\

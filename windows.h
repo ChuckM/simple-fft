@@ -13,7 +13,7 @@
  */
 
 #pragma once
-#include "signal.h"
+#include <dsp/signal.h>
 
 typedef enum 
 {

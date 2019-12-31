@@ -20,9 +20,9 @@
 #include <math.h>
 #include <complex.h>
 #include <string.h>
-#include "signal.h"
-#include "windows.h"
-#include "dft.h"
+#include <dsp/signal.h>
+#include <dsp/windows.h>
+#include <dsp/dft.h>
 
 /* 
  *  compute_dft(...)

@@ -20,9 +20,9 @@
 #include <string.h>
 #include <math.h>
 #include <complex.h>
-#include "signal.h"
-#include "windows.h"
-#include "fft.h"
+#include <dsp/signal.h>
+#include <dsp/windows.h>
+#include <dsp/fft.h>
 
 /* This defines turn of different levels of 'chattyness' about what
  *  The code is doing. It can be instructive when learning the code

@@ -16,45 +16,55 @@
 # NO WARRANTY, EXPRESS OR IMPLIED ACCOMPANIES THIS SOFTWARE. USE IT AT
 # YOUR OWN RISK.
 
-OBJ_DIR = obj
+OBJ_DIR = ./obj
 
-BIN_DIR = bin
+BIN_DIR = ./bin
+
+INC_DIR = ./dsp
 
 PROGRAMS = demo tp tp2 tp3 tp4 waves hann bh dft_test fft_test \
 	   corr corr-plot multi-corr-plot filt-resp filt-test\
-	   integrator filt-design sig-test tp5 cmaj7 cic cic-verify cic-test-data
+	   integrator filt-design sig-test tp5 cmaj7 \
+	   cic cic-test cic-verify cic-test-data
+
+HEADERS = cic.h dft.h fft.h filter.h plot.h \
+			remez.h signal.h windows.h
 
 LDFLAGS = -lm
 
-TOOL_SRC = signal.c plot.c fft.c dft.c windows.c filter.c
+TOOL_SRC = signal.c plot.c cic.c fft.c dft.c windows.c filter.c
 
 OBJECTS = $(TOOL_SRC:%.c=$(OBJ_DIR)/%.o)
 
-BINS = $(PROGRAMS:%=$(BIN_DIR)/%)
+INCLUDES = $(HEADERS:%.h=$(INC_DIR)/%.h)
 
-HEADERS = signal.h fft.h dft.h windows.h
+BINS = $(PROGRAMS:%=$(BIN_DIR)/%)
 
 all: dirs 3khz-tone-pdm.test $(OBJECTS) $(BINS)
 
 clean:
-	rm -f $(BINS) $(OBJECTS) $(OBJ_DIR)/remez.o plots/*.data
+	rm -f $(INCLUDES) $(BINS) $(OBJECTS) $(OBJ_DIR)/remez.o plots/*.data
 
 3khz-tone-pdm.test: bin/cic-test-data
 	bin/cic-test-data
 
-dirs:
+dirs: 
 	mkdir -p $(BIN_DIR)
 	mkdir -p $(OBJ_DIR)
+	mkdir -p $(INC_DIR)
 
-$(OBJ_DIR)/%.o: %.c %.h
-	cc -g -fPIC -c $< -o $@
+$(INC_DIR)/%.h: %.h
+	cp $< $@
 
-$(BIN_DIR)/%: %.c $(OBJECTS)
-	cc -g -o $@ $< ${OBJECTS} ${LDFLAGS}
+$(OBJ_DIR)/%.o: %.c $(INCLUDES)
+	cc -g -fPIC -I. -c $< -o $@
+
+$(BIN_DIR)/%: %.c $(OBJECTS) $(INCLUDES)
+	cc -g -I. -o $@ $< ${OBJECTS} ${LDFLAGS}
 
 $(OBJ_DIR)/remez.o: remez.c remez.h
 	cc -g -fPIC -o $@ -c remez.c
 
-$(BIN_DIR)/filt-design: filt-design.c $(OBJ_DIR)/remez.o
-	cc -o $@ $< ${OBJECTS} $(OBJ_DIR)/remez.o ${LDFLAGS}
+$(BIN_DIR)/filt-design: filt-design.c $(OBJ_DIR)/remez.o $(INCLUDES)
+	cc -I. -o $@ $< ${OBJECTS} $(OBJ_DIR)/remez.o ${LDFLAGS}
 

@@ -16,8 +16,8 @@
 #include <stdlib.h>
 #include <math.h>
 #include <complex.h>
-#include "signal.h"
-#include "fft.h"
+#include <dsp/signal.h>
+#include <dsp/fft.h>
 
 #define SAMPLE_RATE 8192
 #define BINS 1024

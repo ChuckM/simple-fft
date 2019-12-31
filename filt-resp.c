@@ -26,10 +26,10 @@
 #include <getopt.h>
 #include <math.h>
 #include <complex.h>
-#include "signal.h"
-#include "dft.h"
-#include "windows.h"
-#include "filter.h"
+#include <dsp/signal.h>
+#include <dsp/dft.h>
+#include <dsp/windows.h>
+#include <dsp/filter.h>
 
 /* define a sample filter */
 double sample_taps[34] = {

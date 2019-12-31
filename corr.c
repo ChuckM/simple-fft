@@ -18,7 +18,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
-#include "signal.h"
+#include <dsp/signal.h>
 
 #define SAMPLE_RATE 15000
 

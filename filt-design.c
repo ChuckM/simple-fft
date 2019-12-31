@@ -26,10 +26,10 @@
 #include <math.h>
 #include <complex.h>
 #include <getopt.h>
-#include "signal.h"
-#include "windows.h"
-#include "remez.h"
-#include "fft.h"
+#include <dsp/signal.h>
+#include <dsp/windows.h>
+#include <dsp/remez.h>
+#include <dsp/fft.h>
 
 #define SAMPLE	"sample.filter"
 #define	TAPS	127

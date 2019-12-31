@@ -18,9 +18,9 @@
 #include <math.h>
 #include <complex.h>
 #include <getopt.h>
-#include "signal.h"
-#include "windows.h"
-#include "fft.h"
+#include <dsp/signal.h>
+#include <dsp/windows.h>
+#include <dsp/fft.h>
 
 extern char *optarg;
 

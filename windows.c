@@ -23,8 +23,8 @@
 #include <stdio.h>
 #include <math.h>
 #include <complex.h>
-#include "signal.h"
-#include "windows.h"
+#include <dsp/signal.h>
+#include <dsp/windows.h>
 
 /* hann_window_function( ... )
  *

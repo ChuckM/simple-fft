@@ -19,8 +19,8 @@
 #include <strings.h>
 #include <math.h>
 #include <complex.h>
-#include "signal.h"
-#include "fft.h"
+#include <dsp/signal.h>
+#include <dsp/fft.h>
 
 extern char *optarg;
 extern int optind, opterr, optopt;

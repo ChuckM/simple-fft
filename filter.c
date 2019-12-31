@@ -25,9 +25,10 @@
 #include <strings.h>
 #include <math.h>
 #include <complex.h>
-#include "filter.h"
-#include "signal.h"
-#include "dft.h"
+#include <dsp/filter.h>
+#include <dsp/signal.h>
+#include <dsp/windows.h>
+#include <dsp/dft.h>
 
 /* Internal prototypes */
 static char *fetch_line(FILE *, char *, int);

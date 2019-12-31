@@ -10,7 +10,7 @@
 #include <fcntl.h>
 #include <stdint.h>
 #include <math.h>
-#include "signal.h"
+#include <dsp/signal.h>
 
 
 #define TEST_FILE "3khz-tone-pdm.test"

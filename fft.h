@@ -4,8 +4,8 @@
 #pragma once
 #include <stdint.h>
 #include <string.h> /* for memset */
-#include "signal.h"
-#include "windows.h"
+#include <dsp/signal.h>
+#include <dsp/windows.h>
 
 enum fft_x_axis {
 	FFT_X_NORM,			/* normalized */

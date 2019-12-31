@@ -22,10 +22,10 @@
 #include <stdint.h>
 #include <math.h>
 #include <complex.h>
-#include "signal.h"
-#include "windows.h"
-#include "fft.h"
-#include "plot.h"
+#include <dsp/signal.h>
+#include <dsp/windows.h>
+#include <dsp/fft.h>
+#include <dsp/plot.h>
 
 #define PLOTFILE	"plots/tp2-plot.data"
 #define BINS		1024		// 1024 FFT bins (must be power of 2)

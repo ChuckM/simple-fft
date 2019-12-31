@@ -25,10 +25,10 @@
 #include <math.h>
 #include <complex.h>
 #include <getopt.h>
-#include "signal.h"
-#include "filter.h"
-#include "windows.h"
-#include "fft.h"
+#include <dsp/signal.h>
+#include <dsp/filter.h>
+#include <dsp/windows.h>
+#include <dsp/fft.h>
 
 extern char *optarg;
 extern int	optind, opterr, optopt;
