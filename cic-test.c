@@ -23,60 +23,25 @@
 #include <stdlib.h>
 #include <dsp/signal.h>
 #include <dsp/fft.h>
+#include <dsp/cic.h>
 
-#define PDM_TEST_DATA "3khz-tone-pdm.test"
+struct cic_filter_t *filter;
 
-#define F_HIGH	3072000		/* 3.072 MSPS */
-#define F_LOW	24000		/* 24 kSPS */
-#define R	(F_HIGH/F_LOW)	/* Decimation factor */
-#define M	1
-#define	N	1				/* 1 stage */
-
-int32_t integrator_accumulator[N];
-int32_t	comb_value[N][M];
-
-/*
- * cic_filter(...)
- *
- * This implements the CIC decimating filter path.
- */
 int
-cic_filter(uint8_t *input, int r, int m, int n)
+main(int argc, char *argv[])
 {
-	for (int round = 0; round < r; round++) {
-		int32_t data;
-		/* input data is 0 or 1 depending on bit value */
-		data = (*(input + (round / 8)) & (1 << (round % 8))) ? 1 : -1;
-		for (int stage = 0; stage < n; stage++) {
-			int32_t value;
+	sample_buffer	*impulse;
+	sample_buffer	*resp;
+	sample_buffer	*fft1;
+	sample_buffer	*fft2;
 
-			/* we sum either the input data or the previous accumulator */
-			value = (stage > 0) ? integrator_accumulator[stage - 1] : data;
-			integrator_accumulator[stage] += value;
-		}
-	}
-	for (int stage = 0; stage < n; stage++) {
-		/* default (first) value, is the value of the last integrator */
-		int32_t value = integrator_accumulator[n-1];
-
-		/*
-		 * If there is more than one stage, later stages get their input
-		 * to the comb from the output of the previous comb
-		 */
-		if (stage > 0) {
-			value = comb_value[stage - 1][0];
-		}
-		switch (m) {
-			case 1:
-				value = value - comb_value[stage][0];
-				break;
-			case 2:
-				value = value - comb_value[stage][1];
-				break;
-			default:
-				fprintf(stderr, "Illegal value '%d' for M in cic_filter\n", m);
-				return 0;
-		}
-	}
-
+	/* N = 1, M = 2, R = 8 */
+	filter = cic_filter(1, 2, 8);
+	impulse = alloc_buf(1024, 1024);
+	clear_samples(impulse);
+	impulse->data[0] = 1.0;
+	resp = cic_decimate(impulse, filter);
+	fft1 = compute_fft(resp, 8192, W_RECT);
+	fft2 = compute_fft(impulse, 8192, W_RECT);
+	printf("Done.\n");
 }

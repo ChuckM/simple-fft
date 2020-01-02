@@ -175,14 +175,14 @@ fetch_line(FILE *f, char *buf, int bufsize)
  *     ...
  *     <double>
  */
-struct fir_filter *
+struct fir_filter_t *
 load_filter(FILE *f)
 {
 	char				buf[256];	/* line buffer */
 	char				*line;		/* interesting bit in the line buffer */
 	char				*name;
 	double				*taps;
-	struct fir_filter	*res;		/* filter result */
+	struct fir_filter_t	*res;		/* filter result */
 	int 				ll;			/* line length */
 	int					n_taps;
 	
@@ -217,7 +217,7 @@ load_filter(FILE *f)
 		return NULL;
 	}
 
-	res = (struct fir_filter *) malloc(sizeof(struct fir_filter));
+	res = (struct fir_filter_t *) malloc(sizeof(struct fir_filter_t));
 	if (res == NULL) {
 		fprintf(stderr, "Out of memory\n");
 		free(taps);
@@ -248,7 +248,7 @@ load_filter(FILE *f)
  * out of the FIR filter.
  */
 sample_buffer *
-filter(sample_buffer *signal, struct fir_filter *fir)
+fir_filter(sample_buffer *signal, struct fir_filter_t *fir)
 {
 	sample_buffer *res;
 
@@ -289,7 +289,7 @@ filter(sample_buffer *signal, struct fir_filter *fir)
  * out of the FIR filter.
  */
 double *
-filter_real(double signal[], int n, struct fir_filter *fir)
+filter_real(double signal[], int n, struct fir_filter_t *fir)
 {
 	double *res;
 

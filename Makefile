@@ -25,7 +25,7 @@ INC_DIR = ./dsp
 PROGRAMS = demo tp tp2 tp3 tp4 waves hann bh dft_test fft_test \
 	   corr corr-plot multi-corr-plot filt-resp filt-test\
 	   integrator filt-design sig-test tp5 cmaj7 \
-	   cic cic-test cic-verify cic-test-data
+	   cic-test cic-verify cic-test-data impulse
 
 HEADERS = cic.h dft.h fft.h filter.h plot.h \
 			remez.h signal.h windows.h

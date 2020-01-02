@@ -69,7 +69,7 @@ double sample_taps[34] = {
 		0.000579	// h33
 };
 
-struct fir_filter sample1 = {
+struct fir_filter_t sample1 = {
 	"34 Tap Test Filter",
 	34,
 	sample_taps
@@ -104,7 +104,7 @@ main(int argc, char *argv[])
 	int mag = MAG_NORMALIZE;
 	int sample_rate = SAMPLE_RATE;
 	int bins = BINS;
-	struct fir_filter	*test;
+	struct fir_filter_t	*test;
 	char filter_name[256];
 	const char *optstring = "hm:b:";
 	double *taps;

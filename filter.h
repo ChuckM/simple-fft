@@ -23,17 +23,17 @@
 
 #include <dsp/signal.h>
 
-struct fir_filter {
+struct fir_filter_t {
 	char	*name;
 	int		n_taps;
 	double	*taps;
 };
 
 /* Apply a filter to a signal */
-sample_buffer * filter(sample_buffer *signal, struct fir_filter *fir);
+sample_buffer * fir_filter(sample_buffer *signal, struct fir_filter_t *fir);
 
 /* Apply a filter to an array of real values */
-double * filter_real(double signal[], int n, struct fir_filter *fir);
+double * filter_real(double signal[], int n, struct fir_filter_t *fir);
 
 /* Parse a FIR filter descriptor file. */
-struct fir_filter *load_filter(FILE *f);
+struct fir_filter_t *load_filter(FILE *f);

@@ -22,9 +22,65 @@
 #include <dsp/signal.h>
 #include <dsp/fft.h>
 #include <dsp/cic.h>
+static int __decimation_iteration(complex double *data, struct cic_filter_t *cic);
+
 
 /*
- * uint8_t *cic_decimate( ... )
+ * One iteration of decimation, pulled out into its own routine
+ * for easier debugging.
+ */
+static int
+__decimation_iteration(complex double *data, struct cic_filter_t *cic)
+{
+	int ci_c, ci_p;
+	/*
+	 * Integration phase: Each integrator stage is run in "parallel"
+	 * The first integrator has as input the 'input' sample buffer.
+	 *
+	 * At the moment all integrators are 2s complement 32 bit counters.
+	 *
+	 * To start, we run the integrators 'r' times (this is the decimation
+	 * factor)
+	 */
+	for (int iter = 0; iter < cic->r; iter++) {
+		/* XXX: we really should have a 'to int' type function */
+		cic->stages[0].i += (int) data[iter];
+		/* Now run through the stages, stage 0 gets input from xn */
+		for (int stage = 1; stage < cic->n; stage++) {
+			/* integrate */
+			cic->stages[stage].i += cic->stages[stage-1].i;
+		}
+	}
+	/* Now for the combs:
+	 * For each stage
+	 * 		The current input is either the output of the last integrator
+	 * 		(first comb) or the output of the previous comb.
+	 * 		The x(n-2) or x(n-1) value is the current (ndx + 1) mod (M+1)
+	 * 		For M = 1 (M+1 = 2) and ndx oscillates between 0 and 1.
+	 * 		For M = 2 (M+1 = 3) the ndx oscillates around 0, 1, 2
+	 */
+	cic->stages[0].ci = (cic->stages[0].ci + 1) % 3;
+	/* value is from last integrator */
+	cic->stages[0].c[cic->stages[0].ci] = cic->stages[cic->n - 1].i;
+
+	/* now walk through the stages and update them */
+	for (int i = 1; i < cic->n; i++) {
+
+		cic->stages[i].ci = (cic->stages[i].ci + 1) % 3;
+		/* set current and previous for previous stage */
+		ci_c = cic->stages[i - 1].ci;
+		ci_p = (ci_c - cic->m) % 3;
+		/* input is x(n) - x(n-M) of previous comb */
+		cic->stages[i].c[cic->stages[i].ci] = 
+			cic->stages[i - 1].c[ci_c] - cic->stages[i - 1].c[ci_p];
+	}
+	ci_c = cic->stages[cic->n - 1].ci;
+	ci_p = (ci_c - cic->m) % 3;
+	return (cic->stages[cic->n - 1].c[ci_c] - cic->stages[cic->n - 1].c[ci_p]);
+}
+
+/*
+ * cic_decimate( ... )
  *
  * This processes 'R' bits of input (must be a multiple of 8) through
  * 'N' stages of integrators and combs. It returns a pointer to the
@@ -36,176 +92,42 @@
 sample_buffer *
 cic_decimate(sample_buffer *inp, struct cic_filter_t *cic)
 {
-	uint32_t 	bitmask;	/* size of integrator accumulator */
-	uint32_t	xn;			/* input x(n) */
 	sample_buffer	*res;
+	uint32_t	inp_ndx, res_ndx = 0; /* index into sample buffers */
 
 	/* allocate a buffer that is one n'th of the input buffer at a
  	 * sample rate that is also one n'th.
 	 */
 	res = alloc_buf(inp->n / cic->r, inp->r / cic->r);
-
-	/*
-	 * Integration phase: Each integrator stage is run in "parallel"
-	 * The first integrator has as input the 'bit' from the bit stream.
-	 * (this for MEMs bitstreams) otherwise it would be the sample. For
-	 * later stages the input is the output of the previous bitstream.
-	 *
-	 * Integration counters: wraps at (r-1) for N=0
-	 * Given R = 8 and N = 5, bitmask at each integrator is: 
-	 * Iteration	Bitmask		Max value
-	 *   (N)		   (R-1)
-	 *    1			   0x7			7			R^N
-	 *    2			   0x3F			63			R^N
-	 *    3			   0x1FF		511			R^N
-	 *    4			   0xFFF		4095		R^N
-	 *    5			   0x7FFF		32767		R^N
-	 */
-	for (int iter = 0; iter < cic->r; iter++) {
-		xn = ((*cur_sample & (0x1 << (iter % 8))) != 0) ? 1 : 0;
-		bitmask = cic->r;
-		for (int stage = 0; stage < cic->n; stage++) {
-			if (stage > 0) {
-				xn = cic->stages[stage-1].i;
-			}
-			/* integrate */
-			cic->stages[stage].i += xn;
-			/* wrap */
-			cic->stages[stage].i &= (bitmask - 1);
-			/* next integrator */
-			bitmask = bitmask * cic->r;
-		}
-		/* move the byte counter after you have processed 8 bits */
-		if (((iter + 1) % 8) == 0) {
-			cur_sample++;
-		}
-	}
-	/* Now for the combs:
-	 * For each stage
-	 * 		The current input is either the output of the last integrator
-	 * 		(first comb) or the output of the previous comb.
-	 * 		The x(n-2) or x(n-1) value is the current (ndx + 1) mod (M+1)
-	 * 		For M = 1 (M+1 = 2) and ndx oscillates between 0 and 1.
-	 * 		For M = 2 (M+1 = 3) the ndx oscillates around 0, 1, 2
-	 */
-	xn = cic->stages[cic->n - 1].i;
-	for (int stage = 0; stage < cic->n; stage++) {
-		if (stage > 0) {
-			struct cic_stage *prev_stage = &(cic->stages[stage-1]);
-			xn = prev_stage->c[prev_stage->ndx] - 
-					prev_stage->c[(prev_stage->ndx + 1) % (cic->m + 1)];
-		}
-		cic->stages[stage].ndx += 1;
-		cic->stages[stage].ndx = cic->stages[stage].ndx % (cic->m + 1);
-		cic->stages[stage].c[cic->stages[stage].ndx] = xn;
-	}
-	return cur_sample;
-}
-
-/*
- * cic_decimation_filter( n, m, r )
- *
- * Generate a CIC filter with 'n' stages, a decimation rate of 'r'
- * and an M factor of 'm'.
- * TODO: sanity check the numbers passed. (m == 1 or 2)
- */
-struct cic_filter *
-cic_decimation_filter(int n, int m, int r)
-{
-	struct cic_filter	*result;
-	struct cic_stage	*stages;
-
-	stages = calloc(n, sizeof(struct cic_stage));
-	if (! stages) {
+	if (res == NULL) {
 		return NULL;
 	}
-	result = calloc(1, sizeof(struct cic_filter));
-	if (! result) {
-		free(stages);
-		return NULL;
+
+	for (int i = 0; (i + cic->r) < inp->n; i += cic->r) {
+		res->data[res_ndx++] = __decimation_iteration(inp->data + i, cic);
 	}
-	result->stages = stages;
-	result->n = n;
-	result->m = m;
-	result->r = r;
-	return result;
+	return res;
 }
 
-#define TEST_DATA	"3khz-tone-pdm.test"
-
-/* trying to abstract sample stream */
-uint32_t next_sample();
-
-/*
- * Test code to process the PDM data. It runs the data through a CIC
- * decimation filter to generate multi-bit PCM. We then take the FFT
- * of that result and plot it to verify that we've successfully recovered
- * the test data. (should be a 3kHz tone)
- *
- * Some assumptions that are baked in at the start,
- * 	- The test data is encoded at 3.072 MSPS (typical MEMS microphone)
- * 	- Samples are 1 bit per sample, packed 8 to a byte.
- * 	- The output is PCM
- */
-uint8_t buffer[768000];
-
-int
-main(int argc, char *argv[])
+/* create a CIC filter (can interpolate or decimate) */
+struct cic_filter_t *
+cic_filter(int n, int m, int r)
 {
-	sample_buffer *sb;
-	sample_buffer *fft;
-	FILE	*inp;
-	FILE	*plot;
-	struct cic_filter filt;
-	struct cic_stage filt_stages[5];
-	uint8_t	*cur_ptr;
-	uint32_t	mask;
+	struct cic_filter_t *res;
+	struct cic_stage_t *s;
 
-	inp = fopen(TEST_DATA, "r");
-	if (inp == NULL) {
-		fprintf(stderr, "Can't open test data file: %s\n", TEST_DATA);
-		exit(1);
+	s = calloc(n, sizeof(struct cic_stage_t));
+	if (s == NULL) {
+		return NULL;
 	}
-	fread(buffer, sizeof(uint8_t), 384000, inp);
-	fclose(inp);
-	filt.n = 5;
-	filt.m = 1;
-	filt.r = 8;
-	filt.stages = &filt_stages[0];
-	memset(filt_stages, 0, sizeof(struct cic_stage) * 5);
-	printf("Max integration values:\n");
-	mask = filt.r;
-	for (int k = 0; k < filt.n; k++) {
-		printf("  Stage %d: 0x%x\n", k+1, mask-1);
-		mask = mask * filt.r;
+	res = calloc(1, sizeof(struct cic_filter_t));
+	if (res == NULL) {
+		free(s);
+		return NULL;
 	}
-	
-	sb = alloc_buf(8192, 192000);
-	cur_ptr = buffer;
-	for (int i = 0; i < 8192; i++) {
-		cur_ptr = cic_decimate(cur_ptr, &filt);
-		sb->data[i] = (double) (filt.stages[4].c[filt.stages[4].ndx]) / 32767.0;
-	}
-	printf("Filter state:\n");
-	for (int k = 0; k < filt.n; k++) {
-		printf("    Stage %d:\n", k+1);
-		printf("      Integrator: %d\n", filt.stages[k].i);
-		printf("           Combs: %d %d\n", filt.stages[k].c[filt.stages[k].ndx],
-			filt.stages[k].c[(filt.stages[k].ndx + 1) % (filt.m + 1)]);
-	}
-	fft = compute_fft(sb, 8192, W_BH);
-	plot = fopen("plots/cic-data.plot", "w");
-	plot_fft(plot, fft, "cic"); /* XXX check this */
-	fprintf(plot, "$plot_time << EOD\n");
-	for (int i = 0; i < 8192; i++) {
-		fprintf(plot, "%d %f\n", i, creal(sb->data[i]));
-	}
-	fprintf(plot, "EOD\n");
-	fprintf(plot,"set title '%s'\n", "CIC Test Data");
-	fprintf(plot,"set xlabel 'Frequency'\n");
-	fprintf(plot, "set grid\n");
-	fprintf(plot,"set ylabel 'Magnitude (%s)'\n", "dB");
-	fprintf(plot,"set key outside\n");
-	fprintf(plot,"plot [0:8191] $plot_time using 1:2 with lines title 'CIC'\n");
-	fclose(plot);
+	res->n = n;
+	res->m = m;
+	res->r = r;
+	res->stages = s;
+	return res;
 }

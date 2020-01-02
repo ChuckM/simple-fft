@@ -122,7 +122,7 @@ static double __filter_taps[81] = {
 	-0.011451,	// h79
 	0.000005	// h80
 };
-struct fir_filter my_filter = {
+struct fir_filter_t my_filter = {
 	"Test Filter",
 	81,
 	__filter_taps
@@ -142,7 +142,7 @@ main(int argc, char *argv[])
 	sample_buffer	*filt_resp;
 	sample_buffer	*filter_coefficients;
 	sample_buffer	*fft_filtered;
-	struct fir_filter	*filt = &my_filter;
+	struct fir_filter_t	*filt = &my_filter;
 	int				normalized = 0;
 	char			*test_filter;
 	FILE			*of;
@@ -184,7 +184,7 @@ main(int argc, char *argv[])
 	sig = alloc_buf(SAMPLE_SIZE, SAMPLE_RATE);
 	add_cos(sig, SAMPLE_RATE / 8.0, 1.0);
 	add_cos(sig, 3.0 * SAMPLE_RATE / 8.0, 1.0);
-	filtered_sig = filter(sig, filt);
+	filtered_sig = fir_filter(sig, filt);
 	fft_orig = compute_fft(sig, BINS, W_BH);
 	fft_filtered = compute_fft(filtered_sig, BINS, W_BH);
 	for (int i = 0; i < fft_orig->n; i++) {

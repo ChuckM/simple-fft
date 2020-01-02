@@ -10,7 +10,7 @@
  */
 struct cic_stage_t {
 	uint32_t i;		/* Integrator term  */
-	int		ndx;	/* Comb ndx for FIFO operation */
+	int		ci;		/* Comb ndx for FIFO operation */
 	uint32_t c[3];	/* Comb term: x(n), x(n-1), x(n-2) */
 };
 
@@ -21,7 +21,7 @@ struct cic_filter_t {
 	int			n;		/* number of stages */
 	int			m;		/* M = {1, 2} */
 	int			r;		/* decimation/interpolation ratio */
-	struct cic_stage *stages;
+	struct cic_stage_t *stages;
 };
 
 /* apply the filter to a sample buffer */
