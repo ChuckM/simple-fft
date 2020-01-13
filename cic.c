@@ -42,6 +42,11 @@ __decimation_iteration(complex double *data, struct cic_filter_t *cic)
 	 * To start, we run the integrators 'r' times (this is the decimation
 	 * factor)
 	 */
+#if 0
+	/* this was my first test, and ran the integrators front to back
+	 * but now i think this is wrong and they should be run back to 
+	 * front.
+	 */
 	for (int iter = 0; iter < cic->r; iter++) {
 		/* XXX: we really should have a 'to int' type function */
 		cic->stages[0].i += (int) data[iter];
@@ -50,6 +55,14 @@ __decimation_iteration(complex double *data, struct cic_filter_t *cic)
 			/* integrate */
 			cic->stages[stage].i += cic->stages[stage-1].i;
 		}
+	}
+#endif
+	for (int iter = 0; iter < cic->r; iter++) {
+		for (int stage = (cic->n - 1); stage > 0; stage--) {
+			/* integrate */
+			cic->stages[stage].i += cic->stages[stage-1].i;
+		}
+		cic->stages[0].i += (int) data[iter];
 	}
 	/* Now for the combs:
 	 * For each stage

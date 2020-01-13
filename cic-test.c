@@ -27,6 +27,7 @@
 
 struct cic_filter_t *filter;
 
+#define PLOT_FILE	"./plots/cic-test.plot"
 int
 main(int argc, char *argv[])
 {
@@ -34,14 +35,50 @@ main(int argc, char *argv[])
 	sample_buffer	*resp;
 	sample_buffer	*fft1;
 	sample_buffer	*fft2;
+	int				N = 3;
+	int				M = 1;
+	int				R = 5;
+	FILE			*of;
 
-	/* N = 1, M = 2, R = 8 */
-	filter = cic_filter(1, 2, 8);
-	impulse = alloc_buf(1024, 1024);
-	clear_samples(impulse);
-	impulse->data[0] = 1.0;
+	printf("Test CIC filter with N=%d, M=%d, and R=%d\n", N, M, R);
+	filter = cic_filter(N, M, R);
+	impulse = alloc_buf(500, 500);
+#ifdef STEP_RESPONSE
+	/* Step response */
+	for (int i = 0; i < impulse->n; i++) {
+		impulse->data[i] = (i < (impulse->n/2)) ? 0.0 : 1.0;
+	}
+#endif
+#define IMPULSE_RESPONSE
+#ifdef IMPULSE_RESPONSE
+	/* Impulse response */
+	impulse->data[0] = 1;
+	for (int i = 1; i < impulse->n; i++) {
+		impulse->data[i] = 0;
+	}
+#endif
 	resp = cic_decimate(impulse, filter);
+	printf("Simple Impulse test, first 10 values:\n");
+	for (int i = 0; i < 10; i++) {
+		printf("[%2d] - %f\n", i, creal(resp->data[i]));
+	}
+	exit(0);
 	fft1 = compute_fft(resp, 8192, W_RECT);
 	fft2 = compute_fft(impulse, 8192, W_RECT);
+	of = fopen(PLOT_FILE, "w");
+	if (of == NULL) {
+		fprintf(stderr, "Error, can't open %s\n", PLOT_FILE);
+		exit(1);
+	}
+	plot_fft(of, fft1, "cic");
+	fprintf(of, "set title 'CIC Test of Impulse Response (N=%d, M=%d, R=%d)'\n",
+			N, M, R);
+	fprintf(of, "set xlabel 'Frequency (normalized)\n");
+	fprintf(of, "set ylabel 'Magnitude (dB)\n");
+	fprintf(of, "set key box font \"Inconsolata,10\" autotitle columnheader\n");
+	fprintf(of, "set grid\n");
+	fprintf(of, "plot [0:0.5] $cic_fft_data using cic_xnorm_col:cic_ydb_col"
+									" with lines lt rgb '#ff1010'\n");
+	fclose(of);
 	printf("Done.\n");
 }

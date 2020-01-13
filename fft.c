@@ -254,6 +254,11 @@ compute_ifft(sample_buffer *fft)
  * <name>_min = <value>
  * <name>_freq = <value>
  * <name>_nyquist = <value>
+ * <name>_xnorm_col = 0
+ * <name>_xfreq_col = 1
+ * <name>_ynorm_col = 2
+ * <name>_ydb_col = 3
+ * <name>_ymag_col = 4
  * $fft_<name> << EOD
  * <f normalized> <f_hz> <mag_normalized> <mag_db> <mag_real>
  * <f normalized> <f_hz> <mag_normalized> <mag_db> <mag_real>
@@ -285,7 +290,12 @@ plot_fft(FILE *of, sample_buffer *fft, char *name)
 	fprintf(of, "%s_max = %f\n", name, fft->sample_max);
 	fprintf(of, "%s_freq = %f\n", name, (double) fft->r);
 	fprintf(of, "%s_nyquist = %f\n", name, (double) fft->r / 2.0);
-	fprintf(of,"$fft_%s << EOD\n", name);
+ 	fprintf(of, "%s_xnorm_col = 1\n", name);
+	fprintf(of, "%s_xfreq_col = 2\n", name);
+	fprintf(of, "%s_ynorm_col = 3\n", name);
+	fprintf(of, "%s_ydb_col = 4\n", name);
+	fprintf(of, "%s_ymag_col = 5\n", name);
+	fprintf(of,"$%s_fft_data << EOD\n", name);
 	fprintf(of, "#\n# Columns are:\n");
 	fprintf(of, "# 1. Normalized frequency (-.5 - 1.0)\n");
 	fprintf(of, "# 2. Frequency by sample rate (- nyquist, 2* nyquist)\n");

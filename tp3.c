@@ -58,7 +58,7 @@ main(int argc, char *argv[])
 	sample_buffer 	*sig2;
 	sample_buffer	*fft1;
 	sample_buffer	*fft2;
-	struct fir_filter	*filt;
+	struct fir_filter_t	*filt;
 	double	i_data[SAMPLE_RATE * 4];
 	double	*i_filtered;
 	double	q_data[SAMPLE_RATE * 4];

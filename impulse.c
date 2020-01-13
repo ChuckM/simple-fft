@@ -45,16 +45,37 @@ main(int argc, char *argv[])
 	FILE	*of;
 
 	printf("Generate impulse...\n");
-	buf = alloc_buf(8192, 8192);
+	buf = alloc_buf(100, 100);
 	clear_samples(buf);
 	if (argc == 2) {
 		ndx = atoi(argv[1]);
 	}
+	for (int i = 0; i < buf->n; i++) {
+		if (i < (buf->n/2)) {
+			buf->data[i] = 0;
+		} else {
+			buf->data[i] = 1.0;
+		}
+	}
+#if 0
+/*
+ * Older version
+ */
 	buf->data[ndx] = 1.0;
+	buf->data[ndx+1] = -1.0;
+#endif
 	fft = compute_fft(buf, 8192, W_RECT);
 	of = fopen(PLOT, "w");
 	plot_fft(of, fft, "impulse");
-	fprintf(of,"plot $fft_impulse\n");
+	fprintf(of, "set title 'Impulse FFT Plot (Rectangular Window)'\n");
+	fprintf(of, "set xlabel \"Frequency (kHz)\"\n");
+	fprintf(of, "set ylabel \"Magnitude (dB)\"\n");
+	fprintf(of, "set grid\n");
+/*	fprintf(of, "set xtics 0.1 0.05\n"); */
+	fprintf(of, "set nokey\n");
+	fprintf(of, 
+	  "plot [-0.5:0.5] $impulse_fft_data using impulse_xnorm_col:impulse_yabs_col"
+				" with lines lt rgb \"#1010ff\"\n");
 	fclose(of);
 	printf("Done.\n");
 }
