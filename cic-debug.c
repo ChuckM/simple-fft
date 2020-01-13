@@ -64,7 +64,10 @@ int
 main(int argc, char *argv[])
 {
 	int32_t	integrators[3];
-	int32_t	combs[3];
+	struct {
+		int32_t	xn;
+		int32_t	yn;
+	} combs[3];
 	int32_t	D = 5;
 	int32_t	xn, yn;
 	int32_t	output[256];
@@ -75,7 +78,7 @@ main(int argc, char *argv[])
 		output[i] = 0;
 	}
 	for (int i = 0; i < 3; i++) {
-		integrators[i] = combs[i] = 0;
+		integrators[i] = combs[i].xn = combs[i].yn = 0;
 	}
 	
 	/* assertion #1, so long as D > S (D = 5, S = 3 so that constraint
@@ -118,9 +121,11 @@ main(int argc, char *argv[])
 			for (int k = 0; k < 3; k++) {
 				if (k == 2) {
 					/* Rick Lyon's suggests the summing operator */
+					/* XXX this was incorrect, it is a 'shift' operator */
 					combs[0] += (integrators[2] - combs[0]);
 				} else {
 					/* Rick Lyon's suggests the summing operator */
+					/* XXX this was incorrect, it is a 'shift' operator */
 					combs[2 - k] += (combs[1 - k] - combs[ 2 - k]);
 				}
 			}
@@ -131,8 +136,10 @@ main(int argc, char *argv[])
 			 */
 			for (int k = 0; k < 3; k++) {
 				/* Rick Lyon's suggests the summing operator */
-				combs[k] = ((k == 0) ? integrators[2] : combs[k - 1]) - 
-						combs[k];
+				/* XXX this was incorrect, it is a 'shift' operator */
+				xn = (k == 0) ? integrators[2] : combs[k-1].yn;
+				combs[k].yn = xn - combs[k].xn;
+				combs[k].xn = xn;
 			}
 #endif
 		} else {
@@ -143,7 +150,7 @@ main(int argc, char *argv[])
 		if ((i % D) == 0) {
 			printf("  %3d : %3d : %3d : %3d : %3d : %4d : %4d : %4d : y[%d]\n",
 				i, xn, integrators[0], integrators[1], integrators[2],
-				   combs[0], combs[1], combs[2], yn);
+				   combs[0].yn, combs[1].yn, combs[2].yn, yn);
 				yn++;
 		} else {
 			printf("  %3d : %3d : %3d : %3d : %3d :      :      :      :\n",
