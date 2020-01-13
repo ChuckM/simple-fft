@@ -117,9 +117,11 @@ main(int argc, char *argv[])
 #ifdef REVERSE_COMPUTE
 			for (int k = 0; k < 3; k++) {
 				if (k == 2) {
-					combs[0] = integrators[2] - combs[0];
+					/* Rick Lyon's suggests the summing operator */
+					combs[0] += (integrators[2] - combs[0]);
 				} else {
-					combs[2 - k] = combs[1 - k] - combs[ 2 - k];
+					/* Rick Lyon's suggests the summing operator */
+					combs[2 - k] += (combs[1 - k] - combs[ 2 - k]);
 				}
 			}
 #else
@@ -128,6 +130,7 @@ main(int argc, char *argv[])
 			 * 		this is the input value, minus the previous value
 			 */
 			for (int k = 0; k < 3; k++) {
+				/* Rick Lyon's suggests the summing operator */
 				combs[k] = ((k == 0) ? integrators[2] : combs[k - 1]) - 
 						combs[k];
 			}
