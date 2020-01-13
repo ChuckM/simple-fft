@@ -57,14 +57,20 @@ __decimation_iteration(complex double *data, struct cic_filter_t *cic)
 		}
 	}
 #endif
+	XXX
+	fix this, make integrators from first to last, match
+	the last integrator with the first comb, so that the
+	math of finding the xn input is easy, and then the first
+	comb's yn value becomes the filter output.
 	for (int iter = 0; iter < cic->r; iter++) {
-		for (int stage = (cic->n - 1); stage > 0; stage--) {
+		cic->stages[0].i += (int) data[iter];
+		for (int stage = 1; stage < cic->n; stage++) {
 			/* integrate */
 			cic->stages[stage].i += cic->stages[stage-1].i;
 		}
-		cic->stages[0].i += (int) data[iter];
 	}
 	/* Now for the combs:
+	 * XXX Run these in reverse
 	 * For each stage
 	 * 		The current input is either the output of the last integrator
 	 * 		(first comb) or the output of the previous comb.

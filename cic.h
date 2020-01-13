@@ -10,8 +10,9 @@
  */
 struct cic_stage_t {
 	uint32_t i;		/* Integrator term  */
+	int32_t	yn;		/* Comb 'output' term */
 	int		ci;		/* Comb ndx for FIFO operation */
-	uint32_t c[3];	/* Comb term: x(n), x(n-1), x(n-2) */
+	uint32_t c[2];	/* Comb history term: x(n-1), x(n-2) */
 };
 
 /*
