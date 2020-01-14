@@ -35,9 +35,9 @@ main(int argc, char *argv[])
 	sample_buffer	*resp;
 	sample_buffer	*fft1;
 	sample_buffer	*fft2;
-	int				N = 3;
-	int				M = 1;
-	int				R = 5;
+	int				N = 8;
+	int				M = 2;
+	int				R = 32;
 	FILE			*of;
 
 	printf("Test CIC filter with N=%d, M=%d, and R=%d\n", N, M, R);
@@ -52,8 +52,12 @@ main(int argc, char *argv[])
 #define IMPULSE_RESPONSE
 #ifdef IMPULSE_RESPONSE
 	/* Impulse response */
-	impulse->data[0] = 1;
-	for (int i = 1; i < impulse->n; i++) {
+	impulse->data[0] = 0;
+	impulse->data[1] = 0;
+	impulse->data[2] = 0;
+	impulse->data[3] = 0;
+	impulse->data[4] = 1;
+	for (int i = 5; i < impulse->n; i++) {
 		impulse->data[i] = 0;
 	}
 #endif
@@ -62,7 +66,6 @@ main(int argc, char *argv[])
 	for (int i = 0; i < 10; i++) {
 		printf("[%2d] - %f\n", i, creal(resp->data[i]));
 	}
-	exit(0);
 	fft1 = compute_fft(resp, 8192, W_RECT);
 	fft2 = compute_fft(impulse, 8192, W_RECT);
 	of = fopen(PLOT_FILE, "w");
@@ -77,7 +80,7 @@ main(int argc, char *argv[])
 	fprintf(of, "set ylabel 'Magnitude (dB)\n");
 	fprintf(of, "set key box font \"Inconsolata,10\" autotitle columnheader\n");
 	fprintf(of, "set grid\n");
-	fprintf(of, "plot [0:0.5] $cic_fft_data using cic_xnorm_col:cic_ydb_col"
+	fprintf(of, "plot [0:0.5] $cic_fft_data using cic_xnorm_col:cic_ynorm_col"
 									" with lines lt rgb '#ff1010'\n");
 	fclose(of);
 	printf("Done.\n");

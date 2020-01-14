@@ -9,10 +9,10 @@
  * This is one stage of an 'N' stage CIC filter.
  */
 struct cic_stage_t {
-	uint32_t i;		/* Integrator term  */
+	uint32_t i;		/* Integrator output term  */
 	int32_t	yn;		/* Comb 'output' term */
-	int		ci;		/* Comb ndx for FIFO operation */
-	uint32_t c[2];	/* Comb history term: x(n-1), x(n-2) */
+	int		ndx;	/* Comb ndx for FIFO operation */
+	uint32_t xn[3];	/* Comb history term: x(n-1), x(n-2) */
 };
 
 /*

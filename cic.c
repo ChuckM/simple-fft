@@ -23,79 +23,105 @@
 #include <dsp/fft.h>
 #include <dsp/cic.h>
 static int __decimation_iteration(complex double *data, struct cic_filter_t *cic);
+static inline int __comb_value(struct cic_stage_t *s, int m);
 
+/*
+ * Simple helper function to compute the output of the Comb, only supports
+ * m = 2 or m = 1.
+ *
+ * This is an insanely stupid algorithm that trys to save some memory
+ * copies. For the three element array:
+ *
+ *      +----- ndx points here when called
+ *     /
+ * [ n-2 ] [ n-1 ] [n-0]
+ *    \       \      \
+ *     \       \      \--- ndx + 2 mod 3
+ *      \       \--------- ndx + 1 mod 3
+ *       \---------------- ndx + 0 mod 3
+ * Assumes 'ndx' points to the end of the list, 
+ * Assumes list is 3 entries long and circular,
+ * So 'current' Xn is at ndx-1, xn-2 is under ndx, and xn-1 is under ndx+1 
+ */
+static inline int __comb_value(struct cic_stage_t *s, int m)
+{
+	int ndx1 = (s->ndx + 2) % 3;
+	/* this points to Xn-1 or Xn-2 */
+	int ndx2 = (s->ndx + ((m == 1) ? 1 : 0)) % 3;
+	int	xn = s->xn[ndx1];
+	return (s->xn[ndx1] - s->xn[ndx2]);
+}
+
+#if 0
+dump_stage(int n, struct cic_filter_t *cic)
+{
+	printf("\tCo%d = %d, (Xn, Xn-1, Xn-2) = (%d, %d, %d)\n", 0, 
+		__comb_value(&cic->stages[cic->n-1], cic->m),
+		cic->stages[cic->n-1].xn[ndx],
+		cic->stages[cic->n-1].xn[((ndx+2) % 3)],
+		cic->stages[cic->n-1].xn[((ndx+1) % 3)]);
+	for (int n = cic->n - 2; n >= 0; n--) {
+		/* print out state (ndx wasn't updated so points to xn) */
+		printf("\tCo%d = %d, (Xn, Xn-1, Xn-2) = (%d, %d, %d)\n", cic->n - n, 
+			__comb_value(&cic->stages[n], cic->m),
+			cic->stages[n].xn[ndx],
+			cic->stages[n].xn[((ndx+2) % 3)],
+			cic->stages[n].xn[((ndx+1) % 3)]);
+	}
+}
+#endif
 
 /*
  * One iteration of decimation, pulled out into its own routine
  * for easier debugging.
+ * 
+ * NOTE: it will consume 'r' data input samples and generate 1
+ * data output sample.
  */
 static int
 __decimation_iteration(complex double *data, struct cic_filter_t *cic)
 {
-	int ci_c, ci_p;
+	int32_t ndx, xn, stage;
 	/*
-	 * Integration phase: Each integrator stage is run in "parallel"
+	 * Integration phase:
 	 * The first integrator has as input the 'input' sample buffer.
-	 *
-	 * At the moment all integrators are 2s complement 32 bit counters.
+	 * All integrators are 2s complement 32 bit counters.
 	 *
 	 * To start, we run the integrators 'r' times (this is the decimation
 	 * factor)
 	 */
-#if 0
-	/* this was my first test, and ran the integrators front to back
-	 * but now i think this is wrong and they should be run back to 
-	 * front.
-	 */
-	for (int iter = 0; iter < cic->r; iter++) {
-		/* XXX: we really should have a 'to int' type function */
-		cic->stages[0].i += (int) data[iter];
-		/* Now run through the stages, stage 0 gets input from xn */
-		for (int stage = 1; stage < cic->n; stage++) {
-			/* integrate */
-			cic->stages[stage].i += cic->stages[stage-1].i;
-		}
-	}
-#endif
-	XXX
-	fix this, make integrators from first to last, match
-	the last integrator with the first comb, so that the
-	math of finding the xn input is easy, and then the first
-	comb's yn value becomes the filter output.
-	for (int iter = 0; iter < cic->r; iter++) {
-		cic->stages[0].i += (int) data[iter];
-		for (int stage = 1; stage < cic->n; stage++) {
-			/* integrate */
-			cic->stages[stage].i += cic->stages[stage-1].i;
+	for (int i = 0; i < cic->r; i++) {
+		/* Run through each stage */
+		for (int k = 0; k < cic->n; k++) {
+			cic->stages[k].i += (k == 0) ? (int) data[i] :
+					  						cic->stages[k-1].i;
 		}
 	}
 	/* Now for the combs:
-	 * XXX Run these in reverse
-	 * For each stage
-	 * 		The current input is either the output of the last integrator
-	 * 		(first comb) or the output of the previous comb.
-	 * 		The x(n-2) or x(n-1) value is the current (ndx + 1) mod (M+1)
-	 * 		For M = 1 (M+1 = 2) and ndx oscillates between 0 and 1.
-	 * 		For M = 2 (M+1 = 3) the ndx oscillates around 0, 1, 2
+	 * There is some trickyness here. I index the combs from back to
+	 * front. This is because the last stage's integrator, has the
+	 * input value for the first comb. So we can get them out of the
+	 * same structure. Then the first stage in the array ends up with
+	 * the last comb, so it has the final output value.
+	 *
 	 */
-	cic->stages[0].ci = (cic->stages[0].ci + 1) % 3;
-	/* value is from last integrator */
-	cic->stages[0].c[cic->stages[0].ci] = cic->stages[cic->n - 1].i;
 
-	/* now walk through the stages and update them */
-	for (int i = 1; i < cic->n; i++) {
-
-		cic->stages[i].ci = (cic->stages[i].ci + 1) % 3;
-		/* set current and previous for previous stage */
-		ci_c = cic->stages[i - 1].ci;
-		ci_p = (ci_c - cic->m) % 3;
-		/* input is x(n) - x(n-M) of previous comb */
-		cic->stages[i].c[cic->stages[i].ci] = 
-			cic->stages[i - 1].c[ci_c] - cic->stages[i - 1].c[ci_p];
+	/* First comb gets input from the Integrator */
+	ndx = cic->stages[cic->n - 1].ndx;
+	cic->stages[cic->n - 1].xn[ndx] = cic->stages[cic->n-1].i;
+	cic->stages[cic->n - 1].ndx = (ndx + 1) % 3;
+	for (int n = cic->n - 2; n >= 0; n--) {
+		/* get output from previous comb */
+		xn = __comb_value(&cic->stages[n+1], cic->m);
+		ndx = cic->stages[n].ndx;
+		/* store current input */ 
+		cic->stages[n].xn[ndx] = xn;
+		/* point to end of the list (where next input will be stored) */
+		cic->stages[n].ndx = (ndx + 1) % 3;
 	}
-	ci_c = cic->stages[cic->n - 1].ci;
-	ci_p = (ci_c - cic->m) % 3;
-	return (cic->stages[cic->n - 1].c[ci_c] - cic->stages[cic->n - 1].c[ci_p]);
+	xn = __comb_value(&(cic->stages[0]), cic->m);
+	printf("***  Yn => %d\n", xn);
+	return (xn);
 }
 
 /*
