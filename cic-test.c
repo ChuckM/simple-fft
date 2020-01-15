@@ -27,22 +27,43 @@
 
 struct cic_filter_t *filter;
 
+char *plots[] = {
+	"cic0",
+	"cic1",
+	"cic2",
+	"cic3",
+	"cic4"
+};
+
+char *titles[] = {
+	"Impulse offset 0",
+	"Impulse offset 1",
+	"Impulse offset 2",
+	"Impulse offset 3",
+	"Impulse offset 4"
+};
+
+
 #define PLOT_FILE	"./plots/cic-test.plot"
 int
 main(int argc, char *argv[])
 {
 	sample_buffer	*impulse;
-	sample_buffer	*resp;
-	sample_buffer	*fft1;
-	sample_buffer	*fft2;
-	int				N = 8;
-	int				M = 2;
-	int				R = 32;
+	sample_buffer	*fir;
+	sample_buffer	*resp[5];
+	sample_buffer	*fft[5];
+	sample_buffer	*fir_fft;
+	int				ndx;
+	int				N = 3;
+	int				M = 1;
+	int				R = 5;
 	FILE			*of;
 
 	printf("Test CIC filter with N=%d, M=%d, and R=%d\n", N, M, R);
 	filter = cic_filter(N, M, R);
 	impulse = alloc_buf(500, 500);
+	fir = alloc_buf(5*3, 500);
+	clear_samples(fir);
 #ifdef STEP_RESPONSE
 	/* Step response */
 	for (int i = 0; i < impulse->n; i++) {
@@ -52,36 +73,62 @@ main(int argc, char *argv[])
 #define IMPULSE_RESPONSE
 #ifdef IMPULSE_RESPONSE
 	/* Impulse response */
-	impulse->data[0] = 0;
-	impulse->data[1] = 0;
-	impulse->data[2] = 0;
-	impulse->data[3] = 0;
-	impulse->data[4] = 1;
-	for (int i = 5; i < impulse->n; i++) {
+	for (int i = 0; i < impulse->n; i++) {
 		impulse->data[i] = 0;
 	}
 #endif
-	resp = cic_decimate(impulse, filter);
-	printf("Simple Impulse test, first 10 values:\n");
-	for (int i = 0; i < 10; i++) {
-		printf("[%2d] - %f\n", i, creal(resp->data[i]));
+	for (int i = 0; i < 5; i++) {
+		impulse->data[i] = 1.0;
+		resp[i] = cic_decimate(impulse, filter);
+		impulse->data[i] = 0;
 	}
-	fft1 = compute_fft(resp, 8192, W_RECT);
-	fft2 = compute_fft(impulse, 8192, W_RECT);
+	printf("Simple Impulse test, first 10 values:\n");
+	printf("Offset   0    1    2    3    4\n");
+	printf("------ ---  ---  ---  ---  ---\n");
+	for (int i = 0; i < 10; i++) {
+		printf("[%2d] - %3.0f, %3.0f, %3.0f, %3.0f, %3.0f\n", i, 
+			creal(resp[0]->data[i]),
+			creal(resp[1]->data[i]),
+			creal(resp[2]->data[i]),
+			creal(resp[3]->data[i]),
+			creal(resp[4]->data[i]));
+	}
+	ndx = 0;
+	for (int i = 0; i < 3; i++) {
+		for (int k = 0; k < 5; k++) {
+			fir->data[ndx++] = resp[4 - k]->data[i];
+		}
+	}
+	printf("FIR filters:");
+	for (int i = 0; i < 15; i++) {
+		printf(" %d%s", (int)(creal(fir->data[i])), (i < 14) ? "," : "\n");
+	}
+	
 	of = fopen(PLOT_FILE, "w");
 	if (of == NULL) {
 		fprintf(stderr, "Error, can't open %s\n", PLOT_FILE);
 		exit(1);
 	}
-	plot_fft(of, fft1, "cic");
+	fir_fft = compute_fft(fir, 8192, W_RECT);
+	for (int i = 0; i < 5; i++) {
+		fft[i] = compute_fft(resp[i], 8192, W_RECT);
+		plot_fft(of, fft[i], plots[i]);
+	}
+	plot_fft(of, fir_fft, "fir");
 	fprintf(of, "set title 'CIC Test of Impulse Response (N=%d, M=%d, R=%d)'\n",
 			N, M, R);
 	fprintf(of, "set xlabel 'Frequency (normalized)\n");
-	fprintf(of, "set ylabel 'Magnitude (dB)\n");
-	fprintf(of, "set key box font \"Inconsolata,10\" autotitle columnheader\n");
+	fprintf(of, "set ylabel 'Magnitude (Normalized)\n");
+	fprintf(of, "set key box font \"Inconsolata,10\"\n");
 	fprintf(of, "set grid\n");
-	fprintf(of, "plot [0:0.5] $cic_fft_data using cic_xnorm_col:cic_ynorm_col"
-									" with lines lt rgb '#ff1010'\n");
+	fprintf(of, "plot [0:1.0] ");
+	for (int i = 0; i < 5; i++) {
+		fprintf(of, "$%s_fft_data using %s_xnorm_col:%s_ynorm_col"
+									" with lines title '%s', ", 
+					plots[i], plots[i], plots[i], titles[i]);
+	}
+	fprintf(of, "$fir_fft_data using fir_xnorm_col:fir_ynorm_col"
+					" with lines title 'FIR Polyphase'\n");
 	fclose(of);
 	printf("Done.\n");
 }
