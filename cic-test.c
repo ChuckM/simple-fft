@@ -7,7 +7,7 @@
  * should be.
  *
  * Written November 2019 by Chuck McManis
- * Copyright (c) 2019, Charles McManis
+ * Copyright (c) 2019-2020, Charles McManis
  *
  * I hereby grant permission for anyone to use this software for any 
  * purpose that they choose, I do not warrant the software to be
