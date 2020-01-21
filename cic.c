@@ -120,7 +120,6 @@ __decimation_iteration(complex double *data, struct cic_filter_t *cic)
 		cic->stages[n].ndx = (ndx + 1) % 3;
 	}
 	xn = __comb_value(&(cic->stages[0]), cic->m);
-	printf("***  Yn => %d\n", xn);
 	return (xn);
 }
 
