@@ -5,8 +5,8 @@ Wondering why my test waveform isn't identical to my cosine wave form. I
 calculate the period in the same way.
 
 ANSWER: I was using the 'float' version of the cos/sin functions in
-one case (add_cos) and the 'double' version of them in the test case
-(add_test) so basically double the dynamic range. Fixing that gets
+one case (`add_cos`) and the 'double' version of them in the test case
+(`add_test`) so basically double the dynamic range. Fixing that gets
 them a lot closer, but the test one has better "nominal" dynamic range,
 its noise is around -300 dB but it has spurs up to -220DB, whereas the
 one using the functions directly has its noise at -250 dB with no spurs
@@ -49,37 +49,37 @@ illustrate the problem and the fix.
 Add DFT code and examples.
 
 So article outline:
-	Who the article is for (not for Matlab geeks)
-	Correlation as a way to "pick out" frequencies in a signal.
-	Slewing a sinusoid from DC to 'N' to map out sinusoids, the DFT
-	Linear vs Log plotting, dynamic range
-	Signals and Harmonics - what makes a waveform a waveform?
-	Doing that "Fast" with the Fast Fourier Transform
-	Gotchas and Spectral Leakage
-	Adding a "window" to the FFT
-		The Hann window
-		The Blackman-Harris 4 element window
-	Conclusions and next steps.
+  * Who the article is for (not for Matlab geeks)
+  *	Correlation as a way to "pick out" frequencies in a signal.
+  *	Slewing a sinusoid from DC to 'N' to map out sinusoids, the DFT
+  *	Linear vs Log plotting, dynamic range
+  *	Signals and Harmonics - what makes a waveform a waveform?
+  *	Doing that "Fast" with the Fast Fourier Transform
+  *	Gotchas and Spectral Leakage
+  *	Adding a "window" to the FFT
+    * The Hann window
+    * The Blackman-Harris 4 element window
+  * Conclusions and next steps.
 
 I'm thinking I should move the window functions to their own .c and .h
-files. *DONE*
+files. **DONE**
 
 Down sampling to get IQ data from REAL data.
 
 Tasks:
-	Generate 4x data
-	Take the FFT and show it with the images on the "other" side.
-	Downsample x4
-		low pass filter
-		decimate
-	Take the FFT and show only our desired waveforms have come through.
+  * Generate 4x data
+  * Take the FFT and show it with the images on the "other" side.
+  * Downsample x4
+    * low pass filter
+    * decimate
+  * Take the FFT and show only our desired waveforms have come through.
 
 This taken from Chapter 6 on Practical Applications in DSP.
 Show frequencies over the passband target are eliminated
 Show frequenices near the passband are passed.
 
-----------------
 DFT questions
+-------------
 
 New dft code from the internet. Looking to see if we can "zoom" it so that
 we can compute the DFT for a filter and have the expected result.
@@ -90,6 +90,7 @@ Then, zoom it too 100 points for the 34 element sample.
 Finally, zoom it to 500 points for the 34 element sample.
 
 Other FIR notes
+---------------
 
 An average of 'n' bins is essentially and array of taps each
 holding the value 1/n. 
@@ -110,8 +111,8 @@ code uses the complex exponential (which I didn't realize we had!) Mine
 saves multiplies.
 
 Two ways to write it:
-1) the complex exponential e^-jwkt/bins
-2) the incremental angle cos(wt*k/bins) - sin(wt*k/bins) I
+  # the complex exponential e^-jwkt/bins
+  # the incremental angle cos(wt*k/bins) - sin(wt*k/bins) I
 
 They should be identical, and one way leads to a lot less work.
 So a quick test program to see if we can prove this numerically.
@@ -131,7 +132,7 @@ The TP3 experiment was a failure, The image signal persists.
 
 The TP4 experiment suggests I should be able to simply read and write
 doubles to disk. A good way to examin files is with
-hexdump -e '8/1 "%02X ""\n"' <file> | head -25 > <save.file>
+`hexdump -e '8/1 "%02X ""\n"' <file> | head -25 > <save.file>`
 
 Signal storing and loading for anything other than doubles is
 broken horribly. I'm not sure exactly how I expected it to work
@@ -141,28 +142,40 @@ Plotting
 --------
 
 I really need a plotter. I am thinking something like:
-int plot(FILE *file, char *name, signal_buffer *b, Y_NORM/Y_DB, X_NORM/X_FREQ/X_TIME);
+
+`int plot(FILE *file, char *name, signal_buffer *b, Y_NORM/Y_DB, X_NORM/X_FREQ/X_TIME);`
+
 
 This then writes into file :
+```
 $plot_%d << EOD
 [normalized|frequency|time] name
 <value> <value>
 ...
 EOD
+```
 
 Returns a number of the plot, so that later it can be referred to
-as 'plot $plot_<n> using 1:2 with lines'
+as `plot $plot_<n> using 1:2 with lines`
 
-implemented in FFT, now to add it to signal.
+implemented in FFT, now to add it to signal. **DONE**
+
+I came back through and rewrote this to work differently. I put all of
+the variants in the data, then I can choose which version to plot by
+picking the appropriate columns. I also used `gnuplot` variables to
+identify which columns are which. Finally I used the name as a common
+prefix for all of the variables. You still need to pick which columns you
+are going to use but all the choices are there. See `fft_test` for an
+example.
 
 Negative frequency shifting
 ---------------------------
-The complex frequency -fs/4 = [1 + 0i, 0 + -1i, -1 + 0i, 0 + 1i]
+The complex frequency `-fs/4 = [1 + 0i, 0 + -1i, -1 + 0i, 0 + 1i]`
 
 TP5 - gets the frequency back but it is the complex conjugate of the original
 which is kind of weird.
 
-remez is still broken, found a couple of copies that had been worked on after
+`remez` is still broken, found a couple of copies that had been worked on after
 the version I have, they still have problems. Mostly because I don't think
 anyone other than Parks and Mclellan understood what they were doing. The
 Approximation theory book is on order as I retrace their steps in order to
@@ -171,7 +184,42 @@ looking at more modern (and memory hungry) solutions which might find a better
 filter solution.
 
 Deliverables:
+-------------
 
 One a CMaj7th chord and its FFT, the other a "wonky" waveform where at
 one sample rate it is a sine wave but at a higher frequency it is not.
 
+CIC Notes
+---------
+
+Lots of work on understanding and implementing CIC filters over the last
+few commits. Lots of referring to 
+[Rick Lyon's text](https://www.dsprelated.com/showarticle/1171.php)
+which uses a unit impulse to test a nominal 3 stage, decimate by 5 CIC
+filter.
+
+Using that test I was able to debug what my filter was doing and to figure
+out how it was broken. It also helped clarify the role of the integrators
+and the combs. Plotting the impulse response however opened up a bunch of
+questions. In particular why it didn't work.
+
+If you pass the unit impulse through a correctly working CIC filter you
+will get an output with either 'n' or 'n - 1' non-zero values. The value n
+in this case is the number of stages. So for a 3 stage filter you get at
+most 3 values, sometimes 2. With a decimation of 5 they add up to 25.
+
+I wondered about _why_ they added up to 25 and realized that three stages
+of integration, generate a constant, a linear value, and then a quadratic
+value. Because the decimation factor is 5 and the M value is 1, this is
+5^2 or 25. If you set M to 2, you get 200 as your constant factor. That
+is (D \* M)^2 \* M. If you set D to 6, you get 36 if M is 1, and 288 if M is
+2, consistent with this analysis.
+
+With 4 stages you should get to a cubic level, so a decimate rate of 5 with
+4 stages should be 5^3 or 125, which it is. With M set to 2 that is 10 cubed
+times 2 or 2000. Which it is. 
+
+What I don't have yet is a mathematical derivation for why this is true. I
+am still working on that.
+
+impulse

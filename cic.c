@@ -22,7 +22,7 @@
 #include <dsp/signal.h>
 #include <dsp/fft.h>
 #include <dsp/cic.h>
-static int __decimation_iteration(complex double *data, struct cic_filter_t *cic);
+
 static inline int __comb_value(struct cic_stage_t *s, int m);
 
 /*
@@ -52,77 +52,6 @@ static inline int __comb_value(struct cic_stage_t *s, int m)
 	return (s->xn[ndx1] - s->xn[ndx2]);
 }
 
-#if 0
-dump_stage(int n, struct cic_filter_t *cic)
-{
-	printf("\tCo%d = %d, (Xn, Xn-1, Xn-2) = (%d, %d, %d)\n", 0, 
-		__comb_value(&cic->stages[cic->n-1], cic->m),
-		cic->stages[cic->n-1].xn[ndx],
-		cic->stages[cic->n-1].xn[((ndx+2) % 3)],
-		cic->stages[cic->n-1].xn[((ndx+1) % 3)]);
-	for (int n = cic->n - 2; n >= 0; n--) {
-		/* print out state (ndx wasn't updated so points to xn) */
-		printf("\tCo%d = %d, (Xn, Xn-1, Xn-2) = (%d, %d, %d)\n", cic->n - n, 
-			__comb_value(&cic->stages[n], cic->m),
-			cic->stages[n].xn[ndx],
-			cic->stages[n].xn[((ndx+2) % 3)],
-			cic->stages[n].xn[((ndx+1) % 3)]);
-	}
-}
-#endif
-
-/*
- * One iteration of decimation, pulled out into its own routine
- * for easier debugging.
- * 
- * NOTE: it will consume 'r' data input samples and generate 1
- * data output sample.
- */
-static int
-__decimation_iteration(complex double *data, struct cic_filter_t *cic)
-{
-	int32_t ndx, xn, stage;
-	/*
-	 * Integration phase:
-	 * The first integrator has as input the 'input' sample buffer.
-	 * All integrators are 2s complement 32 bit counters.
-	 *
-	 * To start, we run the integrators 'r' times (this is the decimation
-	 * factor)
-	 */
-	for (int i = 0; i < cic->r; i++) {
-		/* Run through each stage */
-		for (int k = 0; k < cic->n; k++) {
-			cic->stages[k].i += (k == 0) ? (int) data[i] :
-					  						cic->stages[k-1].i;
-		}
-	}
-	/* Now for the combs:
-	 * There is some trickyness here. I index the combs from back to
-	 * front. This is because the last stage's integrator, has the
-	 * input value for the first comb. So we can get them out of the
-	 * same structure. Then the first stage in the array ends up with
-	 * the last comb, so it has the final output value.
-	 *
-	 */
-
-	/* First comb gets input from the Integrator */
-	ndx = cic->stages[cic->n - 1].ndx;
-	cic->stages[cic->n - 1].xn[ndx] = cic->stages[cic->n-1].i;
-	cic->stages[cic->n - 1].ndx = (ndx + 1) % 3;
-	for (int n = cic->n - 2; n >= 0; n--) {
-		/* get output from previous comb */
-		xn = __comb_value(&cic->stages[n+1], cic->m);
-		ndx = cic->stages[n].ndx;
-		/* store current input */ 
-		cic->stages[n].xn[ndx] = xn;
-		/* point to end of the list (where next input will be stored) */
-		cic->stages[n].ndx = (ndx + 1) % 3;
-	}
-	xn = __comb_value(&(cic->stages[0]), cic->m);
-	return (xn);
-}
-
 /*
  * cic_decimate( ... )
  *
@@ -137,18 +66,41 @@ sample_buffer *
 cic_decimate(sample_buffer *inp, struct cic_filter_t *cic)
 {
 	sample_buffer	*res;
-	uint32_t	inp_ndx, res_ndx = 0; /* index into sample buffers */
+	int				xn, ndx = 0;
+	uint32_t		res_ndx = 0; /* index into sample buffers */
 
 	/* allocate a buffer that is one n'th of the input buffer at a
  	 * sample rate that is also one n'th.
 	 */
-	res = alloc_buf(inp->n / cic->r, inp->r / cic->r);
+	res = alloc_buf((inp->n / cic->r)+1, inp->r / cic->r);
 	if (res == NULL) {
 		return NULL;
 	}
 
-	for (int i = 0; (i + cic->r) < inp->n; i += cic->r) {
-		res->data[res_ndx++] = __decimation_iteration(inp->data + i, cic);
+	for (int i = 0; i < inp->n; i ++) {
+		cic->iter = (cic->iter + 1) % cic->r; /* count this iteration */
+		/* Run through each stage */
+		for (int k = 0; k < cic->n; k++) {
+			cic->stages[k].i += (k == 0) ? (int) inp->data[i] :
+					  						cic->stages[k-1].i;
+		}
+		/* if we're at a decimation step, run the combs */
+		if ((cic->iter % cic->r) == 0) {
+			/* First comb gets input from the Integrator */
+			ndx = cic->stages[cic->n - 1].ndx;
+			cic->stages[cic->n - 1].xn[ndx] = cic->stages[cic->n-1].i;
+			cic->stages[cic->n - 1].ndx = (ndx + 1) % 3;
+			for (int n = cic->n - 2; n >= 0; n--) {
+				/* get output from previous comb */
+				xn = __comb_value(&cic->stages[n+1], cic->m);
+				ndx = cic->stages[n].ndx;
+				/* store current input */ 
+				cic->stages[n].xn[ndx] = xn;
+				/* point to end of the list (where next input will be stored) */
+				cic->stages[n].ndx = (ndx + 1) % 3;
+			}
+			res->data[res_ndx++] = __comb_value(&cic->stages[0], cic->m);
+		}
 	}
 	return res;
 }
@@ -169,9 +121,20 @@ cic_filter(int n, int m, int r)
 		free(s);
 		return NULL;
 	}
-	res->n = n;
-	res->m = m;
-	res->r = r;
+	res->n = n;		/* Number of stages */
+	res->m = m;		/* M value (1 or 2) */
+	res->r = r;		/* decimation rate */
+	res->iter = -1;	/* iteration count */
 	res->stages = s;
 	return res;
 }
+
+void
+cic_reset(struct cic_filter_t *filter)
+{
+	filter->iter = -1;
+	for (int i = 0; i < filter->n; i++) {
+		memset(&filter->stages[i], 0, sizeof(struct cic_stage_t));
+	}
+}
+

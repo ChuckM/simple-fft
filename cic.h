@@ -22,12 +22,16 @@ struct cic_filter_t {
 	int			n;		/* number of stages */
 	int			m;		/* M = {1, 2} */
 	int			r;		/* decimation/interpolation ratio */
+	int			iter;	/* iteration count */
 	struct cic_stage_t *stages;
 };
 
 /* apply the filter to a sample buffer */
 sample_buffer *cic_decimate(sample_buffer *inp, struct cic_filter_t *cic);
 sample_buffer *cic_interpolate(sample_buffer *inp, struct cic_filter_t *cic);
+
+/* reset the filter state to initial state */
+void cic_reset(struct cic_filter_t *filter);
 
 /* create a CIC filter (can interpolate or decimate) */
 struct cic_filter_t *cic_filter(int n, int m, int r);
