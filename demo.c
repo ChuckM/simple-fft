@@ -206,7 +206,7 @@ main(int argc, char *argv[])
 			ft = compute_fft(sig, bins, wf);
 			break;
 		case USE_DFT:
-			ft = compute_dft(sig, bins, wf);
+			ft = compute_dft(sig, bins, 0.0, (double) SAMPLE_RATE, wf);
 			break;
 		default:
 			fprintf(stderr, "Err: unknown algorithm (%d) selected?\n", algo);

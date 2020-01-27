@@ -63,7 +63,7 @@ main(int argc, char *argv[])
 	add_cos(test, 3000.0, 1.0); 	// 3 kHz
 
 	/* Now compute the DFT */
-	dft = compute_dft(test, bins, wf);
+	dft = compute_dft(test, bins, 0.0, (double) bins, wf);
 
 	if (! dft) {
 		fprintf(stderr, "DFT was not calculated.\n");

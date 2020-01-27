@@ -222,4 +222,12 @@ times 2 or 2000. Which it is.
 What I don't have yet is a mathematical derivation for why this is true. I
 am still working on that.
 
-impulse
+Skip zero question, sometimes there is a leading 0 in the output of
+the impulse test. If we skip a leading zero we always get the correct
+sum, if we don't skip it, sometimes we don't get all the terms.
+
+Skip zero seems related to response number, if we always skip on 5+ we
+seem to work correctly (so for a 3 stage filter is having the impulse in
+on the 4th pulse the trigger?) We're going to try decimate by 8 and by 9
+to see if we need to skip 2 zeros in the last cast of -9
+

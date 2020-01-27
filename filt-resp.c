@@ -154,7 +154,7 @@ main(int argc, char *argv[])
 		filt->data[i] = test->taps[i];
 	}
 
-	dft = compute_dft(filt, bins, W_RECT);
+	dft = compute_dft(filt, bins, 0, (double) bins, W_RECT);
 	of = fopen("./plots/filter-response.plot", "w");
 	fprintf(of, "$my_plot<<EOF\n");
 	if (half_band == 0) {

@@ -98,38 +98,74 @@ main(int argc, char *argv[])
 	 * We save those results to pull out the impulse response.
 	 */
 	ndx = 0;
+// #define COHERENCE
+#ifdef COHERENCE
+	printf("Running with coherent filter state.\n");
+#endif
 	for (int i = 0; i < R; i++) {
-		int rsum;
+		int rsum, offset;
 		/* put the impulse 'i' pulses in */
-		impulse->data[i] = 1.0;
+		impulse->data[i+6] = 1.0;
+
+#ifdef COHERENCE
+		cic_reset(filter); /* reset filter state (coherence run) */
+#endif
 
 		/* calculate the response */
 		resp[i] = cic_decimate(impulse, filter);
 		rsum = 0;
-		for (int k = 0; k <= S*M; k++) {
-			int val = (int) (creal(resp[i]->data[k]));
-			if (val != 0) {
-				taps[ndx] = (int) (creal(resp[i]->data[k]));
-				rsum += taps[ndx];
-				ndx++;
-			}
+#define SKIPZERO
+#ifdef SKIPZERO
+		offset = (resp[i]->data[0] == 0) ? 1 : 0;
+		if (offset) {
+			printf("* ");
+		} else {
+			printf("  ");
 		}
-		printf("Response #%d: Sum = %d\n", i, rsum);
+#else
+		offset = 0;
+		printf("- ");
+#endif
+		for (int k = 0; k < S; k++) {
+			int val = (int) (creal(resp[i]->data[k+offset]));
+			taps[ndx] = (int) (creal(resp[i]->data[k+offset]));
+			rsum += taps[ndx];
+			ndx++;
+		}
+		printf("Response #%d: Sum = %d [", i, rsum);
+		for (int k = 0; k < S; k++) {
+			printf(" %5d%s", (int)(creal(resp[i]->data[k+offset])),
+				(k != (S - 1)) ? "," : " ]\n");
+		}
 
 		/* set up for the next impulse */
-		impulse->data[i] = 0;
+		impulse->data[i+6] = 0;
 	}
 
 	/* Now allocate a buffer for the composite filter response */
 	fir = alloc_buf(S * R, 1000000);
 	clear_samples(fir);
 
+// #define STRICT
+#ifdef STRICT
 	/* Interleave the filter responses */
 	for (int i = 0; i < S; i++) {
 		for (int k = 0; k < R; k++) {
 			fir->data[k + i * R] = (complex double)(taps[k*S+i]);
 		}
 	}
+#else
+	ndx = 0;
+	/* Interleave the filter responses */
+	for (int i = 0; i < S; i++) {
+		for (int k = 0; k < R; k++) {
+			complex double val = taps[k*S+i];
+			if (val != 0) {
+				fir->data[ndx++] = val;
+			}
+		}
+	}
+#endif
 	printf("taps:\t");
 	for (int i = 0; i < S * R; i++) {
 		printf("%8d ", taps[i]);
