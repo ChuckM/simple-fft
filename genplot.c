@@ -20,59 +20,149 @@
 #include <stdlib.h>
 #include <getopt.h>
 #include <dsp/signal.h>
-#include <dsp/fft.h>
+#include <dsp/dft.h>
 
 #define PLOT_FILE	"./plots/freq-resp-taps.plot"
-
 extern char *optarg;
 extern int optind, opterr, optopt;
+
+enum scale_type {
+		FULL_SCALE,
+		HALF_SCALE,
+		DB_SCALE,
+		NORM_SCALE,
+		ABS_SCALE
+};
+
+enum scale_type xscale = FULL_SCALE;
+enum scale_type yscale = DB_SCALE;
+
+char *title = "No title set";
+char *plot_file = PLOT_FILE;
+
+#define MAX_TAPS 128		/* maximum number of taps */
+#define MIN_TAPS 3			/* minimum number of taps */
 
 int
 main(int argc, char *argv[])
 {
 	sample_buffer	*buf;
-	sample_buffer	*fft;
-	char			*options = "t:";
+	sample_buffer	*dft;
+	char			*options = "t:hm:o:F";
 	char			opt;
 	FILE			*of;
-	int				ndx;
-	double	taps[128];
+	char			*ycolumn;
+	int				tap_ndx;
+	int				show_frac = 0;
+	double	taps[MAX_TAPS];
 
-	if (argc > 128) {
-		fprintf(stderr, "Can't do more than 127 taps\n");
-		exit(1);
+	while ((opt = getopt(argc, argv, options)) != -1) {
+		switch (opt) {
+			default:
+				fprintf(stderr, "usage: genplot [options] tap0 tap1 ...\n");
+				fprintf(stderr, "  options: -t 'title'\n");
+				fprintf(stderr, "           -h (half spectrum, DC to N/2)\n");
+				fprintf(stderr, "           -m [db|norm|abs] (magnitude)\n");
+				exit(1);
+			case 'F':
+				show_frac++;
+				break;
+			case 'o':
+				plot_file = optarg;
+				break;
+			case 't':
+				title = optarg;
+				break;
+			case 'h':
+				xscale = HALF_SCALE;
+				break;
+			case 'm':
+				if (strcasecmp(optarg, "db") == 0) {
+					yscale = DB_SCALE;
+				} else if (strcasecmp(optarg, "norm") == 0) {
+					yscale = NORM_SCALE;
+				} else if (strcasecmp(optarg, "abs") == 0) {
+					yscale = ABS_SCALE;
+				} else {
+					fprintf(stderr, 
+							"scale value must be one of: db, norm or abs\n");
+					exit(1);
+				}
+				break;
+		}
 	}
-	for (ndx = 1; ndx < argc; ndx++) {
+	tap_ndx = 0;
+	while ((optind < argc) && (tap_ndx < MAX_TAPS)) {
 		char *t;
-		double val = strtod(argv[ndx], &t);
-		if (t == argv[ndx]) {
+		double val = strtod(argv[optind], &t);
+		if (t == argv[optind]) {
 			break; /* no conversion so stop */
 		}
-		taps[ndx-1] = val;
+		taps[tap_ndx++] = val;
+		optind++;
 	}
-	if (ndx < 3) {
-		fprintf(stderr, "Need at least 3 tap values to continue\n");
+	
+	if (tap_ndx < MIN_TAPS) {
+		fprintf(stderr, "Need at least %d tap values to continue\n", MIN_TAPS);
 		exit(1);
 	}
-	buf = alloc_buf(ndx, 1000000);
-	for (int i = 0; i < ndx; i++) {
+	if ((tap_ndx == MAX_TAPS) && (optind < argc)) {
+		fprintf(stderr, "Maximum taps (%d) exceeded.\n", MAX_TAPS);
+		exit(1);
+	}
+	buf = alloc_buf(tap_ndx, 1000000);
+	for (int i = 0; i < tap_ndx; i++) {
 		buf->data[i] = taps[i];
 	}
-	fft = compute_fft(buf, 4096, W_RECT);
-	of = fopen(PLOT_FILE, "w");
+	dft = compute_dft(buf, 5000, 0, 5000, W_RECT);
+	of = fopen(plot_file, "w");
 	if (of == NULL) {
-		fprintf(stderr, "Could not open '%s' for writing.\n", PLOT_FILE);
+		fprintf(stderr, "Could not open '%s' for writing.\n", plot_file);
 		exit(1);
 	}
-	plot_fft(of, fft, "taps");
-	fprintf(of, "set title 'CIC Filter Frequency Response (M=1, N=3, D=5)'\n");
-	fprintf(of, "set xlabel 'Frequency (Normalized)'\n");
-	fprintf(of, "set ylabel 'Magnitude (dB)'\n");
+	plot_dft(of, dft, "taps", 0, 5000);
+	fprintf(of, "set title '%s'\n", title);
+	fprintf(of, "set xlabel 'Frequency (Normalized to F_{sample frequency})'\n");
+	fprintf(of, "set ylabel ");
+	switch (yscale) {
+		default:
+			fprintf(of, "'Magnitude (dB)'\n");
+			ycolumn = "taps_ydb_col";
+			break;
+		case NORM_SCALE:
+			fprintf(of, "'Magnitude (Normalized)'\n");
+			ycolumn = "taps_ynorm_col";
+			break;
+		case ABS_SCALE:
+			fprintf(of, "'Magnitude (Absolute)'\n");
+			ycolumn = "taps_ymag_col";
+			break;
+	}
 	fprintf(of, "set grid\n");
 	fprintf(of, "set nokey\n");
+	fprintf(of, "set ytics out\n");
+	if (show_frac) {
+		fprintf(of, "set xtics (");
+		fprintf(of, "\"-F_s/2\" -0.50,");
+		fprintf(of, "\"-3F_s/8\" -0.375,");
+		fprintf(of, "\"-F_s/4\" -0.25,");
+		fprintf(of, "\"-F_s/8\" -0.125,");
+		fprintf(of, "\"DC\" 0,");
+		fprintf(of, "\"F_s/8\" 0.1250,");
+		fprintf(of, "\"F_s/4\" 0.250,");
+		fprintf(of, "\"3F_s/8\" 0.3750,");
+		fprintf(of, "\"F_s/2\" 0.50)\n");
+	} else {
+		if (xscale == HALF_SCALE) {
+			fprintf(of, "set xtics out 0,.05,.5\n");
+		} else {
+			fprintf(of, "set xtics out -0.5,.1,0.5\n");
+		}
+	}
 	fprintf(of, 
-	  "plot [0:1.0] $taps_fft_data using taps_xnorm_col:taps_ydb_col"
-				" with lines lt rgb \"#1010ff\"\n");
+	  "plot [%f:0.5] $taps_dft using taps_xnorm_col:%s"
+				" with lines lt rgb \"#1010ff\"\n", 
+				(xscale == HALF_SCALE) ? 0.0 : -0.5, ycolumn);
 	fclose(of);
 	printf("Done.\n");
 }

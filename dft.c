@@ -43,7 +43,8 @@
  *  of the rotation angle to the fundamental frequency.
  */
 sample_buffer *
-compute_dft(sample_buffer *input, int bins, double fs, double fe, window_function win) {
+compute_dft(sample_buffer *input, int bins, 
+						double fs, double fe, window_function win) {
 	sample_buffer *res = alloc_buf(bins, input->r);
 	complex double root, rotation;
 	double bin_width = (fe - fs) / (double) bins;
@@ -91,9 +92,56 @@ compute_dft(sample_buffer *input, int bins, double fs, double fe, window_functio
  * Write out to a stdio FILE handle the gnuplot information for plotting
  * the DFT. This is analygous to the plot_fft() code except that the DFT
  * can have custom start and end frequencies.
+ *
+ * Much of this comes from the FFT version
  */
 int
 plot_dft(FILE *of, sample_buffer *dft, char *tag, double fs, double fe)
 {
+	/* insure MIN and MAX are accurate */
+	dft->sample_max = 0;
+	dft->sample_min = 0;
+	for (int k = 0; k < dft->n; k++) {
+		set_minmax(dft, k);
+	}
+	fprintf(of, "%s_min = %f\n", tag, dft->sample_min);
+	fprintf(of, "%s_max = %f\n", tag, dft->sample_max);
+	fprintf(of, "%s_freq = %f\n", tag, (double) dft->r);
+	fprintf(of, "%s_nyquist = %f\n", tag, (double) dft->r / 2.0);
+ 	fprintf(of, "%s_xnorm_col = 1\n", tag);
+	fprintf(of, "%s_xfreq_col = 2\n", tag);
+	fprintf(of, "%s_ynorm_col = 3\n", tag);
+	fprintf(of, "%s_ydb_col = 4\n", tag);
+	fprintf(of, "%s_ymag_col = 5\n", tag);
+	fprintf(of,"$%s_dft << EOD\n", tag);
+	fprintf(of, "#\n# Columns are:\n");
+	fprintf(of, "# 1. Normalized frequency (-.5 - 1.0)\n");
+	fprintf(of, "# 2. Frequency by sample rate (- nyquist, 2* nyquist)\n");
+	fprintf(of, "# 3. Normalized magnitude ( 0 - 1.0 )\n");
+	fprintf(of, "# 4. Magnitude in decibels\n");
+	fprintf(of, "# 5. Absolute magnitude\n");
+	fprintf(of, "#\n");
+	for (int k = dft->n / 2; k < dft->n; k++) {
+		double xnorm, freq, ynorm, db, mag;
+		xnorm = -0.5 + (double) (k - (dft->n / 2))/ (double) dft->n;
+		freq = xnorm * (double) dft->r;
+		ynorm = (cmag(dft->data[k]) - dft->sample_min) / 
+						(dft->sample_max - dft->sample_min);
+		db = 20 * log10(cmag(dft->data[k]));
+		mag = cmag(dft->data[k]);
+		fprintf(of, "%f %f %f %f %f\n", xnorm, freq, ynorm, db, mag);
+	}
+
+	for (int k = 0; k < dft->n; k++) {
+		double xnorm, freq, ynorm, db, mag;
+		xnorm = (double) (k)/ (double) dft->n;
+		freq = xnorm * (double) dft->r;
+		ynorm = (cmag(dft->data[k]) - dft->sample_min) / 
+						(dft->sample_max - dft->sample_min);
+		db = 20 * log10(cmag(dft->data[k]));
+		mag = cmag(dft->data[k]);
+		fprintf(of, "%f %f %f %f %f\n", xnorm, freq, ynorm, db, mag);
+	}
+	fprintf(of,	"EOD\n");
 	return 0;
 }

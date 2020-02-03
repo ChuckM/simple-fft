@@ -75,6 +75,8 @@ struct fir_filter_t sample1 = {
 	sample_taps
 };
 
+#define PLOT_FILE "./plots/filter-response.plot"
+
 #define SAMPLE_RATE	128000
 #define BINS	1024
 
@@ -91,6 +93,25 @@ extern int optind, opterr, optopt;
  *  And the optional filter-file contains the name and
  *  tap coefficients for a filter file. See 'avg.filter' for
  *  an example.
+ * Filter Text File format :
+ * 
+ * # Derived filter design, parameters :
+ * # Number of Bands: 2
+ * # Band #1 - [ 0.000000 - 0.230000 ], 1.000000, 6.020600 dB ripple
+ * # Band #2 - [ 0.270000 - 0.500000 ], 0.000000, 6.020600 dB ripple
+ * name: Half Band Filter
+ * taps: 251
+ * 0.003984 # h0
+ * 0.003984 # h1
+ * 0.003984 # h2
+ * 0.003984 # h3
+ * 0.003984 # h4
+ * 0.003984 # h5
+ * 0.003984 # h6
+ * 0.003984 # h7
+ * 0.003984 # h8
+ * ...
+ * The number of tap values have to match. Everything after `#` is ignored.
  */
 int
 main(int argc, char *argv[])
@@ -101,7 +122,7 @@ main(int argc, char *argv[])
 	sample_buffer	*dft;
 	int half_band = 0;
 	int	n_taps;
-	int mag = MAG_NORMALIZE;
+	int mag = MAG_DECIBEL;
 	int sample_rate = SAMPLE_RATE;
 	int bins = BINS;
 	struct fir_filter_t	*test;
@@ -112,8 +133,7 @@ main(int argc, char *argv[])
 
 	while ((opt = getopt(argc, argv, optstring)) != -1) {
 		switch (opt) {
-			case ':':
-			case '?':
+			default:
 				fprintf(stderr, 
 						"Usage: filt-resp [-h] [-m db|norm] [filter]\n");
 				exit(1);
@@ -155,55 +175,29 @@ main(int argc, char *argv[])
 	}
 
 	dft = compute_dft(filt, bins, 0, (double) bins, W_RECT);
-	of = fopen("./plots/filter-response.plot", "w");
-	fprintf(of, "$my_plot<<EOF\n");
-	if (half_band == 0) {
-		double y, x;
-		for (int i = (dft->n / 2); i < dft->n; i++) {
-			x = 0.5 * ((double) (i - (dft->n / 2)) / (double) (dft->n / 2.0));
-			if (mag == MAG_NORMALIZE) {
-				y = (cmag(dft->data[i]) - dft->sample_min) / 
-					(dft->sample_max - dft->sample_min);
-			} else {
-				y = 20.0 * log10(cmag(dft->data[i]));
-			}
-			fprintf(of, "%f %f\n", x, y);
-		}
+	of = fopen(PLOT_FILE, "w");
+	if (of == NULL) {
+		fprintf(stderr, "Could not open %s for writing.\n", PLOT_FILE);
+		exit(1);
 	}
-	for (int i = 0; i < dft->n/2; i++) {
-		double x, y;
-		if (half_band) {
-			x = (double) i / (double) (dft->n / 2.0);
-		} else {
-			x = 0.5 + 0.5 * ((double) (i) / (double) (dft->n / 2.0));
-		}
-		if (mag == MAG_NORMALIZE) {
-			y = (cmag(dft->data[i]) - dft->sample_min) / 
-				(dft->sample_max - dft->sample_min);
-		} else {
-			y = 20.0 * log10(cmag(dft->data[i]));
-		}
-		fprintf(of, "%f %f\n", x, y);
-	}
-	fprintf(of, "EOF\n");
+
+	plot_dft(of, dft, "resp", 0, (double) bins);
 	fprintf(of, "set title \"Filter Response: %s\"\n", test->name);
 	fprintf(of, "set grid\n");
-	if (mag == MAG_NORMALIZE) {
-		fprintf(of, "set ylabel \"Magnitude (normalized)\"\n");
-	} else {
-		fprintf(of, "set ylabel \"Magnitude (dB)\"\n");
-	}
-	if (half_band) {
-		fprintf(of, "set xlabel \"Frequency (normalized to 0 to F_s/2)\"\n");
-	} else {
-		fprintf(of, "set xlabel \"Frequency (normalized to -F_s/2 to F_s/2)\"\n");
-	}
+	fprintf(of, "set ylabel '%s'\n", (mag == MAG_NORMALIZE) ? 
+			"Magnitude (normalized)" : "Magnitude (dB)");
+	fprintf(of, "set xlabel '%s'\n", (half_band != 0) ? 
+		"Frequency (normalized to 0 to F_s/2)" : 
+		"Frequency (normalized to -F_s/2 to F_s/2)");
 	fprintf(of, "set nokey\n");
 	if (half_band) {
-		fprintf(of, "set xtics (\"0\" 0, \"F_s/8\" .25, \"F_s/4\" .5, \"3F_s/8\" .75, \"F_s/2\" 1.0)\n");
+		fprintf(of, "set xtics (\"0\" 0, \"F_s/8\" .125, \"F_s/4\" .25, \"3F_s/8\" .375, \"F_s/2\" .50)\n");
 	} else {
-		fprintf(of, "set xtics (\"-F_s/2\" 0, \"-F_s/4\" .25, \"0\" .5, \"F_s/4\" .75, \"F_s/2\" 1.0)\n");
+		fprintf(of, "set xtics (\"-F_s/2\" -0.50, \"-F_s/4\" -0.25, \"0\" 0, \"F_s/4\" .25, \"F_s/2\" .5)\n");
 	}
-	fprintf(of, "plot [0:1.0] $my_plot using 1:2 with lines\n");
+	fprintf(of, "plot [%f:.50] $%s_dft using"
+		" %s_xnorm_col:%s_y%s_col with lines\n", 
+		(half_band != 0) ? 0.0 : -0.5, "resp", "resp", "resp",
+		(mag == MAG_NORMALIZE) ? "mag" : "db");
 	fclose(of);
 }

@@ -231,3 +231,29 @@ seem to work correctly (so for a 3 stage filter is having the impulse in
 on the 4th pulse the trigger?) We're going to try decimate by 8 and by 9
 to see if we need to skip 2 zeros in the last cast of -9
 
+Filter Text File format :
+-------------------------
+
+```
+# Derived filter design, parameters :
+# Number of Bands: 2
+# Band #1 - [ 0.000000 - 0.230000 ], 1.000000, 6.020600 dB ripple
+# Band #2 - [ 0.270000 - 0.500000 ], 0.000000, 6.020600 dB ripple
+name: Half Band Filter
+taps: 251
+0.003984 # h0
+0.003984 # h1
+0.003984 # h2
+0.003984 # h3
+0.003984 # h4
+0.003984 # h5
+0.003984 # h6
+0.003984 # h7
+0.003984 # h8
+...
+```
+The number of tap values have to match. Everything after `#` is ignored.
+
+Updated `genplot` so now filt-resp is kind of not needed, will fold the filter
+format into genplot and then we'll be done.
+
