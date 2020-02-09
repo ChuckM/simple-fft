@@ -21,6 +21,7 @@
 #include <getopt.h>
 #include <dsp/signal.h>
 #include <dsp/dft.h>
+#include <dsp/filter.h>
 
 #define PLOT_FILE	"./plots/freq-resp-taps.plot"
 extern char *optarg;
@@ -48,9 +49,10 @@ main(int argc, char *argv[])
 {
 	sample_buffer	*buf;
 	sample_buffer	*dft;
-	char			*options = "t:hm:o:F";
+	char			*options = "t:hm:o:Ff:";
 	char			opt;
 	FILE			*of;
+	struct fir_filter_t	*filt = NULL;
 	char			*ycolumn;
 	int				tap_ndx;
 	int				show_frac = 0;
@@ -64,6 +66,20 @@ main(int argc, char *argv[])
 				fprintf(stderr, "           -h (half spectrum, DC to N/2)\n");
 				fprintf(stderr, "           -m [db|norm|abs] (magnitude)\n");
 				exit(1);
+			case 'f':
+				of = fopen(optarg, "r");
+				if (of == NULL) {
+					fprintf(stderr, "Unable to open filter %s\n", optarg);
+					exit(1);
+				}
+				filt = load_filter(of);
+				if (filt == NULL) {
+					fprintf(stderr, "Unable to load filter %s\n", optarg);
+					exit(1);
+				}
+				fclose(of);
+				of = NULL;
+				break;
 			case 'F':
 				show_frac++;
 				break;
@@ -92,14 +108,25 @@ main(int argc, char *argv[])
 		}
 	}
 	tap_ndx = 0;
-	while ((optind < argc) && (tap_ndx < MAX_TAPS)) {
-		char *t;
-		double val = strtod(argv[optind], &t);
-		if (t == argv[optind]) {
-			break; /* no conversion so stop */
+	if (filt != NULL) {
+		if (optind < argc) {
+			fprintf(stderr, "Can't have both taps and filter specified!\n");
+			exit(1);
 		}
-		taps[tap_ndx++] = val;
-		optind++;
+		for (int i = 0; i < filt->n_taps; i++) {
+			taps[tap_ndx++] = filt->taps[i];
+		}
+		title = filt->name;
+	} else {
+		while ((optind < argc) && (tap_ndx < MAX_TAPS)) {
+			char *t;
+			double val = strtod(argv[optind], &t);
+			if (t == argv[optind]) {
+				break; /* no conversion so stop */
+			}
+			taps[tap_ndx++] = val;
+			optind++;
+		}
 	}
 	
 	if (tap_ndx < MIN_TAPS) {
@@ -147,7 +174,7 @@ main(int argc, char *argv[])
 		fprintf(of, "\"-3F_s/8\" -0.375,");
 		fprintf(of, "\"-F_s/4\" -0.25,");
 		fprintf(of, "\"-F_s/8\" -0.125,");
-		fprintf(of, "\"DC\" 0,");
+		fprintf(of, "\"0\" 0,");
 		fprintf(of, "\"F_s/8\" 0.1250,");
 		fprintf(of, "\"F_s/4\" 0.250,");
 		fprintf(of, "\"3F_s/8\" 0.3750,");
