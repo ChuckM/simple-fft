@@ -36,17 +36,52 @@ struct cic_filter_t *filter;
 extern char *optarg;
 extern int optind, opterr, optopt;
 
+/*
+ * Compute the binomial coefficient of 'n' choose 'k' which
+ * is written: ( n )
+ *               k
+ */
+int
+binom(int n,int k)
+{
+	int ans = 1;
+//	printf("%d choose %d\n", n, k);
+	k = (k > n-k) ? n-k : k;
+	for(int j = 1; j <= k; j++, n--) {
+		if(( n % j) == 0) {
+			ans *= (n / j);
+		} else if ((ans % j) == 0) {
+			ans = (ans / j) * n;
+		} else {
+			ans = ( ans * n) / j;
+		}
+	}
+    return ans;
+}
+
+void
+print_coefficients(int S, int M, int R)
+{
+	int sum = M * pow((M * R), S - 1);
+	printf("Coefficent sum should be %d\n", sum);
+	for (int i = 0; i < R; i++) {
+		printf("%d ", binom((S - 1) + i, i));
+	}
+	printf("\n");
+}
+
 int
 main(int argc, char *argv[])
 {
 	sample_buffer	*impulse;
 	sample_buffer	*fir;
 	sample_buffer	*fir2;
-	sample_buffer	**resp;
+	int	**resp;
 	sample_buffer	*fir_fft;
 	/* Stages (s), "M" factor (1 or 2), and decimation rate (r) */
-	const char	*options = "s:m:r:";
+	const char	*options = "Cs:m:r:";
 	/* Defaults recreate filter in Rick Lyon's test document */
+	int				cohere = 0;
 	int				S = 3;
 	int				M = 1;
 	int				R = 5;
@@ -57,6 +92,9 @@ main(int argc, char *argv[])
 
 	while ((opt = getopt(argc, argv, options)) != -1) {
 		switch (opt) {
+			default:
+				exit(1);
+
 			case 's':
 				S = atoi(optarg);
 				break;
@@ -73,6 +111,8 @@ main(int argc, char *argv[])
 	}
 	printf("Test CIC filter with %d stages, M=%d, and decimation rate of %d\n",
 			 S, M, R);
+	print_coefficients(S, M, R);
+
 	filter = cic_filter(S, M, R);
 	/* note, frequency is normalized so sample rate is 'nominal' */
 	printf("Allocation size: %d\n", (10 * S * R));
@@ -81,7 +121,7 @@ main(int argc, char *argv[])
 
 	taps = malloc(sizeof(int) * (S * M * R));
 	/* Various responses depending on phase */
-	resp = calloc(R, sizeof(sample_buffer *));
+	resp = calloc(R, sizeof(int *));
 	if (resp == NULL) {
 		fprintf(stderr, "Couldn't allocate %d response pointers\n", S);
 		exit(1);
@@ -98,48 +138,51 @@ main(int argc, char *argv[])
 	 * We save those results to pull out the impulse response.
 	 */
 	ndx = 0;
-// #define COHERENCE
-#ifdef COHERENCE
-	printf("Running with coherent filter state.\n");
-#endif
+	if (cohere) {
+		printf("Running with coherent filter state.\n");
+	}
 	for (int i = 0; i < R; i++) {
+		sample_buffer *impulse_response;
 		int rsum, offset;
 		/* put the impulse 'i' pulses in */
-		impulse->data[i+6] = 1.0;
+		impulse->data[i] = 1.0;
 
-#ifdef COHERENCE
-		cic_reset(filter); /* reset filter state (coherence run) */
-#endif
+		if (cohere) {
+			cic_reset(filter); /* reset filter state (coherence run) */
+		}
 
 		/* calculate the response */
-		resp[i] = cic_decimate(impulse, filter);
+		impulse_response = cic_decimate(impulse, filter);
+		resp[i] = calloc(S, sizeof(int));
+
 		rsum = 0;
-#define SKIPZERO
-#ifdef SKIPZERO
-		offset = (resp[i]->data[0] == 0) ? 1 : 0;
-		if (offset) {
-			printf("* ");
-		} else {
-			printf("  ");
+		for (int k = 0, ndx = 0; (ndx < S) && (k < impulse_response->n); k++) {
+			int v = (int)(creal(impulse_response->data[k]));
+			if (v) {
+				resp[i][ndx] = v;
+				ndx++;
+				rsum += v;
+			}
+			if (rsum == pow(M*S, R)) {
+				break;
+			}
 		}
-#else
 		offset = 0;
 		printf("- ");
-#endif
 		for (int k = 0; k < S; k++) {
-			int val = (int) (creal(resp[i]->data[k+offset]));
-			taps[ndx] = (int) (creal(resp[i]->data[k+offset]));
+			int val = resp[i][k];
+			taps[ndx] = resp[i][k];
 			rsum += taps[ndx];
 			ndx++;
 		}
 		printf("Response #%d: Sum = %d [", i, rsum);
 		for (int k = 0; k < S; k++) {
-			printf(" %5d%s", (int)(creal(resp[i]->data[k+offset])),
+			printf(" %5d%s", resp[i][k],
 				(k != (S - 1)) ? "," : " ]\n");
 		}
 
 		/* set up for the next impulse */
-		impulse->data[i+6] = 0;
+		impulse->data[i] = 0;
 	}
 
 	/* Now allocate a buffer for the composite filter response */
