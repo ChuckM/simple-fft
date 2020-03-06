@@ -59,15 +59,16 @@ binom(int n,int k)
     return ans;
 }
 
-void
-print_coefficients(int S, int M, int R)
+int
+print_coefficients(int N, int M, int D)
 {
-	int sum = M * pow((M * R), S - 1);
+	int sum = M * pow((M * D), N - 1);
 	printf("Coefficent sum should be %d\n", sum);
-	for (int i = 0; i < R; i++) {
-		printf("%d ", binom((S - 1) + i, i));
+	for (int i = 0; i < D; i++) {
+		printf("%d ", binom((N - 1) + i, i));
 	}
 	printf("\n");
+	return sum;
 }
 
 int
@@ -79,12 +80,12 @@ main(int argc, char *argv[])
 	int	**resp;
 	sample_buffer	*fir_fft;
 	/* Stages (s), "M" factor (1 or 2), and decimation rate (r) */
-	const char	*options = "Cs:m:r:";
+	const char	*options = "Cn:m:d:";
 	/* Defaults recreate filter in Rick Lyon's test document */
 	int				cohere = 0;
-	int				S = 3;
+	int				N = 3;
 	int				M = 1;
-	int				R = 5;
+	int				D = 5;
 	int				*taps;
 	int				ndx;
 	FILE			*of;
@@ -95,11 +96,11 @@ main(int argc, char *argv[])
 			default:
 				exit(1);
 
-			case 's':
-				S = atoi(optarg);
+			case 'n':
+				N = atoi(optarg);
 				break;
-			case 'r':
-				R = atoi(optarg);
+			case 'd':
+				D = atoi(optarg);
 				break;
 			case 'm':
 				M = atoi(optarg);
@@ -110,26 +111,26 @@ main(int argc, char *argv[])
 			}
 	}
 	printf("Test CIC filter with %d stages, M=%d, and decimation rate of %d\n",
-			 S, M, R);
-	print_coefficients(S, M, R);
+			 N, M, D);
+	print_coefficients(N, M, D);
 
-	filter = cic_filter(S, M, R);
+	filter = cic_filter(N, M, D);
 	/* note, frequency is normalized so sample rate is 'nominal' */
-	printf("Allocation size: %d\n", (10 * S * R));
-	impulse = alloc_buf((10 * S * R) + 1, 1000000);
+	printf("Allocation size: %d\n", (10 * N * D));
+	impulse = alloc_buf((10 * N * D) + 1, 1000000);
 	clear_samples(impulse);
 
-	taps = malloc(sizeof(int) * (S * M * R));
+	taps = malloc(sizeof(int) * (N * M * D));
 	/* Various responses depending on phase */
-	resp = calloc(R, sizeof(int *));
+	resp = calloc(D, sizeof(int *));
 	if (resp == NULL) {
-		fprintf(stderr, "Couldn't allocate %d response pointers\n", S);
+		fprintf(stderr, "Couldn't allocate %d response pointers\n", D);
 		exit(1);
 	}
 
 	/*
 	 * Now look at the response:
-	 * This is done 'R' - 1 times, because the response changes based
+	 * This is done 'D' - 1 times, because the response changes based
 	 * on where in the decimation point the impulse arrives. Each point
 	 * is associated with a 'phase' of the filter. So to get the complete
 	 * filter response we compute the impulse response with the impulse
@@ -141,9 +142,9 @@ main(int argc, char *argv[])
 	if (cohere) {
 		printf("Running with coherent filter state.\n");
 	}
-	for (int i = 0; i < R; i++) {
+	for (int i = 0; i < D; i++) {
 		sample_buffer *impulse_response;
-		int rsum, offset;
+		int rsum, ntaps, offset;
 		/* put the impulse 'i' pulses in */
 		impulse->data[i] = 1.0;
 
@@ -153,32 +154,32 @@ main(int argc, char *argv[])
 
 		/* calculate the response */
 		impulse_response = cic_decimate(impulse, filter);
-		resp[i] = calloc(S, sizeof(int));
+	
+		ntaps = 0;
+		for (int i = 0; i < impulse_response->n; i++) {
+			if ((int)creal(impulse_response->data[i]) > 0) {
+				ntaps++;
+			}
+		}
+		printf("%d taps found\n", ntaps);
+		resp[i] = calloc(ntaps, sizeof(int));
 
 		rsum = 0;
-		for (int k = 0, ndx = 0; (ndx < S) && (k < impulse_response->n); k++) {
+		ndx = 0;
+		for (int k = 0; k < impulse_response->n; k++) {
 			int v = (int)(creal(impulse_response->data[k]));
 			if (v) {
 				resp[i][ndx] = v;
 				ndx++;
 				rsum += v;
 			}
-			if (rsum == pow(M*S, R)) {
-				break;
-			}
 		}
-		offset = 0;
+		printf("Found %d taps, sum was %d\n", ndx, rsum);
 		printf("- ");
-		for (int k = 0; k < S; k++) {
-			int val = resp[i][k];
-			taps[ndx] = resp[i][k];
-			rsum += taps[ndx];
-			ndx++;
-		}
 		printf("Response #%d: Sum = %d [", i, rsum);
-		for (int k = 0; k < S; k++) {
+		for (int k = 0; k < ndx; k++) {
 			printf(" %5d%s", resp[i][k],
-				(k != (S - 1)) ? "," : " ]\n");
+				(k != (ndx - 1)) ? "," : " ]\n");
 		}
 
 		/* set up for the next impulse */
@@ -186,23 +187,23 @@ main(int argc, char *argv[])
 	}
 
 	/* Now allocate a buffer for the composite filter response */
-	fir = alloc_buf(S * R, 1000000);
+	fir = alloc_buf(N * D, 1000000);
 	clear_samples(fir);
 
 // #define STRICT
 #ifdef STRICT
 	/* Interleave the filter responses */
-	for (int i = 0; i < S; i++) {
-		for (int k = 0; k < R; k++) {
-			fir->data[k + i * R] = (complex double)(taps[k*S+i]);
+	for (int i = 0; i < N; i++) {
+		for (int k = 0; k < D; k++) {
+			fir->data[k + i * D] = (complex double)(taps[k*N+i]);
 		}
 	}
 #else
 	ndx = 0;
 	/* Interleave the filter responses */
-	for (int i = 0; i < S; i++) {
-		for (int k = 0; k < R; k++) {
-			complex double val = taps[k*S+i];
+	for (int i = 0; i < N; i++) {
+		for (int k = 0; k < D; k++) {
+			complex double val = taps[k*N+i];
 			if (val != 0) {
 				fir->data[ndx++] = val;
 			}
@@ -210,11 +211,11 @@ main(int argc, char *argv[])
 	}
 #endif
 	printf("taps:\t");
-	for (int i = 0; i < S * R; i++) {
+	for (int i = 0; i < N * D; i++) {
 		printf("%8d ", taps[i]);
 	}
 	printf("\nFIR:\t");
-	for (int i = 0; i < S * R; i++) {
+	for (int i = 0; i < N * D; i++) {
 		printf("%8d ", (int)(creal(fir->data[i])));
 	}
 	printf("\n");
@@ -228,8 +229,8 @@ main(int argc, char *argv[])
 	}
 	fir_fft = compute_fft(fir, 8192, W_RECT);
 	plot_fft(of, fir_fft, "fir");
-	fprintf(of, "set title 'CIC Test of Impulse Response (S=%d, M=%d, R=%d)'\n",
-			S, M, R);
+	fprintf(of, "set title 'CIC Test of Impulse Response (N=%d, M=%d, D=%d)'\n",
+			N, M, D);
 	fprintf(of, "set xlabel 'Frequency (normalized)\n");
 	fprintf(of, "set ylabel 'Magnitude (dB)\n");
 	fprintf(of, "set key box font \"Inconsolata,10\"\n");
