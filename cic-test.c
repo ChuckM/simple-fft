@@ -121,7 +121,7 @@ main(int argc, char *argv[])
 	sample_buffer	*fir_fft;
 
 	/* Stages (s), "M" factor (1 or 2), and decimation rate (r) */
-	const char	*options = "n:m:d:";
+	const char	*options = "n:m:d:o:";
 	/* Defaults recreate filter in Rick Lyon's test document */
 	int				N = 3;
 	int				M = 1;
@@ -130,6 +130,7 @@ main(int argc, char *argv[])
 	double			tap_sum;
 	int				ndx;
 	FILE			*of;
+	FILE			*filter_file = NULL;
 	char			opt;
 
 	memset(&filter_taps, 0, sizeof(struct filter_taps_t));
@@ -149,6 +150,15 @@ main(int argc, char *argv[])
 					fprintf(stderr, "M value must be 1 or 2\n");
 					exit(1);
 				}
+				break;
+			case 'o':
+				filter_file = fopen(optarg, "w");
+				if (filter_file == NULL) {
+					fprintf(stderr, "Could not open %s to store filter\n", 
+																	optarg);
+					exit(1);
+				}
+				break;
 			}
 	}
 	printf("Test CIC filter with %d stages, M=%d, and decimation rate of %d\n",
@@ -257,6 +267,19 @@ main(int argc, char *argv[])
 	}
 	for (int i = 0; i < filter_taps.ttaps; i++) {
 		fir->data[i] = taps[i] / tap_sum;
+	}
+	if (filter_file) {
+		fprintf(filter_file, "#\n# CIC Filter\n");
+		fprintf(filter_file, "# %d stages, M lookback %d, and %d decimation rate.\n",
+				N, M, D);
+		fprintf(filter_file, "#\n");
+		fprintf(filter_file, "name: CIC Filter (N=%d, M=%d, and D=%d)\n", N, M, D);
+		fprintf(filter_file, "taps: %d\n", filter_taps.ttaps);
+		for (int i = 0; i < filter_taps.ttaps; i++) {
+			fprintf(filter_file, "%f\n", creal(fir->data[i]));
+		}
+		fclose(filter_file);
+		printf("Wrote filter file.\n");
 	}
 
 #ifdef PRINT_TAPS
