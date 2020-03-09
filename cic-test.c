@@ -28,6 +28,21 @@
 
 struct cic_filter_t *filter;
 
+struct tap_list_t {
+	int term;		/* which binomial coefficient should start */
+	int	ntaps;		/* number of taps */
+	int	*taps;		/* array of integer tap values */
+};
+
+struct filter_taps_t {
+	int	nlists;		/* Number of tap value lists */
+	int	ttaps;		/* total number of taps */
+	int	max_tap;	/* max tap value, (all are > 0) */
+	int max_len;	/* max number of tap values in a list */
+	int	term_sum;	/* Check value for sum of tap values */
+	struct tap_list_t *tap_lists;
+} filter_taps;
+
 /*
  * Filter response plot ends up here.
  */
@@ -40,12 +55,12 @@ extern int optind, opterr, optopt;
  * Compute the binomial coefficient of 'n' choose 'k' which
  * is written: ( n )
  *               k
+ * Algorithm from "Algorithms in C"
  */
 int
 binom(int n,int k)
 {
 	int ans = 1;
-//	printf("%d choose %d\n", n, k);
 	k = (k > n-k) ? n-k : k;
 	for(int j = 1; j <= k; j++, n--) {
 		if(( n % j) == 0) {
@@ -59,16 +74,42 @@ binom(int n,int k)
     return ans;
 }
 
+/*
+ * Compute (and print) the binomial coefficients that will start
+ * each list of taps.
+ */
 int
 print_coefficients(int N, int M, int D)
 {
 	int sum = M * pow((M * D), N - 1);
+	filter_taps.nlists = D;
+	filter_taps.term_sum = sum;
+	filter_taps.tap_lists = calloc(D, sizeof(struct tap_list_t));
+
 	printf("Coefficent sum should be %d\n", sum);
 	for (int i = 0; i < D; i++) {
-		printf("%d ", binom((N - 1) + i, i));
+		int term = binom((N - 1) + i, i);
+		filter_taps.tap_lists[i].term = term;
+		printf("%d ", term);
 	}
 	printf("\n");
 	return sum;
+}
+
+/*
+ * Dump out the computed tap list.
+ */
+void
+print_taplists()
+{
+	printf("Tap list structure:\n");
+	for (int i = 0; i < filter_taps.nlists; i++) {
+		printf("%2d: ", filter_taps.tap_lists[i].term);
+		for (int k = 0; k < filter_taps.tap_lists[i].ntaps; k++) {
+			printf(" %4d,", filter_taps.tap_lists[i].taps[k]);
+		}
+		printf("\n");
+	}
 }
 
 int
@@ -77,25 +118,25 @@ main(int argc, char *argv[])
 	sample_buffer	*impulse;
 	sample_buffer	*fir;
 	sample_buffer	*fir2;
-	int	**resp;
 	sample_buffer	*fir_fft;
+
 	/* Stages (s), "M" factor (1 or 2), and decimation rate (r) */
-	const char	*options = "Cn:m:d:";
+	const char	*options = "n:m:d:";
 	/* Defaults recreate filter in Rick Lyon's test document */
-	int				cohere = 0;
 	int				N = 3;
 	int				M = 1;
 	int				D = 5;
-	int				*taps;
+	double			*taps;
+	double			tap_sum;
 	int				ndx;
 	FILE			*of;
 	char			opt;
 
+	memset(&filter_taps, 0, sizeof(struct filter_taps_t));
 	while ((opt = getopt(argc, argv, options)) != -1) {
 		switch (opt) {
 			default:
 				exit(1);
-
 			case 'n':
 				N = atoi(optarg);
 				break;
@@ -120,105 +161,115 @@ main(int argc, char *argv[])
 	impulse = alloc_buf((10 * N * D) + 1, 1000000);
 	clear_samples(impulse);
 
-	taps = malloc(sizeof(int) * (N * M * D));
-	/* Various responses depending on phase */
-	resp = calloc(D, sizeof(int *));
-	if (resp == NULL) {
-		fprintf(stderr, "Couldn't allocate %d response pointers\n", D);
-		exit(1);
-	}
-
 	/*
 	 * Now look at the response:
-	 * This is done 'D' - 1 times, because the response changes based
-	 * on where in the decimation point the impulse arrives. Each point
-	 * is associated with a 'phase' of the filter. So to get the complete
-	 * filter response we compute the impulse response with the impulse
-	 * arriving at every location from "right on the decimation point" to
-	 * just after etc, until we have just before the next decimation point.
-	 * We save those results to pull out the impulse response.
+	 * Compute the impulse response D-1 times (D is decimation rate)
+	 * so that we get each possible phase of output based on where
+	 * the impule was in the input stream relative to the decimation
+	 * point.
+	 *
+	 * Each point is associated with a 'phase' of the filter. So to get
+	 * the complete filter response we compute the impulse response with 
+	 * the impulse arriving at every location from "right on the decimation
+	 * point" to * just after etc, until we have just before the next
+	 * decimation point.  We save those results to pull out the impulse 
+	 * response.
 	 */
 	ndx = 0;
-	if (cohere) {
-		printf("Running with coherent filter state.\n");
-	}
 	for (int i = 0; i < D; i++) {
 		sample_buffer *impulse_response;
-		int rsum, ntaps, offset;
+		int rsum, ntaps, *resp;
 		/* put the impulse 'i' pulses in */
 		impulse->data[i] = 1.0;
 
-		if (cohere) {
-			cic_reset(filter); /* reset filter state (coherence run) */
-		}
+		cic_reset(filter); /* reset filter state */
 
 		/* calculate the response */
 		impulse_response = cic_decimate(impulse, filter);
 	
 		ntaps = 0;
+		/* count the non-zero terms in the result */
 		for (int i = 0; i < impulse_response->n; i++) {
 			if ((int)creal(impulse_response->data[i]) > 0) {
 				ntaps++;
 			}
 		}
-		printf("%d taps found\n", ntaps);
-		resp[i] = calloc(ntaps, sizeof(int));
 
+		resp = calloc(ntaps, sizeof(int));
 		rsum = 0;
 		ndx = 0;
 		for (int k = 0; k < impulse_response->n; k++) {
 			int v = (int)(creal(impulse_response->data[k]));
+			/* if its non-zero, store it */
 			if (v) {
-				resp[i][ndx] = v;
+				resp[ndx] = v;
+				/* keep the max value */
+				if (v > filter_taps.max_tap) {
+					filter_taps.max_tap = v;
+				}
 				ndx++;
 				rsum += v;
 			}
 		}
-		printf("Found %d taps, sum was %d\n", ndx, rsum);
-		printf("- ");
-		printf("Response #%d: Sum = %d [", i, rsum);
-		for (int k = 0; k < ndx; k++) {
-			printf(" %5d%s", resp[i][k],
-				(k != (ndx - 1)) ? "," : " ]\n");
+		/* now store it into the structure, match it with the
+		 * binomial coefficient calculated earlier.
+		 *
+		 * This loop also notes the maximum tap value (so we can normalize)
+		 * and the length of the longest tap list.
+		 */
+		for (int k = 0; k < filter_taps.nlists; k++) {
+			if (filter_taps.tap_lists[k].term == resp[0]) {
+				filter_taps.tap_lists[k].ntaps = ntaps;
+				if (ntaps > filter_taps.max_len) {
+					filter_taps.max_len = ntaps;
+				}
+				filter_taps.ttaps += ntaps;
+				filter_taps.tap_lists[k].taps = resp;
+				break;
+			}
 		}
 
 		/* set up for the next impulse */
 		impulse->data[i] = 0;
+		free_buf(impulse_response);
 	}
 
 	/* Now allocate a buffer for the composite filter response */
 	fir = alloc_buf(N * D, 1000000);
 	clear_samples(fir);
 
-// #define STRICT
-#ifdef STRICT
+	taps = calloc(filter_taps.ttaps, sizeof(double));
+
+	print_taplists();
+
 	/* Interleave the filter responses */
-	for (int i = 0; i < N; i++) {
-		for (int k = 0; k < D; k++) {
-			fir->data[k + i * D] = (complex double)(taps[k*N+i]);
-		}
-	}
-#else
 	ndx = 0;
-	/* Interleave the filter responses */
-	for (int i = 0; i < N; i++) {
-		for (int k = 0; k < D; k++) {
-			complex double val = taps[k*N+i];
-			if (val != 0) {
-				fir->data[ndx++] = val;
+	tap_sum = 0;
+	for (int i = 0; i < filter_taps.max_len; i++) {
+		for (int k = 0; k < filter_taps.nlists; k++) {
+			if (i < filter_taps.tap_lists[k].ntaps) {
+				double t = (double) filter_taps.tap_lists[k].taps[i];
+				tap_sum += t;
+				taps[ndx] = t;
+				ndx++;
 			}
 		}
 	}
-#endif
+	for (int i = 0; i < filter_taps.ttaps; i++) {
+		fir->data[i] = taps[i] / tap_sum;
+	}
+
+#ifdef PRINT_TAPS
 	printf("taps:\t");
 	for (int i = 0; i < N * D; i++) {
-		printf("%8d ", taps[i]);
+		printf("%f ", taps[i]);
 	}
 	printf("\nFIR:\t");
 	for (int i = 0; i < N * D; i++) {
-		printf("%8d ", (int)(creal(fir->data[i])));
+		printf("%f ", (creal(fir->data[i])));
 	}
 	printf("\n");
+#endif
 
 	printf("Plotting results into %s.\n", PLOT_FILE);
 	
@@ -228,16 +279,17 @@ main(int argc, char *argv[])
 		exit(1);
 	}
 	fir_fft = compute_fft(fir, 8192, W_RECT);
-	plot_fft(of, fir_fft, "fir");
-	fprintf(of, "set title 'CIC Test of Impulse Response (N=%d, M=%d, D=%d)'\n",
+	plot_fft(of, fir_fft, "cic");
+	fprintf(of, "set title 'Magnitude Response for CIC Filter (N=%d, M=%d, D=%d)'\n",
 			N, M, D);
 	fprintf(of, "set xlabel 'Frequency (normalized)\n");
 	fprintf(of, "set ylabel 'Magnitude (dB)\n");
-	fprintf(of, "set key box font \"Inconsolata,10\"\n");
+	fprintf(of, "set nokey \n"); 
 	fprintf(of, "set grid\n");
-	fprintf(of, "plot [0:1.0] ");
-	fprintf(of, "$fir_fft_data using fir_xnorm_col:fir_ydb_col"
-					" with lines title 'FIR Polyphase'\n");
+	fprintf(of, "set xrange [0.0:0.5]\n");
+	fprintf(of, "set yrange [-250.0:0.0]\n");
+	fprintf(of, "plot $cic_fft_data using cic_xnorm_col:cic_ydb_col"
+					" with lines lc 'blue'\n");
 	fclose(of);
 	printf("Done (plotting).\n");
 }

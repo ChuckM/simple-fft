@@ -23,7 +23,7 @@
 #include <dsp/dft.h>
 #include <dsp/filter.h>
 
-#define PLOT_FILE	"./plots/freq-resp-taps.plot"
+#define PLOT_FILE	"./plots/genplot-output.plot"
 extern char *optarg;
 extern int optind, opterr, optopt;
 
