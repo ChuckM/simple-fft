@@ -52,10 +52,6 @@ clean:
 dirs: 
 	mkdir -p $(BIN_DIR)
 	mkdir -p $(OBJ_DIR)
-	mkdir -p $(INC_DIR)
-
-$(INC_DIR)/%.h: %.h
-	cp $< $@
 
 $(OBJ_DIR)/%.o: %.c $(INCLUDES)
 	cc -g -fPIC -I. -c $< -o $@
@@ -63,7 +59,7 @@ $(OBJ_DIR)/%.o: %.c $(INCLUDES)
 $(BIN_DIR)/%: %.c $(OBJECTS) $(INCLUDES)
 	cc -g -I. -o $@ $< ${OBJECTS} ${LDFLAGS}
 
-$(OBJ_DIR)/remez.o: remez.c remez.h
+$(OBJ_DIR)/remez.o: remez.c dsp/remez.h
 	cc -g -fPIC -o $@ -c remez.c
 
 $(BIN_DIR)/filt-design: filt-design.c $(OBJ_DIR)/remez.o $(INCLUDES)
