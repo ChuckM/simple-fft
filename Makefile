@@ -44,7 +44,7 @@ BINS = $(PROGRAMS:%=$(BIN_DIR)/%)
 all: dirs 3khz-tone-pdm.test $(OBJECTS) $(BINS)
 
 clean:
-	rm -f $(INCLUDES) $(BINS) $(OBJECTS) $(OBJ_DIR)/remez.o plots/*.data
+	rm -f $(BINS) $(OBJECTS) $(OBJ_DIR)/remez.o plots/*.data
 
 3khz-tone-pdm.test: bin/cic-test-data
 	bin/cic-test-data
