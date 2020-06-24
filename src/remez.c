@@ -20,7 +20,7 @@
  *************************************************************************/
 
 
-#include "dsp/remez.h"
+#include <dsp/remez.h>
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>

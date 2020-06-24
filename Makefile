@@ -20,7 +20,13 @@ OBJ_DIR = ./obj
 
 BIN_DIR = ./bin
 
+LIB_DIR = ./lib
+
 INC_DIR = ./dsp
+
+SRC_DIR = ./src
+
+LIB_SRC_DIR = ./src/lib
 
 PROGRAMS = demo tp tp2 tp3 tp4 waves hann bh dft_test fft_test \
 	   corr corr-plot multi-corr-plot filt-resp filt-test\
@@ -31,20 +37,25 @@ PROGRAMS = demo tp tp2 tp3 tp4 waves hann bh dft_test fft_test \
 HEADERS = cic.h dft.h fft.h filter.h plot.h \
 			remez.h signal.h windows.h
 
-LDFLAGS = -lm
+LDFLAGS = -lm 
 
-TOOL_SRC = signal.c plot.c cic.c fft.c dft.c windows.c filter.c
+LIB_SRC = signal.c plot.c cic.c fft.c dft.c windows.c filter.c
+
+LIB = $(LIB_DIR)/libsdsp.a
 
 OBJECTS = $(TOOL_SRC:%.c=$(OBJ_DIR)/%.o)
+
+LIB_OBJECTS = $(LIB_SRC:%.c=$(OBJ_DIR)/%.o)
+
 
 INCLUDES = $(HEADERS:%.h=$(INC_DIR)/%.h)
 
 BINS = $(PROGRAMS:%=$(BIN_DIR)/%)
 
-all: dirs 3khz-tone-pdm.test $(OBJECTS) $(BINS)
+all: dirs $(LIB_OBJECTS) 3khz-tone-pdm.test $(OBJECTS) $(LIB) $(BINS)
 
 clean:
-	rm -f $(BINS) $(OBJECTS) $(OBJ_DIR)/remez.o plots/*.data
+	rm -f $(BINS) $(OBJECTS) $(OBJ_DIR)/remez.o plots/*.data $(LIB_DIR)/$(LIB)
 
 3khz-tone-pdm.test: bin/cic-test-data
 	bin/cic-test-data
@@ -52,16 +63,21 @@ clean:
 dirs: 
 	mkdir -p $(BIN_DIR)
 	mkdir -p $(OBJ_DIR)
+	mkdir -p $(LIB_DIR)
 
 $(OBJ_DIR)/%.o: %.c $(INCLUDES)
 	cc -g -fPIC -I. -c $< -o $@
 
-$(BIN_DIR)/%: %.c $(OBJECTS) $(INCLUDES)
-	cc -g -I. -o $@ $< ${OBJECTS} ${LDFLAGS}
+$(LIB_DIR)/%: $(LIB_OBJECTS)
+	ar -r $@ $(LIB_OBJECTS)
+	echo "LIB - $@"
 
-$(OBJ_DIR)/remez.o: remez.c dsp/remez.h
-	cc -g -fPIC -o $@ -c remez.c
+$(BIN_DIR)/%: $(SRC_DIR)/%.c $(OBJECTS) $(INCLUDES)
+	cc -g -I. -o $@ $< ${OBJECTS} -L$(LIB_DIR) -lsdsp ${LDFLAGS}
 
-$(BIN_DIR)/filt-design: filt-design.c $(OBJ_DIR)/remez.o $(INCLUDES)
-	cc -I. -o $@ $< ${OBJECTS} $(OBJ_DIR)/remez.o ${LDFLAGS}
+$(OBJ_DIR)/remez.o: $(SRC_DIR)/remez.c dsp/remez.h
+	cc -g -fPIC -I. -o $@ -c $(SRC_DIR)/remez.c
+
+$(BIN_DIR)/filt-design: $(SRC_DIR)/filt-design.c $(OBJ_DIR)/remez.o $(INCLUDES)
+	cc -I. -o $@ $< ${OBJECTS} $(OBJ_DIR)/remez.o -L$(LIB_DIR) -lsdsp ${LDFLAGS}
 
