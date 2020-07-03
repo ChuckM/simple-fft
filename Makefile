@@ -55,7 +55,7 @@ BINS = $(PROGRAMS:%=$(BIN_DIR)/%)
 all: dirs $(LIB_OBJECTS) 3khz-tone-pdm.test $(OBJECTS) $(LIB) $(BINS)
 
 clean:
-	rm -f $(BINS) $(OBJECTS) $(OBJ_DIR)/remez.o plots/*.data $(LIB_DIR)/$(LIB)
+	rm -f $(BINS) $(OBJECTS) $(OBJ_DIR)/remez.o plots/*.data $(LIB)
 
 3khz-tone-pdm.test: bin/cic-test-data
 	bin/cic-test-data
@@ -72,7 +72,7 @@ $(LIB_DIR)/%: $(LIB_OBJECTS)
 	ar -r $@ $(LIB_OBJECTS)
 	echo "LIB - $@"
 
-$(BIN_DIR)/%: $(SRC_DIR)/%.c $(OBJECTS) $(INCLUDES)
+$(BIN_DIR)/%: $(SRC_DIR)/%.c $(OBJECTS) $(INCLUDES) $(LIB)
 	cc -g -I. -o $@ $< ${OBJECTS} -L$(LIB_DIR) -lsdsp ${LDFLAGS}
 
 $(OBJ_DIR)/remez.o: $(SRC_DIR)/remez.c dsp/remez.h
