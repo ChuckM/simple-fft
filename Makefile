@@ -65,7 +65,7 @@ dirs:
 	mkdir -p $(OBJ_DIR)
 	mkdir -p $(LIB_DIR)
 
-$(OBJ_DIR)/%.o: %.c $(INCLUDES)
+$(OBJ_DIR)/%.o: $(SRC_DIR)/%.c $(INCLUDES)
 	cc -g -fPIC -I. -c $< -o $@
 
 $(LIB_DIR)/%: $(LIB_OBJECTS)
