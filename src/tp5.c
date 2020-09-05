@@ -145,9 +145,11 @@ main(int argc, char *argv[])
 	sig2 = alloc_buf(SAMPLE_RATE, SAMPLE_RATE);
 
 	printf("Building initial signal\n");
-	add_cos(sig1, SAMPLE_RATE * 0.25, 1.0);
+	add_cos_real(sig1, SAMPLE_RATE * 0.25, 1.0);
 	fft1 = compute_fft(sig1, BINS, W_BH);
-
+	for (int i = 0; i < BINS/2; i++) {
+		fft1->data[i + BINS/2] = 0;
+	}
 	printf("Now inverting it ... \n");
 	title = "Method 4";
 	sig2 = method_4(fft1);
@@ -165,8 +167,8 @@ main(int argc, char *argv[])
 					(normalized) ? "normalized" : "dB");
 	fprintf(of,"set multiplot layout 2, 1\n");
 	fprintf(of,"set key outside\n");
-	fprintf(of,"plot [-0.50:0.50] $plot_fft1 using 1:2 with lines title 'FFT1'\n");
-	fprintf(of,"plot [-0.50:0.50] $plot_fft2 using 1:2 with lines title 'FFT2'\n");
+	fprintf(of,"plot [-0.50:0.50] $fft1_fft_data using fft1_xnorm_col:fft1_ydb_col with lines title 'FFT1'\n");
+	fprintf(of,"plot [-0.50:0.50] $fft2_fft_data using fft2_xnorm_col:fft2_ydb_col with lines title 'FFT2'\n");
 	fprintf(of,"unset multiplot\n");
 	fclose(of);
 }

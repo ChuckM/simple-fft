@@ -108,6 +108,30 @@ add_cos(sample_buffer *s, double f, double a)
 }
 
 /*
+ * add_sin( ... )
+ *
+ * Add in a signal (complex) at this frequency and amplitude into
+ * the sample buffer.
+ */
+void
+add_sin(sample_buffer *s, double f, double a)
+{
+	int	i;
+
+	/*
+	 * n is samples
+	 * r is rate (samples per second)
+	 * f is frequency (cycles per second)
+	 * what span is (n / r) seconds / f = cyles /n is cycles per sample?
+	 */
+	for (i = 0; i < s->n; i++ ) {
+		s->data[i] += (sample_t) (a * (sin(2 * M_PI * f * i / s->r) -
+									   cos(2 * M_PI * f * i / s->r) * I));
+		set_minmax(s, i);
+	}
+}
+
+/*
  * add_cos_phase( ... )
  *
  * Add in a signal (complex) at this frequency and amplitude into
@@ -790,32 +814,71 @@ load_signal(char *filename)
 
 int
 plot_signal(FILE *of, char *name, sample_buffer *sig, 
-			int start, int end, int len, enum signal_x x)
+			int start, int end, int len)
 {
-	fprintf(of, "$plot_%s << EOD\n", name);
+	double min_q, min_i;
+	double max_q, max_i;
+	double q_norm, i_norm;
+	
+
+	/* make sure we don't go outside the signal array */
+	if (start < 0) {
+		start = 0;
+	}
+	if (start > sig->n) {
+		start = sig->n;
+	}
+
 	if (end <= start) {
 		end = start + len;
 	}
 	if (end >= sig->n) {
 		end = sig->n;
 	}
+	min_q = min_i = max_q = max_i = 0;
 	for (int k = start; k < end; k++) {
-		complex double sig_y;
-		double	dx, dy;
+		double q, i;
+		i = creal(sig->data[k]);
+		q = cimag(sig->data[k]);
+		min_q = (q <= min_q) ? q : min_q;
+		min_i = (i <= min_i) ? i : min_i;
+		max_q = (q >= max_q) ? q : max_q;
+		max_i = (i >= max_i) ? i : max_i;
+	}
+	i_norm = max_i - min_i;
+	q_norm = max_q - min_q;
 
-		sig_y = (k < sig->n) ?  sig_y = sig->data[k] : 0;
-		switch (x) {
-			default:
-			case SIG_X_TIME:
-				dx = (double) k / (double) sig->r;
-				break;
-			case SIG_X_NORM:
-				dx = (double) k / (double) sig->n;
-				break;
-		}
+	fprintf(of, "%s_min_i = %f\n", name, min_i);
+	fprintf(of, "%s_max_i = %f\n", name, max_i);
+	fprintf(of, "%s_min_q = %f\n", name, min_q);
+	fprintf(of, "%s_max_q = %f\n", name, max_q);
+	fprintf(of, "%s_x_time_col = 1\n", name);
+	fprintf(of, "%s_x_time_norm_col = 2\n", name);
+	fprintf(of, "%s_y_i_col = 3\n", name);
+	fprintf(of, "%s_y_q_col = 4\n", name);
+	fprintf(of, "%s_y_i_norm_col = 5\n", name);
+	fprintf(of, "%s_y_q_norm_col = 6\n", name);
+	fprintf(of, "$%s_sig_data << EOD\n", name);
+	fprintf(of, "#\n# Columns are:\n");
+	fprintf(of, "# 1. Time Delta (seconds)\n");
+	fprintf(of, "# 2. Time Delta (normalized)\n");
+	fprintf(of, "# 3. Inphase (real) value\n");
+	fprintf(of, "# 4. Quadrature (imaginary) value\n");
+	fprintf(of, "# 5. Inphase (real) value normalized (-0.5 - 0.5)\n");
+	fprintf(of, "# 6. Quadrature (imaginary) value normalized (-0.5 - 0.5)\n");
+	for (int k = start; k < end; k++) {
+		double	dt, dx;
+		double	sig_i, sig_q;
+
+		
+		sig_i = creal(sig->data[k]);
+		sig_q = cimag(sig->data[k]);
+		dt = (double) k / (double) sig->r;
+		dx = (double) k / (double) sig->n;
 		/* prints real part, imaginary part, and magnitude */
-		fprintf(of, "%f %f %f %f\n", dx, creal(sig_y), cimag(sig_y), 
-									cmag(sig_y));
+		fprintf(of, "%f %f %f %f %f %f\n", dt, dx, sig_i, sig_q, 
+						((sig_i + min_i) / i_norm) - 0.5, 
+						((sig_q + min_q) / q_norm) - 0.5);
 	}
 	fprintf(of, "EOD\n");
 }

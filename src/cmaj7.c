@@ -24,17 +24,54 @@
 
 extern char *optarg;
 
-/* some notes */
-#define Bb3	233.082
-#define C4	261.626
-#define	E4	329.628
-#define F4	349.228
-#define G4	391.995
-#define A4	440.000
-#define Bb4	466.160
+/* some notes (rounded to the nearest tenth of a Hz) */
+#define Bb3	233.1
+#define C4	261.6		/* C Major 7th (root) */
+#define	E4	329.6		/* C Major 7th (third) */
+#define F4	349.2
+#define G4	392.0		/* C Major 7th (fifth) */
+#define A4	440.0
+#define Bb4	466.2		/* C Major 7th (seventh) */
 
-#define SAMPLE_RATE 10386
-#define BINS 8192
+#define SAMPLE_RATE 163840
+#define BINS 32768
+//#define SAMPLE_RATE 8192
+//#define BINS 8192
+
+/*
+ * add_zero_sin( ... )
+ *
+ * Add in a signal (complex) at this frequency and amplitude into
+ * the sample buffer.
+ *
+ * Note: This is a variant of the version in signal.c used for this
+ * example only. My goal was to get a high detail FFT of the chord.
+ * In order to do that I need to minimize spectrum leakage which one
+ * can help with windowing, but not eliminate. So instead we'll put
+ * waveforms that start and stop at 0.0 real (or close enough) and 
+ * then the rest of the buffer is zero filled to maximize the FFT
+ * fidelity.
+ */
+void
+add_zero_sin(sample_buffer *s, double f, double a)
+{
+	int	i;
+
+	/*
+	 * n is samples
+	 * r is rate (samples per second)
+	 * f is frequency (cycles per second)
+	 * what span is (n / r) seconds / f = cyles /n is cycles per sample?
+	 */
+	for (i = 0; i < s->n; i++ ) {
+		if (((2 * M_PI * C4 * (double) i)/(double)s->r) > (54 * M_PI)) {
+			break;
+		}
+		s->data[i] += (sample_t) (a * (sin(2 * M_PI * f * i / s->r) -
+									   cos(2 * M_PI * f * i / s->r) * I));
+		set_minmax(s, i);
+	}
+}
 
 /*
  * An illustrative plot of a CMaj7th chord
@@ -86,25 +123,21 @@ main(int argc, char *argv[])
 		for (int k = 0; k < 4; k++) {
 			sum += creal(notes[k]->data[i]);
 		}
-		if (abs(sum) < EPSILON) {
-			printf("Convergence : %d\n", i);
-		}
 	}
 
-	add_cos(sig, C4, 0.50);
-	add_cos(sig, E4, 0.50);
-	add_cos(sig, G4, 0.50);
-	add_cos(sig, Bb4, 0.50);
+	add_zero_sin(sig, C4, 0.50);
+	add_zero_sin(sig, E4, 0.50);
+	add_zero_sin(sig, G4, 0.50);
+	add_zero_sin(sig, Bb4, 0.50);
 	of = fopen("plots/cmaj7.plot", "w");
-	plot_signal(of, "chord", sig, 0,(int)(.075*sr), 0, SIG_X_TIME);
-	bh_window_buffer(sig, BINS);
-	bh_window_buffer(sig, BINS);
+	plot_signal(of, "chord", sig, 0,(int)(.075*sr), 0);
 	fft = compute_fft(sig, BINS, W_BH);
 	if (fft == NULL) {
 		fprintf(stderr, "FFT failed\n");
 		exit(1);
 	}
-	plot_fft(of, fft, "fft");
+
+	plot_fft(of, fft, "chord");
 
 	fprintf(of,"set title 'CMaj7^{th} (Frequency Domain)' font \"Arial,14\"\n");
 	fprintf(of, "set xtics font \"Arial,10\"\n");
@@ -114,11 +147,11 @@ main(int argc, char *argv[])
 	fprintf(of,"set ylabel 'Magnitude (dB)' font \"Arial,12\"\n");
 	fprintf(of,"set multiplot layout 2, 1\n");
 	fprintf(of,"set key box font \"Arial,10\"\n");
-	fprintf(of,"plot [0:1000] $plot_fft using 1:2 with lines title 'Chord FFT' lt rgb '#1010ff' lw 1.5\n");
+	fprintf(of,"plot [0:1000] $chord_fft_data using chord_xfreq_col:chord_ydb_col with lines title 'Chord FFT' lt rgb '#1010ff' lw 1.5\n");
 	fprintf(of,"set title 'CMaj7^{th} (Time Domain)' font \"Arial,14\"\n");
 	fprintf(of, "set xlabel 'Time (s)' font \"Arial,12\"\n");
 	fprintf(of, "set ylabel 'Amplitude (V)' font \"Arial,12\"\n");
-	fprintf(of,"plot [0:0.06] $plot_chord using 1:2 with lines title 'Chord' lt rgb '#ff1010' lw 1.5\n");
+	fprintf(of,"plot [0:0.06] $chord_sig_data using chord_x_time_col:chord_y_i_norm_col with lines title 'Chord' lt rgb '#ff1010' lw 1.5\n");
 	fprintf(of,"unset multiplot\n");
 	fclose(of);
 }
