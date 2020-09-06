@@ -145,73 +145,51 @@ main(int argc, char *argv[])
 		fprintf(stderr, "Unable to open %s for writing.\n", name);
 		exit(1);
 	}
-	fprintf(of, "$plot_data << EOD\n");
-	if (make_it_real) {
-		if (showphase) {
-			fprintf(of, "period I I_{phase}\n");
-		} else {
-			fprintf(of, "period I\n");
-		}
-	} else {
-		if (showphase) {
-			fprintf(of, "period I Q I_{phase} Q_{phase}\n");
-		} else {
-			fprintf(of, "period I Q\n");
-		}
-	}
-	for (int i = 0; i < wave->n; i++) {
-		if (make_it_real) {
-			fprintf(of, "%f %f", 2.0 * (double) i / (double) wave->n,
-			creal(wave->data[i]));
-			if (showphase) {
-				fprintf(of, " %f", creal(wave_phase->data[i]));
-			}
-			fprintf(of, "\n");
-		} else {
-			fprintf(of, "%f %f %f", 2.0 * (double) i / (double) wave->n,
-			creal(wave->data[i]), cimag(wave->data[i]));
-			if (showphase) {
-				fprintf(of, " %f %f", creal(wave_phase->data[i]),
-						cimag(wave_phase->data[i]));
-			}
-			fprintf(of, "\n");
-		}
-	}
+	plot_signal(of, wave, "sig", 0, wave->n);
+	plot_signal(of, wave_phase, "sigphase", 0, wave_phase->n);
 	fprintf(of, 
-		"EOD\n"
 		"set xlabel \"Period\"\n"
 		"set ylabel \"Amplitude\"\n"
 		"set grid\n"
 		"set title \"%s\"\n"
 		"set xtics border in scale 1,0.5 offset character 0,0,0\\\n"
 		"	norangelimit \\\n"
-		"	(\"{/Symbol p}/2\" 0.25,\\\n"
-		"	 \"{/Symbol p}\" .5, \\\n"
-		"	 \"3{/Symbol p}/2\" .75, \\\n"
-		"	 \"2{/Symbol p}\" 1, \\\n"
-		"	 \"5{/Symbol p}/2\" 1.25,\\\n"
-		"	 \"3{/Symbol p}\" 1.5, \\\n"
-		"	 \"7{/Symbol p}/2\" 1.75, \\\n"
-		"	 \"4{/Symbol p}\" 2)\n"
-		"set key outside autotitle columnheader\n"
-		"plot [0:2] $plot_data \\\n", plot_title);
+		"	(\"{/Symbol p}/2\" 0.125,\\\n"
+		"	 \"{/Symbol p}\" .25, \\\n"
+		"	 \"3{/Symbol p}/2\" .375, \\\n"
+		"	 \"2{/Symbol p}\" .5, \\\n"
+		"	 \"5{/Symbol p}/2\" .625,\\\n"
+		"	 \"3{/Symbol p}\" .75, \\\n"
+		"	 \"7{/Symbol p}/2\" .875, \\\n"
+		"	 \"4{/Symbol p}\" 1)\n"
+		"set key outside autotitle columnheader\n", plot_title);
 	if (make_it_real == 0) {
 		fprintf(of, 
-		"              using 1:2 with lines lt rgb \"#1010ff\" lw 1.5,\\\n"
-		"         \"\" using 1:3 with lines lt rgb \"#ff1010\" lw 1.5");
+		"	plot [0:1] $sig_sig_data \\\n"
+		"              using sig_x_time_norm_col:sig_y_i_norm_col \\\n"
+		"              with lines lt rgb \"#1010ff\" lw 1.5 ,\\\n"
+		"         \"\" \\\n"
+		"			   using sig_x_time_norm_col:sig_y_q_norm_col \\\n"
+		"			   with lines lt rgb \"#ff1010\" lw 1.5");
 		if (showphase) {
 			fprintf(of, ", \\\n"
-		"         \"\" using 1:4 with lines lt rgb \"#c0c0c0\" lw 1.5, \\\n"
-		"         \"\" using 1:5 with lines lt rgb \"#101010\" lw 1.5");
-		
+			"  $sig_sigphase_data \\\n"
+			" 		using sigphase_x_time_norm_col:sigphase_y_i_norm_col \\\n"
+			" 		with lines lt rgb \"#c0c0c0\" lw 1.5 , \\\n"
+			"  $sig_sigphase_data \\\n"
+			" 		using sigphase_x_time_norm_col:sigphase_y_q_norm_col \\\n"
+			" 		with lines lt rgb \"#101010\" lw 1.5");
 		}
-
 	} else {
 		fprintf(of, 
-		"              using 1:2 with lines lt rgb \"#1010ff\" lw 1.5");
+		"	plot [0:1] $sig_sig_data \\\n"
+		"		using sig_x_time_norm_col:sig_y_i_norm_col \\\n"
+		"		with lines lt rgb \"#1010ff\" lw 1.5");
 		if (showphase) {
 			fprintf(of, ", \\\n"
-		"              \"\" using 1:3 with lines lt rgb \"#ff1010\" lw 1.5");
+			"	$sigphase_sig_data \\\n"
+			"		using sigphase_x_time_norm_col:sigphase_y_i_norm_col \\\n"
+			"		 with lines lt rgb \"#ff1010\" lw 1.5");
 		}
 	}
 	fprintf(of, "\n");

@@ -813,9 +813,9 @@ load_signal(char *filename)
 }
 
 int
-plot_signal(FILE *of, char *name, sample_buffer *sig, 
-			int start, int end, int len)
+plot_signal(FILE *of, sample_buffer *sig, char *name, int start, int len)
 {
+	int	end;
 	double min_q, min_i;
 	double max_q, max_i;
 	double q_norm, i_norm;
@@ -829,12 +829,12 @@ plot_signal(FILE *of, char *name, sample_buffer *sig,
 		start = sig->n;
 	}
 
-	if (end <= start) {
+	if ((len <= 0) || ((start + len) >= sig->n)) {
+		end = sig->n;
+	} else {
 		end = start + len;
 	}
-	if (end >= sig->n) {
-		end = sig->n;
-	}
+
 	min_q = min_i = max_q = max_i = 0;
 	for (int k = start; k < end; k++) {
 		double q, i;
@@ -847,6 +847,8 @@ plot_signal(FILE *of, char *name, sample_buffer *sig,
 	}
 	i_norm = max_i - min_i;
 	q_norm = max_q - min_q;
+	printf("Signal %s: I [%f -- %f, %f], Q [%f -- %f, %f] \n",
+		name, min_i, max_i, i_norm, min_q, max_q, q_norm);
 
 	fprintf(of, "%s_min_i = %f\n", name, min_i);
 	fprintf(of, "%s_max_i = %f\n", name, max_i);
@@ -866,19 +868,21 @@ plot_signal(FILE *of, char *name, sample_buffer *sig,
 	fprintf(of, "# 4. Quadrature (imaginary) value\n");
 	fprintf(of, "# 5. Inphase (real) value normalized (-0.5 - 0.5)\n");
 	fprintf(of, "# 6. Quadrature (imaginary) value normalized (-0.5 - 0.5)\n");
+	fprintf(of, "#  1        2        3        4         5         6\n");
+
 	for (int k = start; k < end; k++) {
 		double	dt, dx;
 		double	sig_i, sig_q;
-
 		
 		sig_i = creal(sig->data[k]);
 		sig_q = cimag(sig->data[k]);
-		dt = (double) k / (double) sig->r;
-		dx = (double) k / (double) sig->n;
+		dt = (double) (k - start) / (double) sig->r;
+		dx = (double) (k - start) / (double) (end - start);
 		/* prints real part, imaginary part, and magnitude */
-		fprintf(of, "%f %f %f %f %f %f\n", dt, dx, sig_i, sig_q, 
-						((sig_i + min_i) / i_norm) - 0.5, 
-						((sig_q + min_q) / q_norm) - 0.5);
+		fprintf(of, "%f %f %f %f %f %f\n", 
+						dt, dx, sig_i, sig_q, 
+						(i_norm != 0) ? ((sig_i - min_i) / i_norm) - 0.5 : 0, 
+						(q_norm != 0) ? ((sig_q - min_q) / q_norm) - 0.5 : 0);
 	}
 	fprintf(of, "EOD\n");
 }

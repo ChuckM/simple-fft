@@ -130,7 +130,7 @@ main(int argc, char *argv[])
 	add_zero_sin(sig, G4, 0.50);
 	add_zero_sin(sig, Bb4, 0.50);
 	of = fopen("plots/cmaj7.plot", "w");
-	plot_signal(of, "chord", sig, 0,(int)(.075*sr), 0);
+	plot_signal(of, sig, "chord", 0, (int)(.075*sr));
 	fft = compute_fft(sig, BINS, W_BH);
 	if (fft == NULL) {
 		fprintf(stderr, "FFT failed\n");

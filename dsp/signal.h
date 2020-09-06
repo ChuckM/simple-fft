@@ -108,4 +108,4 @@ void add_square_real(sample_buffer *, double, double);
 int store_signal(sample_buffer *signal, signal_format fmt, char *filename);
 sample_buffer *load_signal(char *filename);
 
-int plot_signal(FILE *of, char *name, sample_buffer *sig, int s, int e, int l);
+int plot_signal(FILE *of, sample_buffer *sig, char *n, int start, int len);

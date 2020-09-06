@@ -139,17 +139,25 @@ main(int argc, char *argv[])
 	sample_buffer	*fft2;
 	FILE	*of;
 	char 	*title;
+	double	bin_width;
 	int normalized;
 
 	sig1 = alloc_buf(SAMPLE_RATE, SAMPLE_RATE);
 	sig2 = alloc_buf(SAMPLE_RATE, SAMPLE_RATE);
 
 	printf("Building initial signal\n");
-	add_cos_real(sig1, SAMPLE_RATE * 0.25, 1.0);
+	bin_width = (double) (SAMPLE_RATE) / (double) (BINS);
+	printf("Adding signal @ %f Hz [bin width = %f]\n", bin_width * 250, bin_width);
+	add_cos(sig1, bin_width * 250, 1.0);
+#if 0
+	add_cos_real(sig1, bin_width * 250.5, 1.0);
+#endif
 	fft1 = compute_fft(sig1, BINS, W_BH);
+#if 0
 	for (int i = 0; i < BINS/2; i++) {
-		fft1->data[i + BINS/2] = 0;
+		fft1->data[i + BINS/2] = fft1->data[0];
 	}
+#endif
 	printf("Now inverting it ... \n");
 	title = "Method 4";
 	sig2 = method_4(fft1);
@@ -159,16 +167,32 @@ main(int argc, char *argv[])
 	normalized = 1;
 	of = fopen("plots/tp5.plot", "w");
 	plot_fft(of, fft1, "fft1");
+	plot_signal(of, sig1, "sig1", 0, sig1->n);
 	plot_fft(of, fft2, "fft2");
+	plot_signal(of, sig2, "sig2", 0, sig2->n);
 	fprintf(of,"set title '%s'\n", title);
 	fprintf(of,"set xlabel 'Frequency'\n");
 	fprintf(of, "set grid\n");
 	fprintf(of,"set ylabel 'Magnitude (%s)'\n", 
 					(normalized) ? "normalized" : "dB");
-	fprintf(of,"set multiplot layout 2, 1\n");
+	fprintf(of,"set multiplot layout 2, 2\n");
 	fprintf(of,"set key outside\n");
-	fprintf(of,"plot [-0.50:0.50] $fft1_fft_data using fft1_xnorm_col:fft1_ydb_col with lines title 'FFT1'\n");
-	fprintf(of,"plot [-0.50:0.50] $fft2_fft_data using fft2_xnorm_col:fft2_ydb_col with lines title 'FFT2'\n");
+	fprintf(of,"plot [-0.50:0.50] $fft1_fft_data using \\\n"
+			   "    fft1_xnorm_col:fft1_ydb_col with lines title 'FFT1'\n");
+	fprintf(of,"plot [0.5:0.502] $sig1_sig_data using \\\n"
+			   "    sig1_x_time_norm_col:sig1_y_i_norm_col \\\n"
+			   "	with lines title 'Signal 1 (I)', \\\n");
+	fprintf(of,"	$sig1_sig_data using \\\n"
+			   "    sig1_x_time_norm_col:sig1_y_q_norm_col \\\n"
+			   "	with lines title 'Signal 1 (Q)'\n");
+	fprintf(of,"plot [-0.50:0.50] $fft2_fft_data using \\\n"
+			   "	fft2_xnorm_col:fft2_ydb_col with lines title 'FFT2'\n");
+	fprintf(of,"plot [0.5:0.504] $sig2_sig_data using \\\n"
+			   "	sig2_x_time_norm_col:sig2_y_i_norm_col\\\n"
+			   "	with lines title 'Signal 2', \\\n");
+	fprintf(of,"	$sig2_sig_data using \\\n"
+			   "    sig2_x_time_norm_col:sig2_y_q_norm_col \\\n"
+			   "	with lines title 'Signal 2 (Q)'\n");
 	fprintf(of,"unset multiplot\n");
 	fclose(of);
 }
