@@ -9,6 +9,7 @@ tp
 bh
 bin/*
 obj/*
+lib/*
 signals/*
 corr
 corr-plot
