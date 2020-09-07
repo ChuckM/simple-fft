@@ -882,7 +882,7 @@ plot_signal(FILE *of, sample_buffer *sig, char *name, int start, int len)
 		fprintf(of, "%f %f %f %f %f %f\n", 
 						dt, dx, sig_i, sig_q, 
 						(i_norm != 0) ? ((sig_i - min_i) / i_norm) - 0.5 : 0, 
-						(q_norm != 0) ? ((sig_q - min_q) / q_norm) - 0.5 : 0);
+						(q_norm > 0.00000001) ? ((sig_q - min_q) / q_norm) - 0.5 : 0);
 	}
 	fprintf(of, "EOD\n");
 }
