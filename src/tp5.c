@@ -24,6 +24,8 @@
  */
 #include <stdio.h>
 #include <stdlib.h>
+#include <getopt.h>
+#include <strings.h>
 #include <math.h>
 #include <complex.h>
 #include <dsp/signal.h>
@@ -129,6 +131,23 @@ method_4(sample_buffer *fft)
 	return res;
 }
 
+extern char *optarg;
+extern int optind, opterr, optopt;
+
+void usage(char *);
+
+void
+usage(char *bin) {
+	printf("Usage: %s [-m {1|2|3|4}] -r -h\n", bin);
+	printf(" -m <method> -- use method 1, 2, 3, or 4 as IFFT\n");
+	printf(" -r -- use a 'real' only waveform\n");
+	printf(" -w {saw, cos, sqr, tri} -- use sawtooth, cosine, square or triangle\n");
+	printf(" -n -- normalized FFT plot (vs. dB)\n");
+	printf(" -H -- Apply Hilbert transform to real signal\n");
+	printf(" -h -- print this message.\n");
+	exit(1);
+}
+
 int
 main(int argc, char *argv[])
 {
@@ -139,60 +158,175 @@ main(int argc, char *argv[])
 	sample_buffer	*fft2;
 	FILE	*of;
 	char 	*title;
-	double	bin_width;
-	int normalized;
+	int		wavetype = 0;
+	int normalized = 0;
+	int		method = 4;
+	int		real_signal = 0;
+	int		do_hilbert = 0;
+	double	demo_freq;
+	char *options = "m:Hrnw:";
+	char opt;
 
-	sig1 = alloc_buf(SAMPLE_RATE, SAMPLE_RATE);
-	sig2 = alloc_buf(SAMPLE_RATE, SAMPLE_RATE);
 
-	printf("Building initial signal\n");
-	bin_width = (double) (SAMPLE_RATE) / (double) (BINS);
-	printf("Adding signal @ %f Hz [bin width = %f]\n", bin_width * 250, bin_width);
-	add_cos(sig1, bin_width * 250, 1.0);
-#if 0
-	add_cos_real(sig1, bin_width * 250.5, 1.0);
-#endif
-	fft1 = compute_fft(sig1, BINS, W_BH);
-#if 0
-	for (int i = 0; i < BINS/2; i++) {
-		fft1->data[i + BINS/2] = fft1->data[0];
+	sig1 = alloc_buf(BINS, SAMPLE_RATE);
+
+	while ((opt = getopt(argc, argv, options)) != -1) {
+		switch (opt) {
+			default:
+			case '?':
+				usage(argv[0]);
+				break;
+			case 'n':
+				normalized++;
+				break;
+			case 'r':
+				real_signal++;
+				break;
+			case 'H':
+				do_hilbert++;
+				break;
+			case 'm' :
+				method = atoi(optarg);
+				if ((method < 1) || (method > 4)) {
+					fprintf(stderr, "Invalid method (should be 1, 2, 3, or 4)\n");
+					usage(argv[0]);
+				}
+				break;
+			case 'w' :
+				if (strncasecmp(optarg, "cos", 3) == 0) {
+					wavetype = 0;
+				} else if (strncasecmp(optarg, "tri", 3) == 0) {
+					wavetype = 1;
+				} else if (strncasecmp(optarg, "sqr", 3) == 0) {
+					wavetype = 2;
+				} else if (strncasecmp(optarg, "saw", 3) == 0) {
+					wavetype = 3;
+				} else {
+					fprintf(stderr, "Invalid waveform type.\n");
+					usage(argv[0]);
+				}
+				break;
+		}
 	}
-#endif
+	printf("Building initial signal\n");
+	/* pick a frequency that shows up in bin 250 */
+	demo_freq = ((double) (SAMPLE_RATE) / (double) (BINS)) * 250;
+	printf("Adding signal @ %f Hz\n", demo_freq);
+	if (real_signal) {
+		switch (wavetype) {
+			default:
+			case 0:
+				add_cos_real(sig1, demo_freq, 1.0);
+				break;
+			case 1:
+				add_triangle_real(sig1, demo_freq, 1.0);
+				break;
+			case 2:
+				add_square_real(sig1, demo_freq, 1.0);
+				break;
+			case 3:
+				add_sawtooth_real(sig1, demo_freq, 1.0);
+				break;
+		}
+	} else {
+		switch (wavetype) {
+			default:
+			case 0:
+				add_cos(sig1, demo_freq, 1.0);
+				break;
+			case 1:
+				add_triangle(sig1, demo_freq, 1.0);
+				break;
+			case 2:
+				add_square(sig1, demo_freq, 1.0);
+				break;
+			case 3:
+				add_sawtooth(sig1, demo_freq, 1.0);
+				break;
+		}
+	}
+	fft1 = compute_fft(sig1, BINS, W_BH);
+	if (real_signal && do_hilbert) {
+		/*
+		 * Apply hibert transform to real signal
+		 */
+		for (int i = 0; i < BINS/2; i++) {
+			fft1->data[i + BINS/2] = fft1->data[0];
+		}
+	}
 	printf("Now inverting it ... \n");
 	title = "Method 4";
-	sig2 = method_4(fft1);
+	switch (method) {
+		case 1:
+			title = "Method 1";
+			sig2 = method_1(fft1);
+			break;
+		case 2:
+			title = "Method 2";
+			sig2 = method_2(fft1);
+			break;
+		case 3:
+			title = "Method 3";
+			sig2 = method_3(fft1);
+			break;
+		default:
+		case 4:
+			title = "Method 4";
+			sig2 = method_4(fft1);
+			break;
+	}
 
 	/* FFT of the inverted FFT */
 	fft2 = compute_fft(sig2, BINS, W_BH);
-	normalized = 1;
+	normalized = 0;
 	of = fopen("plots/tp5.plot", "w");
 	plot_fft(of, fft1, "fft1");
 	plot_signal(of, sig1, "sig1", 0, sig1->n);
 	plot_fft(of, fft2, "fft2");
 	plot_signal(of, sig2, "sig2", 0, sig2->n);
-	fprintf(of,"set title '%s'\n", title);
-	fprintf(of,"set xlabel 'Frequency'\n");
 	fprintf(of, "set grid\n");
+	fprintf(of,"set multiplot layout 2, 2\n");
+	fprintf(of,"set title '%s'\n", title);
+	fprintf(of,"set key outside\n");
+	fprintf(of,"set xlabel 'Frequency'\n");
 	fprintf(of,"set ylabel 'Magnitude (%s)'\n", 
 					(normalized) ? "normalized" : "dB");
-	fprintf(of,"set multiplot layout 2, 2\n");
-	fprintf(of,"set key outside\n");
+	fprintf(of,"set xtics .25\n");
 	fprintf(of,"plot [-0.50:0.50] $fft1_fft_data using \\\n"
-			   "    fft1_xnorm_col:fft1_ydb_col with lines title 'FFT1'\n");
-	fprintf(of,"plot [0.5:0.502] $sig1_sig_data using \\\n"
+			   "    fft1_xnorm_col:fft1%s with lines title 'FFT1'\n",
+					(normalized) ? "_ymag_col" : "_ydb_col");
+	fprintf(of,"set xtics .001\n");
+	fprintf(of,"set title '%s'\n", "Original Signal");
+	fprintf(of,"set xlabel 'Time (normalized)'\n");
+	fprintf(of,"set ylabel 'Amplitude (normalized))'\n");
+	fprintf(of,"plot [0.5:0.504] $sig1_sig_data using \\\n"
 			   "    sig1_x_time_norm_col:sig1_y_i_norm_col \\\n"
-			   "	with lines title 'Signal 1 (I)', \\\n");
+			   "	with lines lt rgb \"#1010ff\" lw 1.5 \\\n"
+			   "	title 'Signal 1 (I)', \\\n");
 	fprintf(of,"	$sig1_sig_data using \\\n"
 			   "    sig1_x_time_norm_col:sig1_y_q_norm_col \\\n"
-			   "	with lines title 'Signal 1 (Q)'\n");
+			   "	with lines lt rgb \"#ff1010\" lw 1.5 \\\n"
+			   "	title 'Signal 1 (Q)' \n");
+	fprintf(of,"set title '%s'\n", title);
+	fprintf(of,"set xtics .25\n");
+	fprintf(of,"set xlabel 'Frequency'\n");
+	fprintf(of,"set ylabel 'Magnitude (%s)'\n", 
+					(normalized) ? "normalized" : "dB");
 	fprintf(of,"plot [-0.50:0.50] $fft2_fft_data using \\\n"
-			   "	fft2_xnorm_col:fft2_ydb_col with lines title 'FFT2'\n");
+			   "	fft2_xnorm_col:fft2%s with lines title 'FFT2'\n",
+					(normalized) ? "_ymag_col" : "_ydb_col");
+	fprintf(of,"set title '%s'\n", "Re-Generated Signal");
+	fprintf(of,"set xtics .001\n");
+	fprintf(of,"set xlabel 'Time (normalized)'\n");
+	fprintf(of,"set ylabel 'Amplitude (normalized))'\n");
 	fprintf(of,"plot [0.5:0.504] $sig2_sig_data using \\\n"
 			   "	sig2_x_time_norm_col:sig2_y_i_norm_col\\\n"
-			   "	with lines title 'Signal 2', \\\n");
+			   "	with lines lt rgb \"#1010ff\" lw 1.5 \\\n"
+			   "	title 'Signal 2', \\\n");
 	fprintf(of,"	$sig2_sig_data using \\\n"
 			   "    sig2_x_time_norm_col:sig2_y_q_norm_col \\\n"
-			   "	with lines title 'Signal 2 (Q)'\n");
+			   "	with lines lt rgb \"#ff1010\" lw 1.5 \\\n"
+			   "	title 'Signal 2 (Q)'\n");
 	fprintf(of,"unset multiplot\n");
 	fclose(of);
 }
