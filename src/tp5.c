@@ -286,15 +286,7 @@ main(int argc, char *argv[])
 	plot_signal(of, sig2, "sig2", 0, sig2->n);
 	fprintf(of, "set grid\n");
 	fprintf(of,"set multiplot layout 2, 2\n");
-	fprintf(of,"set title '%s'\n", title);
 	fprintf(of,"set key outside\n");
-	fprintf(of,"set xlabel 'Frequency'\n");
-	fprintf(of,"set ylabel 'Magnitude (%s)'\n", 
-					(normalized) ? "normalized" : "dB");
-	fprintf(of,"set xtics .25\n");
-	fprintf(of,"plot [-0.50:0.50] $fft1_fft_data using \\\n"
-			   "    fft1_xnorm_col:fft1%s with lines title 'FFT1'\n",
-					(normalized) ? "_ymag_col" : "_ydb_col");
 	fprintf(of,"set xtics .001\n");
 	fprintf(of,"set title '%s'\n", "Original Signal");
 	fprintf(of,"set xlabel 'Time (normalized)'\n");
@@ -302,18 +294,18 @@ main(int argc, char *argv[])
 	fprintf(of,"plot [0.5:0.504] $sig1_sig_data using \\\n"
 			   "    sig1_x_time_norm_col:sig1_y_i_norm_col \\\n"
 			   "	with lines lt rgb \"#1010ff\" lw 1.5 \\\n"
-			   "	title 'Signal 1 (I)', \\\n");
+			   "	title '(I)', \\\n");
 	fprintf(of,"	$sig1_sig_data using \\\n"
 			   "    sig1_x_time_norm_col:sig1_y_q_norm_col \\\n"
 			   "	with lines lt rgb \"#ff1010\" lw 1.5 \\\n"
-			   "	title 'Signal 1 (Q)' \n");
+			   "	title '(Q)' \n");
 	fprintf(of,"set title '%s'\n", title);
-	fprintf(of,"set xtics .25\n");
 	fprintf(of,"set xlabel 'Frequency'\n");
 	fprintf(of,"set ylabel 'Magnitude (%s)'\n", 
 					(normalized) ? "normalized" : "dB");
-	fprintf(of,"plot [-0.50:0.50] $fft2_fft_data using \\\n"
-			   "	fft2_xnorm_col:fft2%s with lines title 'FFT2'\n",
+	fprintf(of,"set xtics .25\n");
+	fprintf(of,"plot [-0.50:0.50] $fft1_fft_data using \\\n"
+			   "    fft1_xnorm_col:fft1%s with lines title 'FFT1'\n",
 					(normalized) ? "_ymag_col" : "_ydb_col");
 	fprintf(of,"set title '%s'\n", "Re-Generated Signal");
 	fprintf(of,"set xtics .001\n");
@@ -322,11 +314,19 @@ main(int argc, char *argv[])
 	fprintf(of,"plot [0.5:0.504] $sig2_sig_data using \\\n"
 			   "	sig2_x_time_norm_col:sig2_y_i_norm_col\\\n"
 			   "	with lines lt rgb \"#1010ff\" lw 1.5 \\\n"
-			   "	title 'Signal 2', \\\n");
+			   "	title '(I)', \\\n");
 	fprintf(of,"	$sig2_sig_data using \\\n"
 			   "    sig2_x_time_norm_col:sig2_y_q_norm_col \\\n"
 			   "	with lines lt rgb \"#ff1010\" lw 1.5 \\\n"
-			   "	title 'Signal 2 (Q)'\n");
+			   "	title '(Q)'\n");
+	fprintf(of,"set title '%s'\n", title);
+	fprintf(of,"set xtics .25\n");
+	fprintf(of,"set xlabel 'Frequency'\n");
+	fprintf(of,"set ylabel 'Magnitude (%s)'\n", 
+					(normalized) ? "normalized" : "dB");
+	fprintf(of,"plot [-0.50:0.50] $fft2_fft_data using \\\n"
+			   "	fft2_xnorm_col:fft2%s with lines title 'FFT2'\n",
+					(normalized) ? "_ymag_col" : "_ydb_col");
 	fprintf(of,"unset multiplot\n");
 	fclose(of);
 }
