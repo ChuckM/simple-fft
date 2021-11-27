@@ -847,8 +847,8 @@ plot_signal(FILE *of, sample_buffer *sig, char *name, int start, int len)
 	}
 	i_norm = max_i - min_i;
 	q_norm = max_q - min_q;
-	printf("Signal %s: I [%f -- %f, %f], Q [%f -- %f, %f] \n",
-		name, min_i, max_i, i_norm, min_q, max_q, q_norm);
+	printf("Signal %s: R = %d, I [%f -- %f, %f], Q [%f -- %f, %f] \n",
+		name, sig->r, min_i, max_i, i_norm, min_q, max_q, q_norm);
 
 	fprintf(of, "%s_min_i = %f\n", name, min_i);
 	fprintf(of, "%s_max_i = %f\n", name, max_i);
@@ -868,6 +868,7 @@ plot_signal(FILE *of, sample_buffer *sig, char *name, int start, int len)
 	fprintf(of, "# 4. Quadrature (imaginary) value\n");
 	fprintf(of, "# 5. Inphase (real) value normalized (-0.5 - 0.5)\n");
 	fprintf(of, "# 6. Quadrature (imaginary) value normalized (-0.5 - 0.5)\n");
+	fprintf(of, "# 7. Time in milleseconds (mS)\n");
 	fprintf(of, "#  1        2        3        4         5         6\n");
 
 	for (int k = start; k < end; k++) {
@@ -879,10 +880,11 @@ plot_signal(FILE *of, sample_buffer *sig, char *name, int start, int len)
 		dt = (double) (k - start) / (double) sig->r;
 		dx = (double) (k - start) / (double) (end - start);
 		/* prints real part, imaginary part, and magnitude */
-		fprintf(of, "%f %f %f %f %f %f\n", 
-						dt, dx, sig_i, sig_q, 
+		fprintf(of, "%f %f %f %f %f %f %f\n", 
+						dt*1000.0, dx, sig_i, sig_q, 
 						(i_norm != 0) ? ((sig_i - min_i) / i_norm) - 0.5 : 0, 
-						(q_norm > 0.00000001) ? ((sig_q - min_q) / q_norm) - 0.5 : 0);
+						(q_norm > 0.00000001) ? ((sig_q - min_q) / q_norm) - 0.5 : 0,
+						dt * 1000.0);
 	}
 	fprintf(of, "EOD\n");
 }
