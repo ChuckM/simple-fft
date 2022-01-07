@@ -163,8 +163,10 @@ main(int argc, char *argv[])
 	int		method = 4;
 	int		real_signal = 0;
 	int		do_hilbert = 0;
+	int		truncate_signal = 0;
+	double period, w_start, w_end;
 	double	demo_freq;
-	char *options = "m:Hrnw:";
+	char *options = "m:Hrnw:T";
 	char opt;
 
 
@@ -181,6 +183,9 @@ main(int argc, char *argv[])
 				break;
 			case 'r':
 				real_signal++;
+				break;
+			case 'T':
+				truncate_signal++;
 				break;
 			case 'H':
 				do_hilbert++;
@@ -211,6 +216,10 @@ main(int argc, char *argv[])
 	printf("Building initial signal\n");
 	/* pick a frequency that shows up in bin 250 */
 	demo_freq = ((double) (SAMPLE_RATE) / (double) (BINS)) * 250;
+	period = ceil((double)(SAMPLE_RATE) / demo_freq);
+	w_start = period / (double) SAMPLE_RATE;
+	w_end = (4.0 * period) / (double) SAMPLE_RATE;
+
 	printf("Adding signal @ %f Hz\n", demo_freq);
 	if (real_signal) {
 		switch (wavetype) {
@@ -245,14 +254,26 @@ main(int argc, char *argv[])
 				break;
 		}
 	}
-	fft1 = compute_fft(sig1, BINS, W_BH);
+	fft1 = compute_fft(sig1, BINS, W_RECT);
 	if (real_signal && do_hilbert) {
 		/*
 		 * Apply hibert transform to real signal
 		 */
-		for (int i = 0; i < BINS/2; i++) {
-			fft1->data[i + BINS/2] = fft1->data[0];
+		for (int i = 1; i < BINS; i++) {
+			if (i < BINS/2) {
+				fft1->data[i] = 2 * fft1->data[i];
+			} else {
+				fft1->data[i] = 0;
+			}
 		}
+	} else if (real_signal && truncate_signal) {
+		sample_buffer *t = alloc_buf(BINS/2, SAMPLE_RATE/2);
+		t->data[0] = fft1->data[0];
+		for (int i = 1; i < BINS/2; i++) {
+			t->data[i] = 2 * fft1->data[i];
+		}
+		free_buf(fft1);
+		fft1 = t;
 	}
 	printf("Now inverting it ... \n");
 	title = "Method 4";
@@ -277,7 +298,7 @@ main(int argc, char *argv[])
 	}
 
 	/* FFT of the inverted FFT */
-	fft2 = compute_fft(sig2, BINS, W_BH);
+	fft2 = compute_fft(sig2, BINS, W_RECT);
 	normalized = 0;
 	of = fopen("plots/tp5.plot", "w");
 	plot_fft(of, fft1, "fft1");
@@ -285,19 +306,21 @@ main(int argc, char *argv[])
 	plot_fft(of, fft2, "fft2");
 	plot_signal(of, sig2, "sig2", 0, sig2->n);
 	fprintf(of, "set grid\n");
+	fprintf(of, "red = 0xcf1010\n");
+	fprintf(of, "blue = 0x1010cf\n");
 	fprintf(of,"set multiplot layout 2, 2\n");
 	fprintf(of,"set key outside\n");
 	fprintf(of,"set xtics .001\n");
 	fprintf(of,"set title '%s'\n", "Original Signal");
 	fprintf(of,"set xlabel 'Time (normalized)'\n");
 	fprintf(of,"set ylabel 'Amplitude (normalized))'\n");
-	fprintf(of,"plot [0.5:0.504] $sig1_sig_data using \\\n"
-			   "    sig1_x_time_norm_col:sig1_y_i_norm_col \\\n"
-			   "	with lines lt rgb \"#1010ff\" lw 1.5 \\\n"
-			   "	title '(I)', \\\n");
+	fprintf(of,"plot [%f:%f] $sig1_sig_data using \\\n"
+			   "    sig1_x_time_col:sig1_y_i_norm_col \\\n"
+			   "	with lines lt rgb blue lw 1.5 \\\n"
+			   "	title '(I)', \\\n", w_start, w_end);
 	fprintf(of,"	$sig1_sig_data using \\\n"
-			   "    sig1_x_time_norm_col:sig1_y_q_norm_col \\\n"
-			   "	with lines lt rgb \"#ff1010\" lw 1.5 \\\n"
+			   "    sig1_x_time_col:sig1_y_q_norm_col \\\n"
+			   "	with lines lt rgb red lw 1.5 \\\n"
 			   "	title '(Q)' \n");
 	fprintf(of,"set title '%s'\n", title);
 	fprintf(of,"set xlabel 'Frequency'\n");
@@ -311,13 +334,13 @@ main(int argc, char *argv[])
 	fprintf(of,"set xtics .001\n");
 	fprintf(of,"set xlabel 'Time (normalized)'\n");
 	fprintf(of,"set ylabel 'Amplitude (normalized))'\n");
-	fprintf(of,"plot [0.5:0.504] $sig2_sig_data using \\\n"
-			   "	sig2_x_time_norm_col:sig2_y_i_norm_col\\\n"
-			   "	with lines lt rgb \"#1010ff\" lw 1.5 \\\n"
-			   "	title '(I)', \\\n");
+	fprintf(of,"plot [%f:%f] $sig2_sig_data using \\\n"
+			   "	sig2_x_time_col:sig2_y_i_norm_col\\\n"
+			   "	with lines lt rgb blue lw 1.5 \\\n"
+			   "	title '(I)', \\\n", w_start, w_end);
 	fprintf(of,"	$sig2_sig_data using \\\n"
-			   "    sig2_x_time_norm_col:sig2_y_q_norm_col \\\n"
-			   "	with lines lt rgb \"#ff1010\" lw 1.5 \\\n"
+			   "    sig2_x_time_col:sig2_y_q_norm_col \\\n"
+			   "	with lines lt rgb red lw 1.5 \\\n"
 			   "	title '(Q)'\n");
 	fprintf(of,"set title '%s'\n", title);
 	fprintf(of,"set xtics .25\n");
