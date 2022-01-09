@@ -193,7 +193,8 @@ main(int argc, char *argv[])
 			case 'm' :
 				method = atoi(optarg);
 				if ((method < 1) || (method > 4)) {
-					fprintf(stderr, "Invalid method (should be 1, 2, 3, or 4)\n");
+					fprintf(stderr,
+                            "Invalid method (should be 1, 2, 3, or 4)\n");
 					usage(argv[0]);
 				}
 				break;
@@ -217,8 +218,8 @@ main(int argc, char *argv[])
 	/* pick a frequency that shows up in bin 250 */
 	demo_freq = ((double) (SAMPLE_RATE) / (double) (BINS)) * 250;
 	period = ceil((double)(SAMPLE_RATE) / demo_freq);
-	w_start = period / (double) SAMPLE_RATE;
-	w_end = (4.0 * period) / (double) SAMPLE_RATE;
+	w_start = 1000.0 * (period / (double) SAMPLE_RATE);
+	w_end = 1000.0 * ((4.0 * period) / (double) SAMPLE_RATE);
 
 	printf("Adding signal @ %f Hz\n", demo_freq);
 	if (real_signal) {
@@ -315,11 +316,11 @@ main(int argc, char *argv[])
 	fprintf(of,"set xlabel 'Time (normalized)'\n");
 	fprintf(of,"set ylabel 'Amplitude (normalized))'\n");
 	fprintf(of,"plot [%f:%f] $sig1_sig_data using \\\n"
-			   "    sig1_x_time_col:sig1_y_i_norm_col \\\n"
+			   "    sig1_x_time_ms_col:sig1_y_i_norm_col \\\n"
 			   "	with lines lt rgb blue lw 1.5 \\\n"
 			   "	title '(I)', \\\n", w_start, w_end);
 	fprintf(of,"	$sig1_sig_data using \\\n"
-			   "    sig1_x_time_col:sig1_y_q_norm_col \\\n"
+			   "    sig1_x_time_ms_col:sig1_y_q_norm_col \\\n"
 			   "	with lines lt rgb red lw 1.5 \\\n"
 			   "	title '(Q)' \n");
 	fprintf(of,"set title '%s'\n", title);
@@ -335,11 +336,11 @@ main(int argc, char *argv[])
 	fprintf(of,"set xlabel 'Time (normalized)'\n");
 	fprintf(of,"set ylabel 'Amplitude (normalized))'\n");
 	fprintf(of,"plot [%f:%f] $sig2_sig_data using \\\n"
-			   "	sig2_x_time_col:sig2_y_i_norm_col\\\n"
+			   "	sig2_x_time_ms_col:sig2_y_i_norm_col\\\n"
 			   "	with lines lt rgb blue lw 1.5 \\\n"
 			   "	title '(I)', \\\n", w_start, w_end);
 	fprintf(of,"	$sig2_sig_data using \\\n"
-			   "    sig2_x_time_col:sig2_y_q_norm_col \\\n"
+			   "    sig2_x_time_ms_col:sig2_y_q_norm_col \\\n"
 			   "	with lines lt rgb red lw 1.5 \\\n"
 			   "	title '(Q)'\n");
 	fprintf(of,"set title '%s'\n", title);
