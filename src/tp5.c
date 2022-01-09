@@ -170,7 +170,7 @@ main(int argc, char *argv[])
 	char opt;
 
 
-	sig1 = alloc_buf(BINS, SAMPLE_RATE);
+	sig1 = alloc_buf(8192, SAMPLE_RATE);
 
 	while ((opt = getopt(argc, argv, options)) != -1) {
 		switch (opt) {
@@ -258,10 +258,12 @@ main(int argc, char *argv[])
 	fft1 = compute_fft(sig1, BINS, W_RECT);
 	if (real_signal && do_hilbert) {
 		/*
-		 * Apply hibert transform to real signal
+		 * Apply Hilbert transform to real signal
 		 */
 		for (int i = 1; i < BINS; i++) {
-			if (i < BINS/2) {
+			if (i == BINS/2) {
+				fft1->data[i] = fft1->data[i];
+			} else if (i < BINS/2) {
 				fft1->data[i] = 2 * fft1->data[i];
 			} else {
 				fft1->data[i] = 0;
