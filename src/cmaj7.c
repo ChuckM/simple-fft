@@ -147,11 +147,11 @@ main(int argc, char *argv[])
 	fprintf(of,"set ylabel 'Magnitude (dB)' font \"Arial,12\"\n");
 	fprintf(of,"set multiplot layout 2, 1\n");
 	fprintf(of,"set key box font \"Arial,10\"\n");
-	fprintf(of,"plot [0:1000] $chord_fft_data using chord_xfreq_col:chord_ydb_col with lines title 'Chord FFT' lt rgb '#1010ff' lw 1.5\n");
+	fprintf(of,"plot [0:1000] $chord_data using chord_xfreq_col:chord_ydb_col with lines title 'Chord FFT' lt rgb '#1010ff' lw 1.5\n");
 	fprintf(of,"set title 'CMaj7^{th} (Time Domain)' font \"Arial,14\"\n");
 	fprintf(of, "set xlabel 'Time (s)' font \"Arial,12\"\n");
 	fprintf(of, "set ylabel 'Amplitude (V)' font \"Arial,12\"\n");
-	fprintf(of,"plot [0:0.06] $chord_sig_data using chord_x_time_col:chord_y_i_norm_col with lines title 'Chord' lt rgb '#ff1010' lw 1.5\n");
+	fprintf(of,"plot [0:0.06] $chord_data using chord_x_time_col:chord_y_i_norm_col with lines title 'Chord' lt rgb '#ff1010' lw 1.5\n");
 	fprintf(of,"unset multiplot\n");
 	fclose(of);
 }

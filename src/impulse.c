@@ -74,7 +74,7 @@ main(int argc, char *argv[])
 /*	fprintf(of, "set xtics 0.1 0.05\n"); */
 	fprintf(of, "set nokey\n");
 	fprintf(of, 
-	  "plot [-0.5:0.5] $impulse_fft_data using impulse_xnorm_col:impulse_yabs_col"
+	  "plot [-0.5:0.5] $impulse_data using impulse_xnorm_col:impulse_yabs_col"
 				" with lines lt rgb \"#1010ff\"\n");
 	fclose(of);
 	printf("Done.\n");

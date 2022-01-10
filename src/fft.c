@@ -286,6 +286,7 @@ plot_fft(FILE *of, sample_buffer *fft, char *name)
 	for (int k = 0; k < fft->n; k++) {
 		set_minmax(fft, k);
 	}
+	fprintf(of, "#\n# Start FFT data for %s :\n#\n", name);
 	fprintf(of, "%s_min = %f\n", name, fft->sample_min);
 	fprintf(of, "%s_max = %f\n", name, fft->sample_max);
 	fprintf(of, "%s_freq = %f\n", name, (double) fft->r);
@@ -295,7 +296,7 @@ plot_fft(FILE *of, sample_buffer *fft, char *name)
 	fprintf(of, "%s_ynorm_col = 3\n", name);
 	fprintf(of, "%s_ydb_col = 4\n", name);
 	fprintf(of, "%s_ymag_col = 5\n", name);
-	fprintf(of,"$%s_fft_data << EOD\n", name);
+	fprintf(of,"$%s_data << EOD\n", name);
 	fprintf(of, "#\n# Columns are:\n");
 	fprintf(of, "# 1. Normalized frequency (-.5 - 1.0)\n");
 	fprintf(of, "# 2. Frequency by sample rate (- nyquist, 2* nyquist)\n");

@@ -95,7 +95,7 @@ main(int argc, char *argv[])
 /*	fprintf(of, "set xtics 0.1 0.05\n"); */
 	fprintf(of, "set nokey\n");
 	fprintf(of, 
-	  "plot [0:fft_freq] $fft_fft_data using fft_xfreq_col:fft_ydb_col"
+	  "plot [0:fft_freq] $fft_data using fft_xfreq_col:fft_ydb_col"
 				" with lines lt rgb \"#1010ff\"\n");
 	fclose(of);
 	printf("Done.\n");

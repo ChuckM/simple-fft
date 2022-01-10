@@ -317,11 +317,11 @@ main(int argc, char *argv[])
 	fprintf(of,"set title '%s'\n", "Original Signal");
 	fprintf(of,"set xlabel 'Time (normalized)'\n");
 	fprintf(of,"set ylabel 'Amplitude (normalized))'\n");
-	fprintf(of,"plot [%f:%f] $sig1_sig_data using \\\n"
+	fprintf(of,"plot [%f:%f] $sig1_data using \\\n"
 			   "    sig1_x_time_ms_col:sig1_y_i_norm_col \\\n"
 			   "	with lines lt rgb blue lw 1.5 \\\n"
 			   "	title '(I)', \\\n", w_start, w_end);
-	fprintf(of,"	$sig1_sig_data using \\\n"
+	fprintf(of,"	$sig1_data using \\\n"
 			   "    sig1_x_time_ms_col:sig1_y_q_norm_col \\\n"
 			   "	with lines lt rgb red lw 1.5 \\\n"
 			   "	title '(Q)' \n");
@@ -330,18 +330,18 @@ main(int argc, char *argv[])
 	fprintf(of,"set ylabel 'Magnitude (%s)'\n", 
 					(normalized) ? "normalized" : "dB");
 	fprintf(of,"set xtics .25\n");
-	fprintf(of,"plot [-0.50:0.50] $fft1_fft_data using \\\n"
+	fprintf(of,"plot [-0.50:0.50] $fft1_data using \\\n"
 			   "    fft1_xnorm_col:fft1%s with lines title 'FFT1'\n",
 					(normalized) ? "_ymag_col" : "_ydb_col");
 	fprintf(of,"set title '%s'\n", "Re-Generated Signal");
 	fprintf(of,"set xtics .001\n");
 	fprintf(of,"set xlabel 'Time (normalized)'\n");
 	fprintf(of,"set ylabel 'Amplitude (normalized))'\n");
-	fprintf(of,"plot [%f:%f] $sig2_sig_data using \\\n"
+	fprintf(of,"plot [%f:%f] $sig2_data using \\\n"
 			   "	sig2_x_time_ms_col:sig2_y_i_norm_col\\\n"
 			   "	with lines lt rgb blue lw 1.5 \\\n"
 			   "	title '(I)', \\\n", w_start, w_end);
-	fprintf(of,"	$sig2_sig_data using \\\n"
+	fprintf(of,"	$sig2_data using \\\n"
 			   "    sig2_x_time_ms_col:sig2_y_q_norm_col \\\n"
 			   "	with lines lt rgb red lw 1.5 \\\n"
 			   "	title '(Q)'\n");
@@ -350,7 +350,7 @@ main(int argc, char *argv[])
 	fprintf(of,"set xlabel 'Frequency'\n");
 	fprintf(of,"set ylabel 'Magnitude (%s)'\n", 
 					(normalized) ? "normalized" : "dB");
-	fprintf(of,"plot [-0.50:0.50] $fft2_fft_data using \\\n"
+	fprintf(of,"plot [-0.50:0.50] $fft2_data using \\\n"
 			   "	fft2_xnorm_col:fft2%s with lines title 'FFT2'\n",
 					(normalized) ? "_ymag_col" : "_ydb_col");
 	fprintf(of,"unset multiplot\n");

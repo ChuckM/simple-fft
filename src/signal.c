@@ -850,6 +850,7 @@ plot_signal(FILE *of, sample_buffer *sig, char *name, int start, int len)
 	printf("Signal %s: R = %d, I [%f -- %f, %f], Q [%f -- %f, %f] \n",
 		name, sig->r, min_i, max_i, i_norm, min_q, max_q, q_norm);
 
+	fprintf(of, "#\n# Start signal data for %s :\n#\n", name);
 	fprintf(of, "%s_min_i = %f\n", name, min_i);
 	fprintf(of, "%s_max_i = %f\n", name, max_i);
 	fprintf(of, "%s_min_q = %f\n", name, min_q);
@@ -861,7 +862,7 @@ plot_signal(FILE *of, sample_buffer *sig, char *name, int start, int len)
 	fprintf(of, "%s_y_i_norm_col = 5\n", name);
 	fprintf(of, "%s_y_q_norm_col = 6\n", name);
 	fprintf(of, "%s_x_time_ms_col = 7\n", name);
-	fprintf(of, "$%s_sig_data << EOD\n", name);
+	fprintf(of, "$%s_data << EOD\n", name);
 	fprintf(of, "#\n# Columns are:\n");
 	fprintf(of, "# 1. Time Delta (seconds)\n");
 	fprintf(of, "# 2. Time Delta (normalized)\n");
