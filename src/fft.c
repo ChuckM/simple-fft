@@ -291,11 +291,11 @@ plot_fft(FILE *of, sample_buffer *fft, char *name)
 	fprintf(of, "%s_max = %f\n", name, fft->sample_max);
 	fprintf(of, "%s_freq = %f\n", name, (double) fft->r);
 	fprintf(of, "%s_nyquist = %f\n", name, (double) fft->r / 2.0);
- 	fprintf(of, "%s_xnorm_col = 1\n", name);
-	fprintf(of, "%s_xfreq_col = 2\n", name);
-	fprintf(of, "%s_ynorm_col = 3\n", name);
-	fprintf(of, "%s_ydb_col = 4\n", name);
-	fprintf(of, "%s_ymag_col = 5\n", name);
+ 	fprintf(of, "%s_x_norm = 1\n", name);
+	fprintf(of, "%s_x_freq = 2\n", name);
+	fprintf(of, "%s_y_norm = 3\n", name);
+	fprintf(of, "%s_y_db = 4\n", name);
+	fprintf(of, "%s_y_mag = 5\n", name);
 	fprintf(of,"$%s_data << EOD\n", name);
 	fprintf(of, "#\n# Columns are:\n");
 	fprintf(of, "# 1. Normalized frequency (-.5 - 1.0)\n");

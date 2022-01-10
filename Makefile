@@ -28,11 +28,13 @@ SRC_DIR = ./src
 
 LIB_SRC_DIR = ./src/lib
 
-PROGRAMS = demo tp tp2 tp3 tp4 waves hann bh dft_test fft_test \
-	   corr corr-plot multi-corr-plot filt-resp filt-test\
-	   integrator filt-design sig-test tp5 cmaj7 \
-	   cic-test cic-verify cic-test-data impulse cic-debug \
-		genplot fig1
+TEST_PROGRAMS = cic-test fft-test filt-test tp tp2 tp3 tp4 tp5 tp6
+
+PROGRAMS = demo waves hann bh dft_test \
+	   corr corr-plot multi-corr-plot filt-resp \
+	   integrator filt-design sig-test cmaj7 \
+	   cic-verify cic-test-data impulse cic-debug \
+	   genplot fig1 $(TEST_PROGRAMS)
 
 HEADERS = cic.h dft.h fft.h filter.h plot.h \
 			remez.h signal.h windows.h

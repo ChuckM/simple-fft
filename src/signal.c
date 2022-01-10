@@ -851,17 +851,17 @@ plot_signal(FILE *of, sample_buffer *sig, char *name, int start, int len)
 		name, sig->r, min_i, max_i, i_norm, min_q, max_q, q_norm);
 
 	fprintf(of, "#\n# Start signal data for %s :\n#\n", name);
-	fprintf(of, "%s_min_i = %f\n", name, min_i);
-	fprintf(of, "%s_max_i = %f\n", name, max_i);
-	fprintf(of, "%s_min_q = %f\n", name, min_q);
-	fprintf(of, "%s_max_q = %f\n", name, max_q);
-	fprintf(of, "%s_x_time_col = 1\n", name);
-	fprintf(of, "%s_x_time_norm_col = 2\n", name);
-	fprintf(of, "%s_y_i_col = 3\n", name);
-	fprintf(of, "%s_y_q_col = 4\n", name);
-	fprintf(of, "%s_y_i_norm_col = 5\n", name);
-	fprintf(of, "%s_y_q_norm_col = 6\n", name);
-	fprintf(of, "%s_x_time_ms_col = 7\n", name);
+	fprintf(of, "%s_i_min = %f\n", name, min_i);
+	fprintf(of, "%s_i_max = %f\n", name, max_i);
+	fprintf(of, "%s_q_min = %f\n", name, min_q);
+	fprintf(of, "%s_q_max = %f\n", name, max_q);
+	fprintf(of, "%s_x_time = 1\n", name);
+	fprintf(of, "%s_x_time_norm = 2\n", name);
+	fprintf(of, "%s_x_time_ms = 3\n", name);
+	fprintf(of, "%s_y_i = 4\n", name);
+	fprintf(of, "%s_y_q = 5\n", name);
+	fprintf(of, "%s_y_i_norm = 6\n", name);
+	fprintf(of, "%s_y_q_norm = 7\n", name);
 	fprintf(of, "$%s_data << EOD\n", name);
 	fprintf(of, "#\n# Columns are:\n");
 	fprintf(of, "# 1. Time Delta (seconds)\n");
@@ -871,7 +871,7 @@ plot_signal(FILE *of, sample_buffer *sig, char *name, int start, int len)
 	fprintf(of, "# 5. Inphase (real) value normalized (-0.5 - 0.5)\n");
 	fprintf(of, "# 6. Quadrature (imaginary) value normalized (-0.5 - 0.5)\n");
 	fprintf(of, "# 7. Time in milleseconds (mS)\n");
-	fprintf(of, "#  1        2        3        4         5         6       7\n");
+	fprintf(of, "# 1        2        3        4         5         6       7\n");
 
 	for (int k = start; k < end; k++) {
 		double	dt, dx;
@@ -883,10 +883,9 @@ plot_signal(FILE *of, sample_buffer *sig, char *name, int start, int len)
 		dx = (double) (k - start) / (double) (end - start);
 		/* prints real part, imaginary part, and magnitude */
 		fprintf(of, "%f %f %f %f %f %f %f\n", 
-						dt, dx, sig_i, sig_q, 
+						dt, dx, dt * 1000.0, sig_i, sig_q, 
 						(i_norm != 0) ? ((sig_i - min_i) / i_norm) - 0.5 : 0, 
-						(q_norm > 0.00000001) ? ((sig_q - min_q) / q_norm) - 0.5 : 0,
-						dt * 1000.0);
+				(q_norm > 0.00000001) ? ((sig_q - min_q) / q_norm) - 0.5 : 0);
 	}
 	fprintf(of, "EOD\n");
 }
