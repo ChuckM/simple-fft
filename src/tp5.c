@@ -32,7 +32,7 @@
 #include <dsp/fft.h>
 
 #define SAMPLE_RATE	10000
-#define BINS		4096
+#define BINS		8192
 
 sample_buffer *
 method_1(sample_buffer *fft)
@@ -153,9 +153,8 @@ main(int argc, char *argv[])
 {
 	sample_buffer	*sig1;
 	sample_buffer	*sig2;
-	sample_buffer	*fft1;
+	sample_buffer	*fft1, *fft2, *fft3;
 	sample_buffer	*ifft;
-	sample_buffer	*fft2;
 	FILE	*of;
 	char 	*title;
 	int		wavetype = 0;
@@ -256,103 +255,111 @@ main(int argc, char *argv[])
 		}
 	}
 	fft1 = compute_fft(sig1, BINS, W_RECT);
+	fft2 = fft1; /* Default is to display this */
 	if (real_signal && do_hilbert) {
+		fft2 = alloc_buf(BINS, SAMPLE_RATE);
 		/*
 		 * Apply Hilbert transform to real signal
 		 */
+		fft2->data[0] = fft1->data[0];
 		for (int i = 1; i < BINS; i++) {
 			if (i == BINS/2) {
-				fft1->data[i] = fft1->data[i];
+				fft2->data[i] = fft2->data[i];
 			} else if (i < BINS/2) {
-				fft1->data[i] = 2 * fft1->data[i];
+				fft2->data[i] = 2 * fft1->data[i];
 			} else {
-				fft1->data[i] = 0;
+				fft2->data[i] = 0;
 			}
 		}
 	} else if (real_signal && truncate_signal) {
-		sample_buffer *t = alloc_buf(BINS/2, SAMPLE_RATE/2);
-		t->data[0] = fft1->data[0];
+		fft2 = alloc_buf(BINS/2, SAMPLE_RATE/2);
+		fft2->data[0] = fft1->data[0];
 		for (int i = 1; i < BINS/2; i++) {
-			t->data[i] = 2 * fft1->data[i];
+			fft2->data[i] = 2 * fft1->data[i];
 		}
-		free_buf(fft1);
-		fft1 = t;
 	}
 	printf("Now inverting it ... \n");
 	title = "Method 4";
 	switch (method) {
 		case 1:
 			title = "Method 1";
-			sig2 = method_1(fft1);
+			sig2 = method_1(fft2);
 			break;
 		case 2:
 			title = "Method 2";
-			sig2 = method_2(fft1);
+			sig2 = method_2(fft2);
 			break;
 		case 3:
 			title = "Method 3";
-			sig2 = method_3(fft1);
+			sig2 = method_3(fft2);
 			break;
 		default:
 		case 4:
 			title = "Method 4";
-			sig2 = method_4(fft1);
+			sig2 = method_4(fft2);
 			break;
 	}
 
 	/* FFT of the inverted FFT */
-	fft2 = compute_fft(sig2, BINS, W_RECT);
+	fft3 = compute_fft(sig2, BINS, W_RECT);
 	normalized = 0;
 	of = fopen("plots/tp5.plot", "w");
 	plot_fft(of, fft1, "fft1");
 	plot_signal(of, sig1, "sig1", 0, sig1->n);
-	plot_fft(of, fft2, "fft2");
+	plot_fft(of, fft3, "fft3");
 	plot_signal(of, sig2, "sig2", 0, sig2->n);
 	fprintf(of, "set grid\n");
 	fprintf(of, "red = 0xcf1010\n");
 	fprintf(of, "blue = 0x1010cf\n");
 	fprintf(of,"set multiplot layout 2, 2\n");
-	fprintf(of,"set key outside\n");
-	fprintf(of,"set xtics .001\n");
-	fprintf(of,"set title '%s'\n", "Original Signal");
-	fprintf(of,"set xlabel 'Time (normalized)'\n");
+	fprintf(of,"set xtics out font 'Arial,8' offset 0,.5\n");
+	fprintf(of,"set title font 'Arial, 12'\n");
+	fprintf(of,"set xlabel font 'Arial, 10' offset 0,1\n");
+	fprintf(of,"set ylabel font 'Arial, 10' offset 1,0\n");
+	fprintf(of,"set key opaque font 'Arial,8' box lw 2\n");
+	fprintf(of,"set xtics 1\n");
+	fprintf(of,"set title '%s' offset 0,-1\n", "Original Signal");
+	fprintf(of,"set xlabel 'Time (mS)'\n");
 	fprintf(of,"set ylabel 'Amplitude (normalized))'\n");
 	fprintf(of,"plot [%f:%f] $sig1_data using \\\n"
-			   "    sig1_x_time_ms_col:sig1_y_i_norm_col \\\n"
+			   "    sig1_x_time_ms:sig1_y_i_norm \\\n"
 			   "	with lines lt rgb blue lw 1.5 \\\n"
 			   "	title '(I)', \\\n", w_start, w_end);
 	fprintf(of,"	$sig1_data using \\\n"
-			   "    sig1_x_time_ms_col:sig1_y_q_norm_col \\\n"
+			   "    sig1_x_time_ms:sig1_y_q_norm \\\n"
 			   "	with lines lt rgb red lw 1.5 \\\n"
 			   "	title '(Q)' \n");
-	fprintf(of,"set title '%s'\n", title);
+	fprintf(of,"set title '%s' offset 0,-1\n", title);
 	fprintf(of,"set xlabel 'Frequency'\n");
 	fprintf(of,"set ylabel 'Magnitude (%s)'\n", 
 					(normalized) ? "normalized" : "dB");
+	fprintf(of,"set nokey\n");
 	fprintf(of,"set xtics .25\n");
 	fprintf(of,"plot [-0.50:0.50] $fft1_data using \\\n"
-			   "    fft1_xnorm_col:fft1%s with lines title 'FFT1'\n",
-					(normalized) ? "_ymag_col" : "_ydb_col");
-	fprintf(of,"set title '%s'\n", "Re-Generated Signal");
-	fprintf(of,"set xtics .001\n");
-	fprintf(of,"set xlabel 'Time (normalized)'\n");
+			   "    fft1_x_norm:fft1%s with lines title 'FFT1'\n",
+					(normalized) ? "_y_mag" : "_y_db");
+	fprintf(of,"set title '%s' offset 0,-1 \n", "Re-Generated Signal");
+	fprintf(of,"set key opaque font 'arial,8' box lw 2\n");
+	fprintf(of,"set xtics 1\n");
+	fprintf(of,"set xlabel 'Time (mS)'\n");
 	fprintf(of,"set ylabel 'Amplitude (normalized))'\n");
 	fprintf(of,"plot [%f:%f] $sig2_data using \\\n"
-			   "	sig2_x_time_ms_col:sig2_y_i_norm_col\\\n"
+			   "	sig2_x_time_ms:sig2_y_i_norm\\\n"
 			   "	with lines lt rgb blue lw 1.5 \\\n"
 			   "	title '(I)', \\\n", w_start, w_end);
 	fprintf(of,"	$sig2_data using \\\n"
-			   "    sig2_x_time_ms_col:sig2_y_q_norm_col \\\n"
+			   "    sig2_x_time_ms:sig2_y_q_norm \\\n"
 			   "	with lines lt rgb red lw 1.5 \\\n"
 			   "	title '(Q)'\n");
-	fprintf(of,"set title '%s'\n", title);
+	fprintf(of,"set title '%s' offset 0,-1\n", title);
+	fprintf(of,"set nokey\n");
 	fprintf(of,"set xtics .25\n");
 	fprintf(of,"set xlabel 'Frequency'\n");
 	fprintf(of,"set ylabel 'Magnitude (%s)'\n", 
 					(normalized) ? "normalized" : "dB");
-	fprintf(of,"plot [-0.50:0.50] $fft2_data using \\\n"
-			   "	fft2_xnorm_col:fft2%s with lines title 'FFT2'\n",
-					(normalized) ? "_ymag_col" : "_ydb_col");
+	fprintf(of,"plot [-0.50:0.50] $fft3_data using \\\n"
+			   "	fft3_x_norm:fft3%s with lines title 'FFT2'\n",
+					(normalized) ? "_y_mag" : "_y_db");
 	fprintf(of,"unset multiplot\n");
 	fclose(of);
 }
