@@ -2,8 +2,9 @@
  * fft_test.c -- a simple example for the FFT
  *
  * 
+ * Update Jan 2022 to use new plot stuff.
  * Written April 2019 by Chuck McManis
- * Copyright (c) 2019, Charles McManis
+ * Copyright (c) 2019-2022, Charles McManis
  *
  * I hereby grant permission for anyone to use this software for any 
  * purpose that they choose, I do not warrant the software to be
@@ -30,7 +31,28 @@
 #include <complex.h>
 #include <dsp/signal.h>
 #include <dsp/fft.h>
+#include <dsp/plot.h>
 
+plot_line_t fft_line = {
+	"FFT Test Data",
+	NULL,
+	0x1010cf,
+	"x_norm",
+	"y_db"
+};
+
+plot_t fft_plot = {
+	"Fast Fourier Transform (Test Data)",
+	-0.5, 0.5,
+	"Frequency (normalized)",
+	"Magnitude (dB)",
+	.1,
+	PLOT_KEY_NONE,
+	1,
+	&fft_line
+};
+
+	
 #define BINS 1024
 #define SAMPLE_RATE	8192
 
@@ -76,27 +98,19 @@ main(int argc, char *argv[])
 		exit(1);
 	}
 	plot_fft(of, fft, "fft");
-	fprintf(of, "set title \"Fast Fourier Transform ");
 	switch (wf) {
 		default:
 		case W_RECT:
-			fprintf(of,"(Rectangular Window)\"\n");
+			fft_plot.title = "FFT (Rectangular Window)";
 			break;
 		case W_BH:
-			fprintf(of,"(Blackman-Harris Window)\"\n");
+			fft_plot.title = "FFT (Blackman-Harris Window)";
 			break;
 		case W_HANN:
-			fprintf(of,"(Hanning Window)\"\n");
+			fft_plot.title = "FFT (Hanning Window)";
 			break;
 	}
-	fprintf(of, "set xlabel \"Frequency (kHz)\"\n");
-	fprintf(of, "set ylabel \"Magnitude (dB)\"\n");
-	fprintf(of, "set grid\n");
-/*	fprintf(of, "set xtics 0.1 0.05\n"); */
-	fprintf(of, "set nokey\n");
-	fprintf(of, 
-	  "plot [0:fft_freq] $fft_data using fft_xfreq_col:fft_ydb_col"
-				" with lines lt rgb \"#1010ff\"\n");
+	plot_data(of, "fft", &fft_plot);
 	fclose(of);
 	printf("Done.\n");
 }
