@@ -293,37 +293,47 @@ plot_fft(FILE *of, sample_buffer *fft, char *name)
 	fprintf(of, "%s_nyquist = %f\n", name, (double) fft->r / 2.0);
  	fprintf(of, "%s_x_norm = 1\n", name);
 	fprintf(of, "%s_x_freq = 2\n", name);
-	fprintf(of, "%s_y_norm = 3\n", name);
-	fprintf(of, "%s_y_db = 4\n", name);
-	fprintf(of, "%s_y_mag = 5\n", name);
+	fprintf(of, "%s_x_freq_khz = 3\n", name);
+	fprintf(of, "%s_x_freq_mhz = 4\n", name);
+	fprintf(of, "%s_y_norm = 5\n", name);
+	fprintf(of, "%s_y_db = 6\n", name);
+	fprintf(of, "%s_y_mag = 7\n", name);
 	fprintf(of,"$%s_data << EOD\n", name);
 	fprintf(of, "#\n# Columns are:\n");
 	fprintf(of, "# 1. Normalized frequency (-.5 - 1.0)\n");
 	fprintf(of, "# 2. Frequency by sample rate (- nyquist, 2* nyquist)\n");
-	fprintf(of, "# 3. Normalized magnitude ( 0 - 1.0 )\n");
-	fprintf(of, "# 4. Magnitude in decibels\n");
-	fprintf(of, "# 5. Absolute magnitude\n");
+	fprintf(of, "# 3. Frequency in kHz\n");
+	fprintf(of, "# 4. Frequency in MHz\n");
+	fprintf(of, "# 5. Normalized magnitude ( 0 - 1.0 )\n");
+	fprintf(of, "# 6. Magnitude in decibels\n");
+	fprintf(of, "# 7. Absolute magnitude\n");
 	fprintf(of, "#\n");
 	for (int k = fft->n / 2; k < fft->n; k++) {
-		double xnorm, freq, ynorm, db, mag;
+		double xnorm, freq, freq_k, freq_m, ynorm, db, mag;
 		xnorm = -0.5 + (double) (k - (fft->n / 2))/ (double) fft->n;
 		freq = xnorm * (double) fft->r;
+		freq_k = freq / 1000.0;
+		freq_m = freq / 1000000.0;
 		ynorm = (cmag(fft->data[k]) - fft->sample_min) / 
 						(fft->sample_max - fft->sample_min);
 		db = 20 * log10(cmag(fft->data[k]));
 		mag = cmag(fft->data[k]);
-		fprintf(of, "%f %f %f %f %f\n", xnorm, freq, ynorm, db, mag);
+		fprintf(of, "%f %f %f %f %f %f %f\n",
+					xnorm, freq, freq_k, freq_m, ynorm, db, mag);
 	}
 
 	for (int k = 0; k < fft->n; k++) {
-		double xnorm, freq, ynorm, db, mag;
+		double xnorm, freq, freq_k, freq_m, ynorm, db, mag;
 		xnorm = (double) (k)/ (double) fft->n;
 		freq = xnorm * (double) fft->r;
+		freq_k = freq / 1000.0;
+		freq_m = freq / 1000000.0;
 		ynorm = (cmag(fft->data[k]) - fft->sample_min) / 
 						(fft->sample_max - fft->sample_min);
 		db = 20 * log10(cmag(fft->data[k]));
 		mag = cmag(fft->data[k]);
-		fprintf(of, "%f %f %f %f %f\n", xnorm, freq, ynorm, db, mag);
+		fprintf(of, "%f %f %f %f %f %f %f\n",
+					xnorm, freq, freq_k, freq_m, ynorm, db, mag);
 	}
 	fprintf(of,	"EOD\n");
 	return 0;
