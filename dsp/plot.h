@@ -25,23 +25,6 @@
 #include <stdint.h>
 
 /*
- * A plot 'line'. This is a separate structure as a single
- * plot may plot multiple lines. This is commonly used in signal
- * waveform plots where both the inphase and quadrature signals
- * are plotted in the same plot. It requires that the columns are
- * the same, so you can do multiple lines from signals or multiple
- * lines from FFTs but not intermix both a signal and FFT line on the
- * same plot.
- */
-typedef struct {
-	char		*title;		/* title of this line */
-	char		*name;		/* if non-NULL use this data instead */
-	uint32_t	color;		/* line color (0 = default) */
-	char		*x;			/* X column from the data */
-	char		*y;			/* Y column from the data */
-} plot_line_t;
-
-/*
  * Key choices
  */
 typedef enum {
@@ -57,13 +40,20 @@ typedef enum {
  */
 typedef struct {
 	char		*title;		/* Plot title */
-	double		xmin, xmax;	/* Extent to be plotted */
+    char        *xscale;    /* X scale to use */
+	double		xmin, xmax;	/* Extent to be plotted 0 = default */
 	char		*xlabel;	/* X axis label */
 	char		*ylabel;	/* Y axis label */
 	double		xtics;		/* X tic marks (0 is no tics) */
-	plot_key_t	k;		/* key option (inside, outside, off) */
+	plot_key_t	k;		    /* key option (inside, outside, off) */
 	size_t		nlines;		/* number of plot lines */
-	plot_line_t	*lines;	/* Plot lines. */
+    struct plot_line_t {
+    	char		*title;		/* title of this line */
+    	char		*name;		/* if non-NULL use this data instead */
+    	uint32_t	color;		/* line color (0 = default) */
+    	char		*x;			/* X column from the data */
+    	char		*y;			/* Y column from the data */
+    } lines[];	/* Plot lines. */
 } plot_t;
 
 /*
@@ -85,8 +75,32 @@ typedef struct {
 	int			cols;		/* Plots in column */
 	int			rows;		/* Plots in rows */
 	int			nplots;		/* Number of plots */
-	subplot_t 	*plots;		/* Sub plots */
+	subplot_t 	plots[];		/* Sub plots */
 } multi_plot_t;
+
+/*
+ * Example/Helper pre-defined structure
+ */
+#define STANDARD_FFT_PLOT(a) \
+    plot_t a = {\
+        "Fast Fourier Transform", "x_norm", 0, 0, \
+        "Frequency (normalized)", "Magnitude (dB)", \
+        0, PLOT_KEY_NONE, 1, {{\
+        	"FFT Magnitude", NULL, 0xcf10cf, "x_norm", "y_db"\
+		}}\
+    };
+
+#define STANDARD_SIGNAL_PLOT \
+    plot_line_t std_signal_plotline[2] = {{\
+        "Inphase", NULL, 0xcf1010, "x_time_ms", "y_norm"\
+    },{\
+        "Quadrature", NULL, 0x1010cf, "x_time_ms", "y_norm"\
+    }};\
+    plot_t std_fft_plot = {\
+        "Analytic Signal", "x_time_ms", 0, 0, \
+        "Time (mS)", "Amplitude (Normalized)", \
+        0, PLOT_KEY_NONE, 1, &std_fft_plotline\
+    };
 
 /* prototypes */
 int plot_data(FILE *f, char *name, plot_t *plot);

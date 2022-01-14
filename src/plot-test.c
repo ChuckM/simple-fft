@@ -46,8 +46,17 @@ extern int optind, opterr, optopt;
 /*
  * Plot the I and Q lines of a signal
  */
-plot_line_t sig_plot_lines[2] = {
- 	{
+
+plot_t sig_plot = {
+	"Original Signal",	/* Plot title */
+    NULL,
+	0, 2.0,				/* 0 to 10 mS */
+	"Time (in mS)",		/* X axis label */
+	"Amplitude",		/* Y axis label */
+	0.1,				/* xtics value */
+	PLOT_KEY_INSIDE,	/* put the key in a box inside */
+	2,
+ 	{{
 		"Inphase",
 		NULL,
 		0x1010cf,
@@ -60,41 +69,32 @@ plot_line_t sig_plot_lines[2] = {
 		0xcf1010,
 		"x_time_ms",
 		"y_q_norm"
-	}
-};
-
-plot_t sig_plot = {
-	"Original Signal",	/* Plot title */
-	0, 2.0,				/* 0 to 10 mS */
-	"Time (in mS)",		/* X axis label */
-	"Amplitude",		/* Y axis label */
-	0.1,				/* xtics value */
-	PLOT_KEY_INSIDE,	/* put the key in a box inside */
-	2,
-	&sig_plot_lines[0]
-};
-
-plot_line_t fft_plot_lines = {
-	"FFT Data",
-	NULL,
-	0x1010cf,
-	"x_freq_khz",
-	"y_db"
+	}}
 };
 
 plot_t fft_plot = {
 	"Signal FFT",		/* Plot title */
+    NULL,
 	0, 30,			/* Frequency span */
 	"Frequency (kHz)",	/* X label */
 	"Magnitude (dB)",	/* Y label */
 	5,				/* 10 ticks each at 3072 Hz */
 	PLOT_KEY_NONE,		/* No key */
 	1,
-	&fft_plot_lines
+	{{
+	    "FFT Data",
+    	NULL,
+    	0x1010cf,
+    	"x_freq_khz",
+    	"y_db"
+    }}
 };
 
-subplot_t sp[4] = {
-	{
+multi_plot_t graph = {
+	"Waveform and Spectrum",
+	2, 2,
+	4, 
+	{{
 		"sig_r",
 		&sig_plot
 	}, {
@@ -107,14 +107,7 @@ subplot_t sp[4] = {
 	}, {
 		"fft_a",
 		&fft_plot
-	}
-};
-
-multi_plot_t graph = {
-	"Waveform and Spectrum",
-	2, 2,
-	4, 
-	sp
+	}}
 };
 
 int

@@ -280,21 +280,54 @@ compute_ifft(sample_buffer *fft)
 int
 plot_fft(FILE *of, sample_buffer *fft, char *name)
 {
+	double fmax;
 	/* insure MIN and MAX are accurate */
 	fft->sample_max = 0;
 	fft->sample_min = 0;
+	fmax = (double) fft->r;
 	for (int k = 0; k < fft->n; k++) {
 		set_minmax(fft, k);
 	}
 	fprintf(of, "#\n# Start FFT data for %s :\n#\n", name);
 	fprintf(of, "%s_min = %f\n", name, fft->sample_min);
 	fprintf(of, "%s_max = %f\n", name, fft->sample_max);
-	fprintf(of, "%s_freq = %f\n", name, (double) fft->r);
-	fprintf(of, "%s_nyquist = %f\n", name, (double) fft->r / 2.0);
+	fprintf(of, "%s_freq = %f\n", name, fmax);
+	fprintf(of, "%s_nyquist = %f\n", name, fmax / 2.0);
+
+	fprintf(of, "#\n# normalized X axis (-0.5 to 0.5)\n#\n");
+	fprintf(of, "%s_x_norm_real = 1\n", name);
  	fprintf(of, "%s_x_norm = 1\n", name);
+	fprintf(of, "%s_x_norm_min = -0.5\n", name);
+	fprintf(of, "%s_x_norm_max = 0.5\n", name);
+	fprintf(of, "%s_x_norm_tics = 0.1\n", name);
+	fprintf(of, "%s_x_norm_min_real = 0\n", name);
+	fprintf(of, "%s_x_norm_max_real = 0.5\n", name);
+	fprintf(of, "%s_x_norm_tics_real = 0.05\n", name);
+
+	fprintf(of, "#\n# Frequency X axis (freq_min, freq_max)\n#\n");
 	fprintf(of, "%s_x_freq = 2\n", name);
+	fprintf(of, "%s_x_freq_min = 0\n", name);
+	fprintf(of, "%s_x_freq_max = %f\n", name, fmax);
+	fprintf(of, "%s_x_freq_real_max = %f\n", name, fmax/2.0);
+	fprintf(of, "%s_x_freq_tics = %f\n", name, ((double) fmax / 10.0));
+	fprintf(of, "%s_x_freq_real_tics = %f\n", name, ((double) fmax / 20.0));
+
+	fprintf(of, "#\n# Frequency in kHz X axis (0, freq_max/1000)\n#\n");
 	fprintf(of, "%s_x_freq_khz = 3\n", name);
+	fprintf(of, "%s_x_freq_khz_min = 0\n", name);
+	fprintf(of, "%s_x_freq_khz_max = %f\n", name,  fmax / 1000.0);
+	fprintf(of, "%s_x_freq_khz_real_max = %f\n", name, fmax / 1e6);
+	fprintf(of,	"%s_x_freq_khz_ticks = %f\n", name, fmax/ 10000.0);
+	fprintf(of, "%s_x_freq_khz_real_ticks = %f\n", name, fmax / 20000.0);
+
+	fprintf(of, "#\n# Frequency in MHz X axis (freq_min, freq_max/1e6)\n#\n");
 	fprintf(of, "%s_x_freq_mhz = 4\n", name);
+	fprintf(of, "%s_x_freq_mhz_min = 0\n", name);
+	fprintf(of, "%s_x_freq_mhz_max = %f\n", name,  fmax / 1e6);
+	fprintf(of, "%s_x_freq_mhz_real_max = %f\n", name, fmax / 2e6);
+	fprintf(of,	"%s_x_freq_mhz_ticks = %f\n", name, fmax/ 1e7);
+	fprintf(of, "%s_x_freq_mhz_real_ticks = %f\n", name, fmax / 2e7);
+
 	fprintf(of, "%s_y_norm = 5\n", name);
 	fprintf(of, "%s_y_db = 6\n", name);
 	fprintf(of, "%s_y_mag = 7\n", name);
@@ -311,7 +344,7 @@ plot_fft(FILE *of, sample_buffer *fft, char *name)
 	for (int k = fft->n / 2; k < fft->n; k++) {
 		double xnorm, freq, freq_k, freq_m, ynorm, db, mag;
 		xnorm = -0.5 + (double) (k - (fft->n / 2))/ (double) fft->n;
-		freq = xnorm * (double) fft->r;
+		freq = xnorm * fmax;
 		freq_k = freq / 1000.0;
 		freq_m = freq / 1000000.0;
 		ynorm = (cmag(fft->data[k]) - fft->sample_min) / 
@@ -325,7 +358,7 @@ plot_fft(FILE *of, sample_buffer *fft, char *name)
 	for (int k = 0; k < fft->n; k++) {
 		double xnorm, freq, freq_k, freq_m, ynorm, db, mag;
 		xnorm = (double) (k)/ (double) fft->n;
-		freq = xnorm * (double) fft->r;
+		freq = xnorm * fmax;
 		freq_k = freq / 1000.0;
 		freq_m = freq / 1000000.0;
 		ynorm = (cmag(fft->data[k]) - fft->sample_min) / 

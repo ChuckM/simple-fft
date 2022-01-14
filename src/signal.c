@@ -105,6 +105,7 @@ add_cos(sample_buffer *s, double f, double a)
 									   sin(2 * M_PI * f * i / s->r) * I));
 		set_minmax(s, i);
 	}
+	s->max_freq = (f > s->max_freq) ? f : s->max_freq;
 }
 
 /*
@@ -129,6 +130,7 @@ add_sin(sample_buffer *s, double f, double a)
 									   cos(2 * M_PI * f * i / s->r) * I));
 		set_minmax(s, i);
 	}
+	s->max_freq = (f > s->max_freq) ? f : s->max_freq;
 }
 
 /*
@@ -154,6 +156,7 @@ add_cos_phase(sample_buffer *s, double f, double a, double ph)
 								   sin((2 * M_PI * f * i / s->r) + ph) * I));
 		set_minmax(s, i);
 	}
+	s->max_freq = (f > s->max_freq) ? f : s->max_freq;
 }
 
 /*
@@ -178,6 +181,7 @@ add_cos_phase_real(sample_buffer *s, double f, double a, double ph)
 		s->data[i] += (sample_t) (a * cos((2 * M_PI  * f * i / s->r)+ph));
 		set_minmax(s, i);
 	}
+	s->max_freq = (f > s->max_freq) ? f : s->max_freq;
 }
 
 /*
@@ -204,6 +208,7 @@ add_cos_real(sample_buffer *s, double f, double a)
 		s->data[i] += (sample_t) (a * (cos((double) i * per)));
 		set_minmax(s, i);
 	}
+	s->max_freq = (f > s->max_freq) ? f : s->max_freq;
 }
 
 /*
@@ -248,6 +253,8 @@ __q_index(int ndx, int rate, double f)
 
 /* add_test
  *
+ * XXX: move the test functions to a test program, out of signal.c
+ *
  * This implements the inphase and quadrature values using a function
  * which sets the quadrature value to the inphase value 25% earlier in
  * the period (representing a 90 degree phase shift).
@@ -259,6 +266,7 @@ add_test(sample_buffer *b, double freq, double amp)
 		b->data[i] = amp * cos(2 * M_PI * __i_index(i, b->r, freq)) +
 					 amp * cos(2 * M_PI * __q_index(i, b->r, freq)) * I;
 	}
+	b->max_freq = (freq > b->max_freq) ? freq : b->max_freq;
 }
 
 /* add_test_real
@@ -273,6 +281,7 @@ add_test_real(sample_buffer *b, double freq, double amp)
 	for (int i = 0; i < b->n; i++) {
 		b->data[i] = amp * cos(2 * M_PI * __i_index(i, b->r, freq));
 	}
+	b->max_freq = (freq > b->max_freq) ? freq : b->max_freq;
 }
 
 /*
@@ -293,6 +302,7 @@ add_sawtooth(sample_buffer *s, double f, double a)
 		s->data[i] += (sample_t) (a * (__i_index(i, s->r, f) - (a/2.0))) + 
 								 (a * (__q_index(i, s->r, f) - (a/2.0))) * I;
 	}
+	s->max_freq = (f > s->max_freq) ? f : s->max_freq;
 }
 
 /*
@@ -312,6 +322,7 @@ add_sawtooth_real(sample_buffer *s, double f, double a)
 	for (i = 0; i < s->n; i++) {
 		s->data[i] += (sample_t) (a * (__i_index(i, s->r, f) - (a/2.0)));
 	}
+	s->max_freq = (f > s->max_freq) ? f : s->max_freq;
 }
 
 /* Triangle wave, 
@@ -348,6 +359,7 @@ add_triangle(sample_buffer *s, double f, double a)
 		q_amp = __triangle(__q_index(i, s->r, f)) * a;
 		s->data[i] += (sample_t) i_amp + q_amp * I;
 	}
+	s->max_freq = (f > s->max_freq) ? f : s->max_freq;
 }
 
 /*
@@ -367,6 +379,7 @@ add_triangle_real(sample_buffer *s, double f, double a)
 		q_amp = __triangle(__q_index(i, s->r, f)) * a;
 		s->data[i] += (sample_t) i_amp;
 	}
+	s->max_freq = (f > s->max_freq) ? f : s->max_freq;
 }
 
 /*
@@ -386,6 +399,7 @@ add_square(sample_buffer *s, double f, double a)
 		s->data[i] += (sample_t) ((__i_index(i, s->r, f) >= .5) ? level : -level) +
 								 ((__q_index(i, s->r, f) >= .5) ? level : -level) * I;
 	}
+	s->max_freq = (f > s->max_freq) ? f : s->max_freq;
 }
 
 /*
@@ -404,6 +418,7 @@ add_square_real(sample_buffer *s, double f, double a)
 	for (i = 0; i < s->n; i++) {
 		s->data[i] += (sample_t) ((__i_index(i, s->r, f) >= .5) ? level : -level);
 	}
+	s->max_freq = (f > s->max_freq) ? f : s->max_freq;
 }
 
 /*

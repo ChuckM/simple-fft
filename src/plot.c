@@ -51,9 +51,30 @@ plot_data(FILE *f, char *name, plot_t *plot)
 	}
 	fprintf(f, "set xlabel '%s'\n", plot->xlabel);
 	fprintf(f, "set ylabel '%s'\n", plot->ylabel);
-	fprintf(f,"plot [%f:%f] ", plot->xmin, plot->xmax);
+	if (plot->xscale == NULL) {
+		fprintf(f, "set xtics %f\n", plot->xtics);
+		fprintf(f, "  plot [%f:%f] ", plot->xmin, plot->xmax);
+	} else {
+	    if (plot->xtics == 0) {
+    		fprintf(f, "set xtics %s_%s_tics\n", name, plot->xscale);
+    	} else {
+    		fprintf(f, "set xtics %f\n", plot->xtics);
+    	}
+    	if ((plot->xmin == 0) && (plot->xmax == 0)) {
+    		fprintf(f, "plot [%s_%s_min:%s_%s_max] ",
+    				name, plot->xscale, name, plot->xscale);
+    	} else if (plot->xmin == 0) {
+    		fprintf(f, "plot [%s_%s_min:%f] ",
+    				name, plot->xscale, plot->xmax);
+    	} else if (plot->xmax == 0) {
+    		fprintf(f, "plot [%f:%s_%s_max] ",
+    				plot->xmin, name, plot->xscale);
+    	} else {
+    		fprintf(f, "plot [%f:%f] ", plot->xmin, plot->xmax);
+    	}
+    }
 	for (int i = 0; i < plot->nlines; i++) {
-		plot_line_t *p = &(plot->lines[i]);
+		struct plot_line_t *p = &(plot->lines[i]);
 		char *n = (p->name != NULL) ? p->name : name;
 
 		fprintf(f, "\t$%s_data using\\\n", n);

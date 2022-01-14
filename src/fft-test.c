@@ -33,26 +33,8 @@
 #include <dsp/fft.h>
 #include <dsp/plot.h>
 
-plot_line_t fft_line = {
-	"FFT Test Data",
-	NULL,
-	0x1010cf,
-	"x_norm",
-	"y_db"
-};
+STANDARD_FFT_PLOT(std_plot);
 
-plot_t fft_plot = {
-	"Fast Fourier Transform (Test Data)",
-	-0.5, 0.5,
-	"Frequency (normalized)",
-	"Magnitude (dB)",
-	.1,
-	PLOT_KEY_NONE,
-	1,
-	&fft_line
-};
-
-	
 #define BINS 1024
 #define SAMPLE_RATE	8192
 
@@ -101,16 +83,16 @@ main(int argc, char *argv[])
 	switch (wf) {
 		default:
 		case W_RECT:
-			fft_plot.title = "FFT (Rectangular Window)";
+			std_plot.title = "FFT (Rectangular Window)";
 			break;
 		case W_BH:
-			fft_plot.title = "FFT (Blackman-Harris Window)";
+			std_plot.title = "FFT (Blackman-Harris Window)";
 			break;
 		case W_HANN:
-			fft_plot.title = "FFT (Hanning Window)";
+			std_plot.title = "FFT (Hanning Window)";
 			break;
 	}
-	plot_data(of, "fft", &fft_plot);
+	plot_data(of, "fft", &std_plot);
 	fclose(of);
 	printf("Done.\n");
 }

@@ -51,6 +51,7 @@ typedef complex double sample_t;
 typedef struct {
 	double			sample_min,		/* min value in buffer */
 					sample_max;		/* max value in buffer */
+	double			max_freq;		/* Maximum frequency */
 	int				n;				/* number of samples */
 	int				r;				/* sample rate in Hz */
 	struct sample_buffer *nxt;		/* chained buffer */

@@ -257,3 +257,100 @@ The number of tap values have to match. Everything after `#` is ignored.
 Updated `genplot` so now filt-resp is kind of not needed, will fold the filter
 format into genplot and then we'll be done.
 
+Possible Idea for IQ data
+-------------------------
+
+Compute the FFT for a signal, bins = 2^n
+then regenerate the signal using ifft bins = 2^(n-1).
+
+Take the FFT of the resulting signal and look at the results.
+
+TP5 fixup
+---------
+
+Error is printed in TP5 "all points y value undefined." The data in
+question is `sig1_sig_data`
+
+Possible causes:
+  * The Y values are corrupted (TP5 is broken)
+  * The plot data is wrong (wrong column #)
+
+So first find the Y values, then confirm the columns.
+
+The line in questions has:
+```
+Plot [0.0017:0.0068] (so check values between these to X valuse)
+using
+    First plot:
+        sig1_x_time_col for X
+        sig1_y_i_norm_col for Y
+    Second plot:
+        sig1_x_time_col for X
+        sig1_y_q_norm_col for Y
+
+So an inphase and quadrature phase plot. Based on the plot file
+the columns are:
+    sig1_x_time_col is 1
+    sig1_y_i_norm_col is 5
+    sig1_y_q_norm_col is 6
+There is also an unused 7th column which is the time in mS
+(this triggers a memory about wanting to change units)
+The mS units have been moved to the front, big clue.
+
+Changing the range in the plot file fixes the output.
+And using the  rightmost column works too, so bug is signal code
+
+TP5 also does the Hilbert transform variation but doesn't let us
+explore just how many bins are "needed" to do a good job.
+
+Plotting the signal seems to break down (it changes with bin size)
+so bin size and signal sample size need to be decoupled.
+```
+
+--------------------------------
+
+So an interesting thing, making a standard "do\_plot" struct that
+can be populated and automagically generate the gnuplot commands
+to plot that plot to a file.
+
+plot enhancement:, plot data is always "tag\_data" -- **done**
+
+parameters: "name", "range", x\_column, y\_column, color.
+graph, title, options (NOKEY), nplots, plots[])
+
+Ok so the start of a working version, changes to the plot functions
+were to remove things like `_col` (as it was redundant) and to normalize
+names like `<label>_<axis>_<units>` so `fft1_x_norm` and `fft1_x_freq`.
+
+TODO: Figure out if we can do an FFT with a frequency range on the bottom
+that _isn't_ the same as the X axis values
+TODO: Figure out if we can do multiple X and Y axis values.
+TODO: Scale the key font smaller for xterm **done**
+TODO: Scale the axis font smaller for xterm **done**
+TODO: Figure out xtics bug on tp5  **done**
+TODO: Organize test programs better?
+TODO: Generate .md files for test programs in a 'docs' directory.
+TODO: Set up multiplots in plot templates **done**
+TODO: Set up graph templates (holding plot templates, holding plot lines) **done**
+TODO: Graph templates get inside/outside/none KEY option/enum **done**
+TODO: Add diamond 'peak' indicators for FFT.
+
+Compute tics value for each possible X axis range as max - min / 10.0 and
+store that in a variable `<name>_x_<units>_tics`, similarly with `y_tics`.
+
+So the whole tics thing has exploded into a "the start and end should be a
+string so that you could either put numbers in there or variables in the
+structures you define because it would be super awesome to have a "standard"
+plot that would just "do the right thing" right? And that plot would pre
+set all the commonnest stuff for a good plot. Which will mean some
+more pre-computed variables for stuff in the plot file and the resurrection
+of the "is this a number" test.
+
+So if I want to use atol() to check for a number then I have to write some
+test code to verify it does what I want.
+
+Okay, huge change thoughts here:
+buffers become **either** a signal buffer or an FFT buffer (there is an ID
+and union in the header). All plotting is done through `plot_fft`, 
+`plot_signal`, and `plot`. 
+
