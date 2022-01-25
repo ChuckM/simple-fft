@@ -33,8 +33,6 @@
 #include <dsp/fft.h>
 #include <dsp/plot.h>
 
-STANDARD_FFT_PLOT(std_plot);
-
 #define BINS 1024
 #define SAMPLE_RATE	8192
 
@@ -79,20 +77,19 @@ main(int argc, char *argv[])
 		fprintf(stderr, "Unable to open ./plots/fft_test.data for writing.\n");
 		exit(1);
 	}
-	plot_fft(of, fft, "fft");
+	plot_fft_data(of, fft, "fft");
 	switch (wf) {
 		default:
 		case W_RECT:
-			std_plot.title = "FFT (Rectangular Window)";
+			plot_fft(of, "FFT (Rectangular Window)", NULL, PLOT_X_NORMALIZED);
 			break;
 		case W_BH:
-			std_plot.title = "FFT (Blackman-Harris Window)";
+			plot_fft(of, "FFT (Blackman-Harris Window)", NULL, PLOT_X_NORMALIZED);
 			break;
 		case W_HANN:
-			std_plot.title = "FFT (Hanning Window)";
+			plot_fft(of, "FFT (Hanning Window)", NULL, PLOT_X_NORMALIZED);
 			break;
 	}
-	plot_data(of, "fft", &std_plot);
 	fclose(of);
 	printf("Done.\n");
 }

@@ -34,25 +34,50 @@ typedef enum {
 	PLOT_KEY_NONE,
 } plot_key_t;
 
+typedef enum {
+    PLOT_X_REAL_FREQUENCY = 0,
+    PLOT_X_FREQUENCY,
+    PLOT_X_REAL_FREQUENCY_KHZ,
+    PLOT_X_FREQUENCY_KHZ,
+    PLOT_X_REAL_NORMALIZED,
+    PLOT_X_NORMALIZED,
+    PLOT_X_REAL_SAMPLERATE,
+    PLOT_X_SAMPLERATE,
+    PLOT_X_TIME,
+    PLOT_X_TIME_MS,
+    PLOT_Y_MAGNITUDE,
+    PLOT_Y_MAGNITUDE_NORMALIZED,
+    PLOT_Y_DB,
+	PLOT_Y_DB_NORMALIZED,
+	PLOT_Y_REAL_AMPLITUDE,
+	PLOT_Y_REAL_AMPLITUDE_NORMALIZED,
+	PLOT_Y_ANALYTIC_AMPLITUDE,
+	PLOT_Y_ANALYTIC_AMPLITUDE_NORMALIZED,
+	PLOT_SCALE_UNDEFINED
+} plot_scale_t;
+
+#if 0
+/*
+ * Moved to be a private structure in plot.c
+ */
+
 /*
  * One plot, it will have a title, an X and Y axis, and one or more
  * plot lines that it plots.
  */
 typedef struct {
 	char		*title;		/* Plot title */
-    char        *xscale;    /* X scale to use */
-	double		xmin, xmax;	/* Extent to be plotted 0 = default */
-	char		*xlabel;	/* X axis label */
-	char		*ylabel;	/* Y axis label */
-	double		xtics;		/* X tic marks (0 is no tics) */
+	/* Parameters around the X and Y axes */
+	struct {
+		char *label;
+		char *scale;
+	} x, y;
 	plot_key_t	k;		    /* key option (inside, outside, off) */
 	size_t		nlines;		/* number of plot lines */
     struct plot_line_t {
     	char		*title;		/* title of this line */
     	char		*name;		/* if non-NULL use this data instead */
     	uint32_t	color;		/* line color (0 = default) */
-    	char		*x;			/* X column from the data */
-    	char		*y;			/* Y column from the data */
     } lines[];	/* Plot lines. */
 } plot_t;
 
@@ -101,8 +126,11 @@ typedef struct {
         "Time (mS)", "Amplitude (Normalized)", \
         0, PLOT_KEY_NONE, 1, &std_fft_plotline\
     };
+#endif
 
 /* prototypes */
-int plot_data(FILE *f, char *name, plot_t *plot);
-int multiplot(FILE *f, char *name, multi_plot_t *plot);
+int multiplot_start(FILE *f, char *title, int columns, int rows);
+int multiplot_end(FILE *f);
+int plot_data(FILE *file, sample_buffer *s, char *name);
+int plot(FILE *f, char *t, char *name, plot_scale_t x, plot_scale_t y);
 

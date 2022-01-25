@@ -354,3 +354,27 @@ buffers become **either** a signal buffer or an FFT buffer (there is an ID
 and union in the header). All plotting is done through `plot_fft`, 
 `plot_signal`, and `plot`. 
 
+And changed again, now there is only:
+`plot_data` which puts the data from a sample buffer into the file.
+`plot_fft` which puts the commands to plot fft data into the file.
+`plot_signal` which puts the commands to plot signal data into the file.
+`plot_begin_multiplot` which puts a header into the file for multiplots
+`plot_end_multiplot` which puts the `unset multiplot` into the file.
+
+So I don't need either the multiplot or subplot structures.
+
+Radians are broken (doesn't plot pi). Turns out what it was really
+trying to plot was fractions of sample rate (Fs) so I fixed it to
+do that and renamed the constant `SAMPLERATE`.
+
+Updated plot some more, figured we'd add `type` to the sample buffer
+which can be `SAMPLE_SIGNAL`, `SAMPLE_FFT`, or `SAMPLE_UNKNOWN`. This allows
+us to have a single `plot_data()` function that will do the right thing
+when you call it. The type flag is set in either the FFT or signal functions.
+
+Back to using 'name' in the main plot parameters for name, and scale in the
+individual plot lines.
+
+
+
+

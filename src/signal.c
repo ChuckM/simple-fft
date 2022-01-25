@@ -8,6 +8,8 @@
  * The ones with the _real suffix generate data with only a real 
  * component even though it is stored in a complex variable (cimag == 0). 
  *
+ * XXX: TODO: Really should factor out sample buffers and signal stuff.
+ *
  * Written September 2018 by Chuck McManis
  *
  * Copyright (c) 2018-2019, Chuck McManis, all rights reserved.
@@ -54,6 +56,13 @@ alloc_buf(int size, int sample_rate) {
 	res->data = malloc(sizeof(sample_t) * size);
 	res->n = size;
 	res->r = sample_rate;
+	/*
+	 *  Initialize min/max to values that will always trigger
+	 *  an update on first signal.
+	 */
+	res->max_freq = 0;
+	res->min_freq = (double)(sample_rate);
+	res->type = SAMPLE_UNKNOWN;
 	res->nxt = NULL;
 	/* clear it to zeros */
 	reset_minmax(res);
@@ -105,7 +114,11 @@ add_cos(sample_buffer *s, double f, double a)
 									   sin(2 * M_PI * f * i / s->r) * I));
 		set_minmax(s, i);
 	}
+	if (s->type != SAMPLE_SIGNAL) {
+		s->type = SAMPLE_SIGNAL;
+	}
 	s->max_freq = (f > s->max_freq) ? f : s->max_freq;
+	s->min_freq = (f < s->min_freq) ? f : s->min_freq;
 }
 
 /*
@@ -130,7 +143,11 @@ add_sin(sample_buffer *s, double f, double a)
 									   cos(2 * M_PI * f * i / s->r) * I));
 		set_minmax(s, i);
 	}
+	if (s->type != SAMPLE_SIGNAL) {
+		s->type = SAMPLE_SIGNAL;
+	}
 	s->max_freq = (f > s->max_freq) ? f : s->max_freq;
+	s->min_freq = (f < s->min_freq) ? f : s->min_freq;
 }
 
 /*
@@ -156,7 +173,11 @@ add_cos_phase(sample_buffer *s, double f, double a, double ph)
 								   sin((2 * M_PI * f * i / s->r) + ph) * I));
 		set_minmax(s, i);
 	}
+	if (s->type != SAMPLE_SIGNAL) {
+		s->type = SAMPLE_SIGNAL;
+	}
 	s->max_freq = (f > s->max_freq) ? f : s->max_freq;
+	s->min_freq = (f < s->min_freq) ? f : s->min_freq;
 }
 
 /*
@@ -181,7 +202,11 @@ add_cos_phase_real(sample_buffer *s, double f, double a, double ph)
 		s->data[i] += (sample_t) (a * cos((2 * M_PI  * f * i / s->r)+ph));
 		set_minmax(s, i);
 	}
+	if (s->type == SAMPLE_UNKNOWN) {
+		s->type = SAMPLE_REAL_SIGNAL;
+	}
 	s->max_freq = (f > s->max_freq) ? f : s->max_freq;
+	s->min_freq = (f < s->min_freq) ? f : s->min_freq;
 }
 
 /*
@@ -208,7 +233,11 @@ add_cos_real(sample_buffer *s, double f, double a)
 		s->data[i] += (sample_t) (a * (cos((double) i * per)));
 		set_minmax(s, i);
 	}
+	if (s->type == SAMPLE_UNKNOWN) {
+		s->type = SAMPLE_REAL_SIGNAL;
+	}
 	s->max_freq = (f > s->max_freq) ? f : s->max_freq;
+	s->min_freq = (f < s->min_freq) ? f : s->min_freq;
 }
 
 /*
@@ -251,39 +280,6 @@ __q_index(int ndx, int rate, double f)
 	return (modf(period, &t));
 }
 
-/* add_test
- *
- * XXX: move the test functions to a test program, out of signal.c
- *
- * This implements the inphase and quadrature values using a function
- * which sets the quadrature value to the inphase value 25% earlier in
- * the period (representing a 90 degree phase shift).
- */
-void
-add_test(sample_buffer *b, double freq, double amp)
-{
-	for (int i = 0; i < b->n; i++) {
-		b->data[i] = amp * cos(2 * M_PI * __i_index(i, b->r, freq)) +
-					 amp * cos(2 * M_PI * __q_index(i, b->r, freq)) * I;
-	}
-	b->max_freq = (freq > b->max_freq) ? freq : b->max_freq;
-}
-
-/* add_test_real
- *
- * This function implements add_cos by using the inphase index funtion
- * to verify that the inphase function is computing the same phase as
- * the add_cos function does.
- */
-void
-add_test_real(sample_buffer *b, double freq, double amp)
-{
-	for (int i = 0; i < b->n; i++) {
-		b->data[i] = amp * cos(2 * M_PI * __i_index(i, b->r, freq));
-	}
-	b->max_freq = (freq > b->max_freq) ? freq : b->max_freq;
-}
-
 /*
  * add_sawtooth( ... )
  *
@@ -303,6 +299,10 @@ add_sawtooth(sample_buffer *s, double f, double a)
 								 (a * (__q_index(i, s->r, f) - (a/2.0))) * I;
 	}
 	s->max_freq = (f > s->max_freq) ? f : s->max_freq;
+	s->min_freq = (f < s->min_freq) ? f : s->min_freq;
+	if (s->type != SAMPLE_SIGNAL) {
+		s->type = SAMPLE_SIGNAL;
+	}
 }
 
 /*
@@ -322,7 +322,11 @@ add_sawtooth_real(sample_buffer *s, double f, double a)
 	for (i = 0; i < s->n; i++) {
 		s->data[i] += (sample_t) (a * (__i_index(i, s->r, f) - (a/2.0)));
 	}
+	if (s->type == SAMPLE_UNKNOWN) {
+		s->type = SAMPLE_REAL_SIGNAL;
+	}
 	s->max_freq = (f > s->max_freq) ? f : s->max_freq;
+	s->min_freq = (f < s->min_freq) ? f : s->min_freq;
 }
 
 /* Triangle wave, 
@@ -360,6 +364,10 @@ add_triangle(sample_buffer *s, double f, double a)
 		s->data[i] += (sample_t) i_amp + q_amp * I;
 	}
 	s->max_freq = (f > s->max_freq) ? f : s->max_freq;
+	s->min_freq = (f < s->min_freq) ? f : s->min_freq;
+	if (s->type != SAMPLE_SIGNAL) {
+		s->type = SAMPLE_SIGNAL;
+	}
 }
 
 /*
@@ -380,6 +388,10 @@ add_triangle_real(sample_buffer *s, double f, double a)
 		s->data[i] += (sample_t) i_amp;
 	}
 	s->max_freq = (f > s->max_freq) ? f : s->max_freq;
+	s->min_freq = (f < s->min_freq) ? f : s->min_freq;
+	if (s->type == SAMPLE_UNKNOWN) {
+		s->type = SAMPLE_REAL_SIGNAL;
+	}
 }
 
 /*
@@ -400,6 +412,10 @@ add_square(sample_buffer *s, double f, double a)
 								 ((__q_index(i, s->r, f) >= .5) ? level : -level) * I;
 	}
 	s->max_freq = (f > s->max_freq) ? f : s->max_freq;
+	s->min_freq = (f < s->min_freq) ? f : s->min_freq;
+	if (s->type != SAMPLE_SIGNAL) {
+		s->type = SAMPLE_SIGNAL;
+	}
 }
 
 /*
@@ -419,6 +435,10 @@ add_square_real(sample_buffer *s, double f, double a)
 		s->data[i] += (sample_t) ((__i_index(i, s->r, f) >= .5) ? level : -level);
 	}
 	s->max_freq = (f > s->max_freq) ? f : s->max_freq;
+	s->min_freq = (f < s->min_freq) ? f : s->min_freq;
+	if (s->type == SAMPLE_UNKNOWN) {
+		s->type = SAMPLE_REAL_SIGNAL;
+	}
 }
 
 /*
@@ -827,80 +847,44 @@ load_signal(char *filename)
 	return res;
 }
 
-int
-plot_signal(FILE *of, sample_buffer *sig, char *name, int start, int len)
+/* add_test
+ *
+ * XXX: move the test functions to a test program, out of signal.c
+ *
+ * This implements the inphase and quadrature values using a function
+ * which sets the quadrature value to the inphase value 25% earlier in
+ * the period (representing a 90 degree phase shift).
+ */
+void
+add_test(sample_buffer *b, double freq, double amp)
 {
-	int	end;
-	double min_q, min_i;
-	double max_q, max_i;
-	double q_norm, i_norm;
-	
-
-	/* make sure we don't go outside the signal array */
-	if (start < 0) {
-		start = 0;
+	for (int i = 0; i < b->n; i++) {
+		b->data[i] = amp * cos(2 * M_PI * __i_index(i, b->r, freq)) +
+					 amp * cos(2 * M_PI * __q_index(i, b->r, freq)) * I;
 	}
-	if (start > sig->n) {
-		start = sig->n;
+	b->max_freq = (freq > b->max_freq) ? freq : b->max_freq;
+	b->min_freq = (freq < b->min_freq) ? freq : b->min_freq;
+	if (b->type != SAMPLE_SIGNAL) {
+		b->type = SAMPLE_SIGNAL;
 	}
-
-	if ((len <= 0) || ((start + len) >= sig->n)) {
-		end = sig->n;
-	} else {
-		end = start + len;
-	}
-
-	min_q = min_i = max_q = max_i = 0;
-	for (int k = start; k < end; k++) {
-		double q, i;
-		i = creal(sig->data[k]);
-		q = cimag(sig->data[k]);
-		min_q = (q <= min_q) ? q : min_q;
-		min_i = (i <= min_i) ? i : min_i;
-		max_q = (q >= max_q) ? q : max_q;
-		max_i = (i >= max_i) ? i : max_i;
-	}
-	i_norm = max_i - min_i;
-	q_norm = max_q - min_q;
-	printf("Signal %s: R = %d, I [%f -- %f, %f], Q [%f -- %f, %f] \n",
-		name, sig->r, min_i, max_i, i_norm, min_q, max_q, q_norm);
-
-	fprintf(of, "#\n# Start signal data for %s :\n#\n", name);
-	fprintf(of, "%s_i_min = %f\n", name, min_i);
-	fprintf(of, "%s_i_max = %f\n", name, max_i);
-	fprintf(of, "%s_q_min = %f\n", name, min_q);
-	fprintf(of, "%s_q_max = %f\n", name, max_q);
-	fprintf(of, "%s_x_time = 1\n", name);
-	fprintf(of, "%s_x_time_norm = 2\n", name);
-	fprintf(of, "%s_x_time_ms = 3\n", name);
-	fprintf(of, "%s_y_i = 4\n", name);
-	fprintf(of, "%s_y_q = 5\n", name);
-	fprintf(of, "%s_y_i_norm = 6\n", name);
-	fprintf(of, "%s_y_q_norm = 7\n", name);
-	fprintf(of, "$%s_data << EOD\n", name);
-	fprintf(of, "#\n# Columns are:\n");
-	fprintf(of, "# 1. Time Delta (seconds)\n");
-	fprintf(of, "# 2. Time Delta (normalized)\n");
-	fprintf(of, "# 3. Inphase (real) value\n");
-	fprintf(of, "# 4. Quadrature (imaginary) value\n");
-	fprintf(of, "# 5. Inphase (real) value normalized (-0.5 - 0.5)\n");
-	fprintf(of, "# 6. Quadrature (imaginary) value normalized (-0.5 - 0.5)\n");
-	fprintf(of, "# 7. Time in milleseconds (mS)\n");
-	fprintf(of, "# 1        2        3        4         5         6       7\n");
-
-	for (int k = start; k < end; k++) {
-		double	dt, dx;
-		double	sig_i, sig_q;
-		
-		sig_i = creal(sig->data[k]);
-		sig_q = cimag(sig->data[k]);
-		dt = (double) (k - start) / (double) sig->r;
-		dx = (double) (k - start) / (double) (end - start);
-		/* prints real part, imaginary part, and magnitude */
-		fprintf(of, "%f %f %f %f %f %f %f\n", 
-						dt, dx, dt * 1000.0, sig_i, sig_q, 
-						(i_norm != 0) ? ((sig_i - min_i) / i_norm) - 0.5 : 0, 
-				(q_norm > 0.00000001) ? ((sig_q - min_q) / q_norm) - 0.5 : 0);
-	}
-	fprintf(of, "EOD\n");
 }
+
+/* add_test_real
+ *
+ * This function implements add_cos by using the inphase index funtion
+ * to verify that the inphase function is computing the same phase as
+ * the add_cos function does.
+ */
+void
+add_test_real(sample_buffer *b, double freq, double amp)
+{
+	for (int i = 0; i < b->n; i++) {
+		b->data[i] = amp * cos(2 * M_PI * __i_index(i, b->r, freq));
+	}
+	b->max_freq = (freq > b->max_freq) ? freq : b->max_freq;
+	b->min_freq = (freq < b->min_freq) ? freq : b->min_freq;
+	if (b->type == SAMPLE_UNKNOWN) {
+		b->type = SAMPLE_REAL_SIGNAL;
+	}
+}
+

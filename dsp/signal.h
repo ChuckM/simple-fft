@@ -40,6 +40,13 @@ typedef enum {
 	FMT_IX_I32		// Real only data as 32 bit int
 } signal_format;
 
+typedef enum {
+	SAMPLE_UNKNOWN,
+	SAMPLE_FFT,
+	SAMPLE_REAL_SIGNAL,		/* signal only has inphase data */
+	SAMPLE_SIGNAL			/* signal has both inphase and quadrature data */
+} sample_buffer_type;
+
 /* this is the sample type for the sample buffer */
 typedef complex double sample_t;
 
@@ -52,8 +59,10 @@ typedef struct {
 	double			sample_min,		/* min value in buffer */
 					sample_max;		/* max value in buffer */
 	double			max_freq;		/* Maximum frequency */
+	double			min_freq;		/* Minimum frequency */
 	int				n;				/* number of samples */
 	int				r;				/* sample rate in Hz */
+	sample_buffer_type	type;		/* type of samples */
 	struct sample_buffer *nxt;		/* chained buffer */
 	sample_t	*data;				/* sample data */
 } sample_buffer;
