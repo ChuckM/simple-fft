@@ -20,6 +20,8 @@
 #include <dsp/signal.h>
 #include <dsp/plot.h>
 
+#define PLOT_KEY_NONE	0
+#define PLOT_KEY_INSIDE	1
 /*
  * Some private data structures for passing plot state around.
  *
@@ -35,7 +37,7 @@ typedef struct {
 		char *scale;
 	} *x;
 	char *ylabel;			/* Label for Y axis */
-	plot_key_t	k;		    /* key option (inside, outside, off) */
+	int	k;		    /* key option (inside, outside, off) */
 	size_t		nlines;		/* number of plot lines */
     struct plot_line_t {
     	char		*title;		/* title of this line */
@@ -134,16 +136,10 @@ __plot(FILE *f, plot_t *plot)
 	fprintf(f, "set title '%s'\n", plot->title);
 	fprintf(f, "set xlabel font 'Arial,10' offset 0,1\n");
 	fprintf(f, "set ylabel font 'Arial,10' offset 1, 0\n");
-	switch(plot->k) {
-		default:
-			fprintf(f, "set nokey\n");
-			break;
-		case PLOT_KEY_INSIDE:
-			fprintf(f, "set key opaque font 'Arial,8' box lw 2\n");
-			break;
-		case PLOT_KEY_OUTSIDE:
-			fprintf(f, "set key outside noopaque\n");
-			break;
+	if (plot->k) {
+		fprintf(f, "set key opaque font 'Arial,8' box lw 2\n");
+	} else {
+		fprintf(f, "set nokey\n");
 	}
 	fprintf(f, "set xlabel '%s'\n", plot->x->label);
 	fprintf(f, "set ylabel '%s'\n", plot->ylabel);
