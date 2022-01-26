@@ -100,10 +100,10 @@ struct __plot_scale __scales[PLOT_SCALE_UNDEFINED] =
 										// PLOT_Y_REAL_AMPLITUDE_NORMALIZED:
 },{
 "Amplitude (Analytic)", "y_amplitude_analytic"
-										// PLOT_Y_ANALYTIC_AMPLITUDE:
+										// PLOT_Y_AMPLITUDE:
 },{
 "Amplitude (Analytic, Normalized)", "y_amplitude_analytic_norm"
-										// PLOT_Y_ANALYTIC_AMPLITUDE_NORMALIZED:
+										// PLOT_Y_AMPLITUDE_NORMALIZED:
 }};
 
 /*
@@ -449,10 +449,10 @@ __plot_signal_data(FILE *of, sample_buffer *sig, char *name)
 #endif
 
 	fprintf(of, "#\n# Start signal data for %s :\n#\n", name);
-	fprintf(of, "%s_i_min = %f\n", name, min_i);
-	fprintf(of, "%s_i_max = %f\n", name, max_i);
-	fprintf(of, "%s_q_min = %f\n", name, min_q);
-	fprintf(of, "%s_q_max = %f\n", name, max_q);
+	fprintf(of, "%s_i_min = %f\n", name, min_i * 1.1);
+	fprintf(of, "%s_i_max = %f\n", name, max_i * 1.1);
+	fprintf(of, "%s_q_min = %f\n", name, min_q * 1.1);
+	fprintf(of, "%s_q_max = %f\n", name, max_q * 1.1);
 	fprintf(of, "%s_end = %d\n", name, end);
 	fprintf(of, "%s_end_s = %f\n", name, end_s);
 	fprintf(of, "%s_end_ms = %f\n", name, end_ms);
@@ -475,17 +475,17 @@ __plot_signal_data(FILE *of, sample_buffer *sig, char *name)
 	 * Y amplitude (Inphase/real)
 	 */
 	fprintf(of, "%s_y_amplitude_real = 3\n", name);
-	fprintf(of, "%s_y_amplitude_real_min = %f\n", name, min_i);
-	fprintf(of, "%s_y_amplitude_real_max = %f\n", name, max_i);
+	fprintf(of, "%s_y_amplitude_real_min = %f\n", name, min_i * 1.1);
+	fprintf(of, "%s_y_amplitude_real_max = %f\n", name, max_i * 1.1);
 
 	/*
 	 * Y amplitude (Quadrature/analytic)
 	 */
 	fprintf(of, "%s_y_amplitude_analytic = 4\n", name);
 	fprintf(of, "%s_y_amplitude_analytic_min = %f\n", name, 
-						(min_i < min_q) ? min_i : min_q);
+						((min_i < min_q) ? min_i : min_q) * 1.1);
 	fprintf(of, "%s_y_amplitude_analytic_max = %f\n", name, 
-						(max_i > max_q) ? max_i : max_q);
+						((max_i > max_q) ? max_i : max_q) * 1.1);
 
 	/*
 	 * Y amplitude normalized (Real)
@@ -628,9 +628,9 @@ plot(FILE *f, char *title, char *name, plot_scale_t x, plot_scale_t y)
 		/* default its a real only plot */
 		y1 = y;
 		y2 = y;
-		if (y == PLOT_Y_ANALYTIC_AMPLITUDE) {
+		if (y == PLOT_Y_AMPLITUDE) {
 			y1 = PLOT_Y_REAL_AMPLITUDE;
-		} else if (y == PLOT_Y_ANALYTIC_AMPLITUDE_NORMALIZED) {
+		} else if (y == PLOT_Y_AMPLITUDE_NORMALIZED) {
 			y1 = PLOT_Y_REAL_AMPLITUDE_NORMALIZED;
 		}
 		/*

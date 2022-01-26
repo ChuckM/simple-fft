@@ -89,7 +89,7 @@ test_3(void)
 	pf = fopen(plot_file, "w");
 	plot_data(pf, hires, "tone");
 	plot(pf, "Four tone complex (analytic) signal",
-					"tone", PLOT_X_TIME_MS, PLOT_Y_ANALYTIC_AMPLITUDE);
+					"tone", PLOT_X_TIME_MS, PLOT_Y_AMPLITUDE);
 	fclose(pf);
 }
 
@@ -257,18 +257,14 @@ parse_y_opt(char *o)
 		return PLOT_SCALE_UNDEFINED;
 	} else if (*o == 'a') {
 		/*
-		 * aa -> analytic amplitude
-		 * aan -> analytic amplitude normalized
+		 * a -> amplitude
+		 * an -> amplitude normalized
 		 */
 		o++;
-		if (*o != 'a') {
-			return PLOT_SCALE_UNDEFINED;
-		}
-		o++;
 		if (*o == 0) {
-			return PLOT_Y_ANALYTIC_AMPLITUDE;
+			return PLOT_Y_AMPLITUDE;
 		} else if ((*o == 'n') && (*(o+1) == 0)) {
-			return PLOT_Y_ANALYTIC_AMPLITUDE_NORMALIZED;
+			return PLOT_Y_AMPLITUDE_NORMALIZED;
 		}
 		return PLOT_SCALE_UNDEFINED;
 	}

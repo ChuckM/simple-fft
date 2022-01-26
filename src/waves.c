@@ -1,6 +1,7 @@
 /*
  * waves.c - generate test plots of the various waveforms.
  *
+ * Updated January 2022 by Chuck McManis
  * Written April 2019 by Chuck McManis
  * Copyright (c) 2019, Chuck McManis
  *
@@ -21,6 +22,7 @@
 #include <complex.h>
 #include <dsp/signal.h>
 #include <dsp/fft.h>
+#include <dsp/plot.h>
 
 extern char *optarg;
 extern int optind, opterr, optopt;
@@ -37,6 +39,7 @@ main(int argc, char *argv[])
 	enum wavetype	wave_type = COS;
 	char name[48];
 	char plot_title[80];
+	plot_scale_t yaxis;
 	int	make_it_real = 0;
 	double phase = 0;
 	const char *optstring = "rw:p:";
@@ -83,11 +86,11 @@ main(int argc, char *argv[])
 			if (make_it_real) {
 				snprintf(plot_title, sizeof(plot_title)-1, 
 						"Real Cosine Waveform");
-				add_cos_real(wave, 2.0, 1.0, phase);
+				add_cos_real(wave, 10.0, 1.0, phase);
 			} else {
 				snprintf(plot_title, sizeof(plot_title)-1, 
 						"Complex Cosine Waveform");
-				add_cos(wave, 2.0, 1.0, phase);
+				add_cos(wave, 10.0, 1.0, phase);
 			}
 			snprintf(name, 48, "plots/wave_cosine.data");
 			break;
@@ -95,11 +98,11 @@ main(int argc, char *argv[])
 			if (make_it_real) {
 				snprintf(plot_title, sizeof(plot_title)-1, 
 						"Real Sawtooth (Ramp) Waveform");
-				add_sawtooth_real(wave, 2.0, 1.0, phase);
+				add_sawtooth_real(wave, 10.0, 1.0, phase);
 			} else {
 				snprintf(plot_title, sizeof(plot_title)-1, 
 						"Complex Sawtooth (Ramp) Waveform");
-				add_sawtooth(wave, 2.0, 1.0, phase);
+				add_sawtooth(wave, 10.0, 1.0, phase);
 			}
 			snprintf(name, 48, "plots/wave_sawtooth.data");
 			break;
@@ -107,11 +110,11 @@ main(int argc, char *argv[])
 			if (make_it_real) {
 				snprintf(plot_title, sizeof(plot_title)-1, 
 						"Real Triangle Waveform");
-				add_triangle_real(wave, 2.0, 1.0, phase);
+				add_triangle_real(wave, 10.0, 1.0, phase);
 			} else {
 				snprintf(plot_title, sizeof(plot_title)-1, 
 						"Complex Triangle Waveform");
-				add_triangle(wave, 2.0, 1.0, phase);
+				add_triangle(wave, 10.0, 1.0, phase);
 			}
 			snprintf(name, 48, "plots/wave_triangle.data");
 			break;
@@ -119,11 +122,11 @@ main(int argc, char *argv[])
 			if (make_it_real) {
 				snprintf(plot_title, sizeof(plot_title)-1, 
 						"Real Square Waveform");
-				add_square_real(wave, 2.0, 1.0, phase);
+				add_square_real(wave, 10.0, 1.0, phase);
 			} else {
 				snprintf(plot_title, sizeof(plot_title)-1, 
 						"Complex Square Waveform");
-				add_square(wave, 2.0, 1.0, phase);
+				add_square(wave, 10.0, 1.0, phase);
 			}
 			snprintf(name, 48, "plots/wave_square.data");
 			break;
@@ -137,6 +140,6 @@ main(int argc, char *argv[])
 	}
 	plot_data(of, wave, "wave");
 	yaxis = (make_it_real) ? PLOT_Y_REAL_AMPLITUDE : PLOT_Y_AMPLITUDE;
-	plot(of, "wave", PLOT_X_TIME_MS, yaxis);
+	plot(of, plot_title, "wave", PLOT_X_TIME_MS, yaxis);
 	fclose(of);
 }
