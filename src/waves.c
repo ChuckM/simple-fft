@@ -34,18 +34,15 @@ main(int argc, char *argv[])
 {
 	FILE *of;
 	sample_buffer	*wave;
-	sample_buffer	*wave_phase;
 	enum wavetype	wave_type = COS;
 	char name[48];
 	char plot_title[80];
 	int	make_it_real = 0;
 	double phase = 0;
 	const char *optstring = "rw:p:";
-	int showphase = 0;
 	char opt;
 
-	wave = alloc_buf(800, 800);
-	wave_phase = alloc_buf(800, 800);
+	wave = alloc_buf(800, 8000);
 	if (! wave) {
 		fprintf(stderr, "Unable to allocate wave buffer\n");
 		exit(1);
@@ -76,7 +73,6 @@ main(int argc, char *argv[])
 					fprintf(stderr, "phase value must be between 0 and 2*pi\n");
 					exit(1);
 				}
-				showphase++;
 				break;
 		}
 		
@@ -87,29 +83,23 @@ main(int argc, char *argv[])
 			if (make_it_real) {
 				snprintf(plot_title, sizeof(plot_title)-1, 
 						"Real Cosine Waveform");
-				add_cos_real(wave, 2.0, 1.0);
-				add_cos_phase_real(wave_phase, 2.0, 1.0, phase);
+				add_cos_real(wave, 2.0, 1.0, phase);
 			} else {
 				snprintf(plot_title, sizeof(plot_title)-1, 
 						"Complex Cosine Waveform");
-				add_cos(wave, 2.0, 1.0);
-				add_cos_phase(wave_phase, 2.0, 1.0, phase);
+				add_cos(wave, 2.0, 1.0, phase);
 			}
-			if (showphase) {
-				snprintf(name, 48, "plots/wave_cosine_phase.data");
-			} else {
-				snprintf(name, 48, "plots/wave_cosine.data");
-			}
+			snprintf(name, 48, "plots/wave_cosine.data");
 			break;
 		case SAWTOOTH:
 			if (make_it_real) {
 				snprintf(plot_title, sizeof(plot_title)-1, 
 						"Real Sawtooth (Ramp) Waveform");
-				add_sawtooth_real(wave, 2.0, 1.0);
+				add_sawtooth_real(wave, 2.0, 1.0, phase);
 			} else {
 				snprintf(plot_title, sizeof(plot_title)-1, 
 						"Complex Sawtooth (Ramp) Waveform");
-				add_sawtooth(wave, 2.0, 1.0);
+				add_sawtooth(wave, 2.0, 1.0, phase);
 			}
 			snprintf(name, 48, "plots/wave_sawtooth.data");
 			break;
@@ -117,11 +107,11 @@ main(int argc, char *argv[])
 			if (make_it_real) {
 				snprintf(plot_title, sizeof(plot_title)-1, 
 						"Real Triangle Waveform");
-				add_triangle_real(wave, 2.0, 1.0);
+				add_triangle_real(wave, 2.0, 1.0, phase);
 			} else {
 				snprintf(plot_title, sizeof(plot_title)-1, 
 						"Complex Triangle Waveform");
-				add_triangle(wave, 2.0, 1.0);
+				add_triangle(wave, 2.0, 1.0, phase);
 			}
 			snprintf(name, 48, "plots/wave_triangle.data");
 			break;
@@ -129,11 +119,11 @@ main(int argc, char *argv[])
 			if (make_it_real) {
 				snprintf(plot_title, sizeof(plot_title)-1, 
 						"Real Square Waveform");
-				add_square_real(wave, 2.0, 1.0);
+				add_square_real(wave, 2.0, 1.0, phase);
 			} else {
 				snprintf(plot_title, sizeof(plot_title)-1, 
 						"Complex Square Waveform");
-				add_square(wave, 2.0, 1.0);
+				add_square(wave, 2.0, 1.0, phase);
 			}
 			snprintf(name, 48, "plots/wave_square.data");
 			break;
@@ -145,53 +135,8 @@ main(int argc, char *argv[])
 		fprintf(stderr, "Unable to open %s for writing.\n", name);
 		exit(1);
 	}
-	plot_signal(of, wave, "sig", 0, wave->n);
-	plot_signal(of, wave_phase, "sigphase", 0, wave_phase->n);
-	fprintf(of, 
-		"set xlabel \"Period\"\n"
-		"set ylabel \"Amplitude\"\n"
-		"set grid\n"
-		"set title \"%s\"\n"
-		"set xtics border in scale 1,0.5 offset character 0,0,0\\\n"
-		"	norangelimit \\\n"
-		"	(\"{/Symbol p}/2\" 0.125,\\\n"
-		"	 \"{/Symbol p}\" .25, \\\n"
-		"	 \"3{/Symbol p}/2\" .375, \\\n"
-		"	 \"2{/Symbol p}\" .5, \\\n"
-		"	 \"5{/Symbol p}/2\" .625,\\\n"
-		"	 \"3{/Symbol p}\" .75, \\\n"
-		"	 \"7{/Symbol p}/2\" .875, \\\n"
-		"	 \"4{/Symbol p}\" 1)\n"
-		"set key outside autotitle columnheader\n", plot_title);
-	if (make_it_real == 0) {
-		fprintf(of, 
-		"	plot [0:1] $sig_sig_data \\\n"
-		"              using sig_x_time_norm_col:sig_y_i_norm_col \\\n"
-		"              with lines lt rgb \"#1010ff\" lw 1.5 ,\\\n"
-		"         \"\" \\\n"
-		"			   using sig_x_time_norm_col:sig_y_q_norm_col \\\n"
-		"			   with lines lt rgb \"#ff1010\" lw 1.5");
-		if (showphase) {
-			fprintf(of, ", \\\n"
-			"  $sig_sigphase_data \\\n"
-			" 		using sigphase_x_time_norm_col:sigphase_y_i_norm_col \\\n"
-			" 		with lines lt rgb \"#c0c0c0\" lw 1.5 , \\\n"
-			"  $sig_sigphase_data \\\n"
-			" 		using sigphase_x_time_norm_col:sigphase_y_q_norm_col \\\n"
-			" 		with lines lt rgb \"#101010\" lw 1.5");
-		}
-	} else {
-		fprintf(of, 
-		"	plot [0:1] $sig_sig_data \\\n"
-		"		using sig_x_time_norm_col:sig_y_i_norm_col \\\n"
-		"		with lines lt rgb \"#1010ff\" lw 1.5");
-		if (showphase) {
-			fprintf(of, ", \\\n"
-			"	$sigphase_sig_data \\\n"
-			"		using sigphase_x_time_norm_col:sigphase_y_i_norm_col \\\n"
-			"		 with lines lt rgb \"#ff1010\" lw 1.5");
-		}
-	}
-	fprintf(of, "\n");
+	plot_data(of, wave, "wave");
+	yaxis = (make_it_real) ? PLOT_Y_REAL_AMPLITUDE : PLOT_Y_AMPLITUDE;
+	plot(of, "wave", PLOT_X_TIME_MS, yaxis);
 	fclose(of);
 }

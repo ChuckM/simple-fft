@@ -93,154 +93,6 @@ free_buf(sample_buffer *sb)
 }
 
 /*
- * add_cos( ... )
- *
- * Add in a signal (complex) at this frequency and amplitude into
- * the sample buffer.
- */
-void
-add_cos(sample_buffer *s, double f, double a)
-{
-	int	i;
-
-	/*
-	 * n is samples
-	 * r is rate (samples per second)
-	 * f is frequency (cycles per second)
-	 * what span is (n / r) seconds / f = cyles /n is cycles per sample?
-	 */
-	for (i = 0; i < s->n; i++ ) {
-		s->data[i] += (sample_t) (a * (cos(2 * M_PI * f * i / s->r) +
-									   sin(2 * M_PI * f * i / s->r) * I));
-		set_minmax(s, i);
-	}
-	if (s->type != SAMPLE_SIGNAL) {
-		s->type = SAMPLE_SIGNAL;
-	}
-	s->max_freq = (f > s->max_freq) ? f : s->max_freq;
-	s->min_freq = (f < s->min_freq) ? f : s->min_freq;
-}
-
-/*
- * add_sin( ... )
- *
- * Add in a signal (complex) at this frequency and amplitude into
- * the sample buffer.
- */
-void
-add_sin(sample_buffer *s, double f, double a)
-{
-	int	i;
-
-	/*
-	 * n is samples
-	 * r is rate (samples per second)
-	 * f is frequency (cycles per second)
-	 * what span is (n / r) seconds / f = cyles /n is cycles per sample?
-	 */
-	for (i = 0; i < s->n; i++ ) {
-		s->data[i] += (sample_t) (a * (sin(2 * M_PI * f * i / s->r) -
-									   cos(2 * M_PI * f * i / s->r) * I));
-		set_minmax(s, i);
-	}
-	if (s->type != SAMPLE_SIGNAL) {
-		s->type = SAMPLE_SIGNAL;
-	}
-	s->max_freq = (f > s->max_freq) ? f : s->max_freq;
-	s->min_freq = (f < s->min_freq) ? f : s->min_freq;
-}
-
-/*
- * add_cos_phase( ... )
- *
- * Add in a signal (complex) at this frequency and amplitude into
- * the sample buffer and set the phase to p.
- */
-void
-add_cos_phase(sample_buffer *s, double f, double a, double ph)
-{
-	int	i;
-
-	/*
-	 * ph is phase
-	 * n is samples
-	 * r is rate (samples per second)
-	 * f is frequency (cycles per second)
-	 * what span is (n / r) seconds / f = cyles /n is cycles per sample?
-	 */
-	for (i = 0; i < s->n; i++ ) {
-		s->data[i] += (sample_t) (a * (cos(((2 * M_PI * f * i) / s->r) + ph) +
-								   sin((2 * M_PI * f * i / s->r) + ph) * I));
-		set_minmax(s, i);
-	}
-	if (s->type != SAMPLE_SIGNAL) {
-		s->type = SAMPLE_SIGNAL;
-	}
-	s->max_freq = (f > s->max_freq) ? f : s->max_freq;
-	s->min_freq = (f < s->min_freq) ? f : s->min_freq;
-}
-
-/*
- * add_cos_phase_real( ... )
- *
- * Add in a signal (real) at this frequency and amplitude into
- * the sample buffer and set the phase to p.
- */
-void
-add_cos_phase_real(sample_buffer *s, double f, double a, double ph)
-{
-	int	i;
-
-	/*
-	 * ph is phase
-	 * n is samples
-	 * r is rate (samples per second)
-	 * f is frequency (cycles per second)
-	 * what span is (n / r) seconds / f = cyles /n is cycles per sample?
-	 */
-	for (i = 0; i < s->n; i++ ) {
-		s->data[i] += (sample_t) (a * cos((2 * M_PI  * f * i / s->r)+ph));
-		set_minmax(s, i);
-	}
-	if (s->type == SAMPLE_UNKNOWN) {
-		s->type = SAMPLE_REAL_SIGNAL;
-	}
-	s->max_freq = (f > s->max_freq) ? f : s->max_freq;
-	s->min_freq = (f < s->min_freq) ? f : s->min_freq;
-}
-
-/*
- * add_cos_real( ... )
- *
- * Add in a signal (real) at this frequency and amplitude into
- * the sample buffer.
- */
-void
-add_cos_real(sample_buffer *s, double f, double a)
-{
-	int	i;
-	double per;
-
-	/*
-	 * n is samples
-	 * r is rate (samples per second)
-	 * f is frequency (cycles per second)
-	 * what span is (n / r) seconds / f = cyles /n is cycles per sample?
-	 */
-	per = (2 * M_PI * f) / (double) s->r;
-
-	for (i = 0; i < s->n; i++ ) {
-		s->data[i] += (sample_t) (a * (cos((double) i * per)));
-		set_minmax(s, i);
-	}
-	if (s->type == SAMPLE_UNKNOWN) {
-		s->type = SAMPLE_REAL_SIGNAL;
-	}
-	s->max_freq = (f > s->max_freq) ? f : s->max_freq;
-	s->min_freq = (f < s->min_freq) ? f : s->min_freq;
-}
-
-/*
  * Wave form index
  *
  * Each point on the waveform is described by frequency, index,
@@ -258,45 +110,66 @@ add_cos_real(sample_buffer *s, double f, double a)
  * period is the time through a single cycle. Multiply it by
  * 2 pi radians for sin or cos, or a another wave function.
  *
- * Index is a fraction since index.25 is 90 degrees "ahead"
+ * Index is a fraction since index.
+ * Phase is passed in radians and converted to an index by dividing
+ * by 2-pi. So pi/2 radians (90 degress) is 1/4 or 0.25 "ahead"
  * of the current sample.
  */
+
 static double
-__i_index(int ndx, int rate, double f)
+cosine(double i, double a)
 {
-	double period = ((double) ndx * f) / (double) rate;
-	double t;
-	return (modf(period, &t));
+	return a * cos(i * 2 * M_PI);
 }
 
 static double
-__q_index(int ndx, int rate, double f)
+sawtooth(double i, double a)
 {
-	double period = (((double) ndx * f) / (double) rate) - 0.25;
-	double t;
-	if (period < 0) {
-		period += 1.0;
-	}
-	return (modf(period, &t));
+	return (a * i * 2) - a;
+}
+
+static double
+triangle(double i, double a)
+{
+	return (i < 0.5) ? (4 * a * i) - a :
+					   3 * a - (4 * a * i);
+}
+
+static double
+square(double i, double a)
+{
+	return (i < 0.5) ? -a : a;
 }
 
 /*
- * add_sawtooth( ... )
+ * add_waveform( ... )
  *
- * Add a sawtooth wave to the sample buffer.
- * Note it goes from -1/2a to +1/2a to avoid
- * having a DC component.
+ * Add a waveform to the sample buffer.
+ * Amplitude will be -a to a (no DC bias)
  */
-void
-add_sawtooth(sample_buffer *s, double f, double a)
+static void
+add_waveform(double (*wf)(double, double), char *name, sample_buffer *s, 
+						double f, double a, double p)
 {
-	int i;
-	double level = a / 2.0;
-	double t;
+	double period = (double) s->r / f;
+	double ph = p / 2 * M_PI;
 
-	for (i = 0; i < s->n; i++) {
-		s->data[i] += (sample_t) (a * (__i_index(i, s->r, f) - (a/2.0))) + 
-								 (a * (__q_index(i, s->r, f) - (a/2.0))) * I;
+	if ((p < 0) || (p >= 2 * M_PI)) {
+		fprintf(stderr, "Illegal phase passed to %s()\n", name);
+		return;
+	}
+
+	for (int k = 0; k < s->n; k++) {
+		double inphase = ((double) k / period) + ph;
+		double quadrature = ((double) k / period) + (ph + 0.25);
+		double i1, i2;
+		double i, q;
+
+		i1 = modf(inphase, &inphase);
+		i2 = modf(quadrature, &quadrature);
+		i = wf(i1, a);
+		q = wf(i2, a);
+		s->data[k] += (sample_t) i + q * I;
 	}
 	s->max_freq = (f > s->max_freq) ? f : s->max_freq;
 	s->min_freq = (f < s->min_freq) ? f : s->min_freq;
@@ -306,44 +179,61 @@ add_sawtooth(sample_buffer *s, double f, double a)
 }
 
 /*
- * add_sawtooth_real( ... )
+ * add_real_waveforem( ... )
  *
- * Add a sawtooth wave to the sample buffer.
- * Note it goes from -1/2a to +1/2a to avoid
- * having a DC component.
+ * Add a real waveform (no quadrature part) to the sample buffer.
+ * Amplitude will be -a to a (no DC bias)
  */
-void
-add_sawtooth_real(sample_buffer *s, double f, double a)
+static void
+add_real_waveform(double (*wf)(double, double), char *name, sample_buffer *s,
+						double f, double a, double p)
 {
-	int i;
-	double level = a / 2.0;
-	double t;
+	double period = (double) s->r / f;
+	double ph = p / 2 * M_PI;
 
-	for (i = 0; i < s->n; i++) {
-		s->data[i] += (sample_t) (a * (__i_index(i, s->r, f) - (a/2.0)));
+	if ((p < 0) || (p >= 2 * M_PI)) {
+		fprintf(stderr, "Illegal phase passed to %s()\n", name);
+		return;
 	}
-	if (s->type == SAMPLE_UNKNOWN) {
-		s->type = SAMPLE_REAL_SIGNAL;
+
+	for (int k = 0; k < s->n; k++) {
+		double inphase = ((double) k / period) + ph;
+		double i1;
+		double i;
+
+		i1 = modf(inphase, &inphase);
+		i = wf(i1, a);
+		s->data[k] += (sample_t) i;
 	}
 	s->max_freq = (f > s->max_freq) ? f : s->max_freq;
 	s->min_freq = (f < s->min_freq) ? f : s->min_freq;
+	if (s->type != SAMPLE_SIGNAL) {
+		s->type = SAMPLE_SIGNAL;
+	}
 }
 
-/* Triangle wave, 
- *  1.0   +
- *       / \
- *  0.0 +   \   +
- *           \ /
- * -1.0       +
- */
-double static __triangle(double index) {
-	if (index < 0.25) {
-		return (index * 2.0);
-	} else if (index < 0.75) {
-		return (0.5 - (index - 0.25) * 2.0);
-	} else {
-		return (-0.5 + (index - 0.75) * 2.0);
-	}
+void
+add_cos(sample_buffer *s, double f, double a, double p)
+{
+	add_waveform(cosine, "add_cos", s, f, a, p);
+}
+
+void
+add_cos_real(sample_buffer *s, double f, double a, double p)
+{
+	add_real_waveform(cosine, "add_cos_real", s, f, a, p);
+}
+
+void
+add_sawtooth(sample_buffer *s, double f, double a, double p)
+{
+	add_waveform(sawtooth, "add_sawtooth", s, f, a, p);
+}
+
+void
+add_sawtooth_real(sample_buffer *s, double f, double a, double p)
+{
+	add_real_waveform(sawtooth, "add_sawtooth_real", s, f, a, p);
 }
 
 /*
@@ -354,20 +244,9 @@ double static __triangle(double index) {
  * having a DC component.
  */
 void
-add_triangle(sample_buffer *s, double f, double a)
+add_triangle(sample_buffer *s, double f, double a, double p)
 {
-	double i_amp, q_amp;
-
-	for (int i = 0; i < s->n; i++) {
-		i_amp = __triangle(__i_index(i, s->r, f)) * a;
-		q_amp = __triangle(__q_index(i, s->r, f)) * a;
-		s->data[i] += (sample_t) i_amp + q_amp * I;
-	}
-	s->max_freq = (f > s->max_freq) ? f : s->max_freq;
-	s->min_freq = (f < s->min_freq) ? f : s->min_freq;
-	if (s->type != SAMPLE_SIGNAL) {
-		s->type = SAMPLE_SIGNAL;
-	}
+	add_waveform(triangle, "add_triangle", s, f, a, p);
 }
 
 /*
@@ -378,20 +257,9 @@ add_triangle(sample_buffer *s, double f, double a)
  * having a DC component.
  */
 void
-add_triangle_real(sample_buffer *s, double f, double a)
+add_triangle_real(sample_buffer *s, double f, double a, double p)
 {
-	double i_amp, q_amp;
-
-	for (int i = 0; i < s->n; i++) {
-		i_amp = __triangle(__i_index(i, s->r, f)) * a;
-		q_amp = __triangle(__q_index(i, s->r, f)) * a;
-		s->data[i] += (sample_t) i_amp;
-	}
-	s->max_freq = (f > s->max_freq) ? f : s->max_freq;
-	s->min_freq = (f < s->min_freq) ? f : s->min_freq;
-	if (s->type == SAMPLE_UNKNOWN) {
-		s->type = SAMPLE_REAL_SIGNAL;
-	}
+	add_real_waveform(triangle, "add_triangle_real", s, f, a, p);
 }
 
 /*
@@ -401,21 +269,9 @@ add_triangle_real(sample_buffer *s, double f, double a)
  * Note that it goes from -1/2a to +1/2a to avoid a DC component.
  */
 void
-add_square(sample_buffer *s, double f, double a)
+add_square(sample_buffer *s, double f, double a, double p)
 {
-	int i;
-	double level = a / 2.0;
-	double t;
-
-	for (i = 0; i < s->n; i++) {
-		s->data[i] += (sample_t) ((__i_index(i, s->r, f) >= .5) ? level : -level) +
-								 ((__q_index(i, s->r, f) >= .5) ? level : -level) * I;
-	}
-	s->max_freq = (f > s->max_freq) ? f : s->max_freq;
-	s->min_freq = (f < s->min_freq) ? f : s->min_freq;
-	if (s->type != SAMPLE_SIGNAL) {
-		s->type = SAMPLE_SIGNAL;
-	}
+	add_waveform(square, "add_square", s, f, a, p);
 }
 
 /*
@@ -425,20 +281,9 @@ add_square(sample_buffer *s, double f, double a)
  * Note that it goes from -1/2a to +1/2a to avoid a DC component.
  */
 void
-add_square_real(sample_buffer *s, double f, double a)
+add_square_real(sample_buffer *s, double f, double a, double p)
 {
-	int i;
-	double level = a / 2.0;
-	double t;
-
-	for (i = 0; i < s->n; i++) {
-		s->data[i] += (sample_t) ((__i_index(i, s->r, f) >= .5) ? level : -level);
-	}
-	s->max_freq = (f > s->max_freq) ? f : s->max_freq;
-	s->min_freq = (f < s->min_freq) ? f : s->min_freq;
-	if (s->type == SAMPLE_UNKNOWN) {
-		s->type = SAMPLE_REAL_SIGNAL;
-	}
+	add_real_waveform(square, "add_square_real", s, f, a, p);
 }
 
 /*
@@ -846,45 +691,3 @@ load_signal(char *filename)
 	fclose(f);
 	return res;
 }
-
-/* add_test
- *
- * XXX: move the test functions to a test program, out of signal.c
- *
- * This implements the inphase and quadrature values using a function
- * which sets the quadrature value to the inphase value 25% earlier in
- * the period (representing a 90 degree phase shift).
- */
-void
-add_test(sample_buffer *b, double freq, double amp)
-{
-	for (int i = 0; i < b->n; i++) {
-		b->data[i] = amp * cos(2 * M_PI * __i_index(i, b->r, freq)) +
-					 amp * cos(2 * M_PI * __q_index(i, b->r, freq)) * I;
-	}
-	b->max_freq = (freq > b->max_freq) ? freq : b->max_freq;
-	b->min_freq = (freq < b->min_freq) ? freq : b->min_freq;
-	if (b->type != SAMPLE_SIGNAL) {
-		b->type = SAMPLE_SIGNAL;
-	}
-}
-
-/* add_test_real
- *
- * This function implements add_cos by using the inphase index funtion
- * to verify that the inphase function is computing the same phase as
- * the add_cos function does.
- */
-void
-add_test_real(sample_buffer *b, double freq, double amp)
-{
-	for (int i = 0; i < b->n; i++) {
-		b->data[i] = amp * cos(2 * M_PI * __i_index(i, b->r, freq));
-	}
-	b->max_freq = (freq > b->max_freq) ? freq : b->max_freq;
-	b->min_freq = (freq < b->min_freq) ? freq : b->min_freq;
-	if (b->type == SAMPLE_UNKNOWN) {
-		b->type = SAMPLE_REAL_SIGNAL;
-	}
-}
-

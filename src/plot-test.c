@@ -345,9 +345,9 @@ main(int argc, char *argv[])
 	 */
 	printf("Generating a multi-tone example signals ...\n");
 	for (int i = 0; i < 5; i++) {
-		add_cos_real(real_signal, tone_spread[i], 0.5);
-		add_cos(complex_signal, tone_spread[i], 0.5);
-		add_cos(hires, tone_spread[i], 0.5);
+		add_cos_real(real_signal, tone_spread[i], 0.5, 0);
+		add_cos(complex_signal, tone_spread[i], 0.5, 0);
+		add_cos(hires, tone_spread[i], 0.5, 0);
 	}
 
 	switch (test_num) {
