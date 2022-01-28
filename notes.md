@@ -377,4 +377,38 @@ individual plot lines.
 
 
 
+Test Status:
 
+```
+Name					Builds		Works
+-----------				------		-----
+plot-test				  Y			  Y
+cic-test				  Y			  Y
+fft-test				  Y			  Y
+filt-test				  Y			  Y
+tp1						  Y
+tp2				<-- needs to be rewritten
+tp3						  Y (needs plot code fixed)
+tp4						  Y
+tp5						  Y
+tp6						  Y
+demo					  Y
+waves					  Y
+hann					  Y
+bh						  Y
+dft_test				  Y
+corr					  Y
+corr-plot				  Y
+multi-corr-plot			  Y
+filt-resp				  Y
+integrator				  Y
+filt-design				  Y
+sig-test				  Y
+cmaj7					  Y
+cic-verify				  Y
+cic-test-data			  Y
+impulse					  Y
+cic-debug				  Y
+genplot					  Y
+fig1					  Y
+```

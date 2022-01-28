@@ -23,6 +23,7 @@
 #include <complex.h>
 #include <dsp/signal.h>
 #include <dsp/fft.h>
+#include <dsp/plot.h>
 
 #define TEST_DATA "3khz-tone-pdm.test"
 #define BITS_PER_SAMPLE		256
@@ -91,26 +92,19 @@ main(int argc, char *argv[])
 		sb->data[i] = 2.0 * (avg_density(buf) - 0.5);
 	}
 	fclose(inp);
+	sb->type = SAMPLE_SIGNAL;
 	/* we now have 8K samples */
 
 	/* Compute the FFT on them to see if our waveform pops out */
 	fft = compute_fft(sb, 8192, W_BH);
 	of = fopen("plots/cic-validate.plot", "w");
-	fprintf(of,"$plot_signal << EOD\n");
-	for (int i = 0; i < 512; i++) {
-		fprintf(of, "%f %f\n", (1000.0 * i) / (double) sb->r, 
-						creal(sb->data[i]));
-	}
-	fprintf(of, "EOD\n");
-	plot_fft(of, fft, "fft"); /* check this */
-	fprintf(of, "set multiplot layout 2,1\n");
-	fprintf(of, "set ylabel \"amplitude\"\n");
-	fprintf(of, "set xlabel \"Time (mS)\"\n");
-	fprintf(of, "plot [0:%f] $plot_signal using 1:2 with lines\n",
-		sb->r / 6000.0);
-	fprintf(of, "set ylabel \"Magnitude (db)\"\n");
-	fprintf(of, "set xlabel \"Frequency\"\n");
-	fprintf(of, "plot [0:%d] $plot_fft using 1:2 with lines\n", sb->r/2);
-	fprintf(of, "unset multiplot\n");
+	plot_data(of, sb, "sig");
+	plot_data(of, fft, "fft"); /* check this */
+	multiplot_begin(of, "CIC Testing", 2, 1);
+	plot(of, "Original Signal", "sig",
+				PLOT_X_TIME_MS, PLOT_Y_AMPLITUDE_NORMALIZED);
+	plot(of, "Test Signal FFT", "fft",
+				PLOT_X_FREQUENCY_KHZ, PLOT_Y_DB);
+	multiplot_end(of);
 	fclose(of);
 }

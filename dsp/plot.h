@@ -47,7 +47,7 @@ typedef enum {
 } plot_scale_t;
 
 /* prototypes */
-int multiplot_start(FILE *f, char *title, int columns, int rows);
+int multiplot_begin(FILE *f, char *title, int columns, int rows);
 int multiplot_end(FILE *f);
 int plot_data(FILE *file, sample_buffer *s, char *name);
 int plot(FILE *f, char *t, char *name, plot_scale_t x, plot_scale_t y);

@@ -21,6 +21,7 @@
 #include <getopt.h>
 #include <dsp/fft.h>
 #include <dsp/filter.h>
+#include <dsp/plot.h>
 
 extern char *optarg;
 extern int optind, optopt, opterr;
@@ -175,9 +176,9 @@ main(int argc, char *argv[])
 	sig_fft = compute_fft(sig1, 1024, W_BH);
 #endif
 	/* Add a 'real' tone to the signal buffer */
-	add_cos_real(sig1, (double) (SAMPLE_RATE / 4.0) * 0.1, 1.0);
-	add_cos_real(sig1, (double) (SAMPLE_RATE / 4.0) * 0.2,  1.0);
-	add_cos_real(sig1, (double) (SAMPLE_RATE / 4.0) * 0.3, 1.0);
+	add_cos_real(sig1, (double) (SAMPLE_RATE / 4.0) * 0.1, 1.0, 0);
+	add_cos_real(sig1, (double) (SAMPLE_RATE / 4.0) * 0.2,  1.0, 0);
+	add_cos_real(sig1, (double) (SAMPLE_RATE / 4.0) * 0.3, 1.0, 0);
 	
 	/* multiply it by -Fs/4 */
 	for (int k = 0; k < sig2->n; k++) {

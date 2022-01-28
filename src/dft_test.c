@@ -54,13 +54,13 @@ main(int argc, char *argv[])
 	}
 
 	/* Add some tones to it, all should be < 1/2 SAMPLE_RATE */
-	add_cos(test, 1024.0, 1.0); 	// 1 kHz
-	add_cos(test, 1752.0, 1.0);		// 1.750 kHz
+	add_cos(test, 1024.0, 1.0, 0); 	// 1 kHz
+	add_cos(test, 1752.0, 1.0, 0);		// 1.750 kHz
 #if 0
 /* falls between bins */
 	add_cos(test, 1750.0, 1.0);		// 1.752 kHz
 #endif
-	add_cos(test, 3000.0, 1.0); 	// 3 kHz
+	add_cos(test, 3000.0, 1.0, 0); 	// 3 kHz
 
 	/* Now compute the DFT */
 	dft = compute_dft(test, bins, 0.0, (double) bins, wf);

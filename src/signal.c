@@ -141,35 +141,62 @@ square(double i, double a)
 	return (i < 0.5) ? -a : a;
 }
 
+static
+sample_t
+add(sample_t a, sample_t b)
+{
+	return a + b;
+}
+
+static
+sample_t
+mix(sample_t a, sample_t b)
+{
+	return a * b;
+}
+
 /*
- * add_waveform( ... )
+ * waveform( ... )
  *
  * Add a waveform to the sample buffer.
  * Amplitude will be -a to a (no DC bias)
  */
 static void
-add_waveform(double (*wf)(double, double), char *name, sample_buffer *s, 
-						double f, double a, double p)
+waveform(char *name,
+			double (*wf)(double, double),
+			sample_t (*func)(sample_t, sample_t),
+			sample_buffer *s,
+			double f, double a, double p)
 {
 	double period = (double) s->r / f;
-	double ph = p / 2 * M_PI;
+	double ph = p / 360; /* assume phase is in degrees */
 
-	if ((p < 0) || (p >= 2 * M_PI)) {
+	if ((p < 0) || (p >= 360)) {
 		fprintf(stderr, "Illegal phase passed to %s()\n", name);
 		return;
 	}
 
+	/*
+	 * Compute inphase and quadrature values for the
+	 * waveform. Note the quadrature value is -90 degrees
+	 * from the inphase value, but using a -ph here would result
+	 * in the algorithm not working at 0, fortunately -90 is
+	 * the same as +270 (.75) or - (+90). The invocation of
+	 * the waveform function shifts phase by 90 degrees and
+	 * uses it's inverse to meet this requirement.
+	 */
 	for (int k = 0; k < s->n; k++) {
 		double inphase = ((double) k / period) + ph;
-		double quadrature = ((double) k / period) + (ph + 0.25);
+		double quadrature = ((double) k / period) + ph + 0.25;
+
 		double i1, i2;
 		double i, q;
 
 		i1 = modf(inphase, &inphase);
 		i2 = modf(quadrature, &quadrature);
 		i = wf(i1, a);
-		q = wf(i2, a);
-		s->data[k] += (sample_t) i + q * I;
+		q = -wf(i2, a); /* see note above */
+		s->data[k] = func((sample_t) (i + q * I), s->data[k]);
 	}
 	s->max_freq = (f > s->max_freq) ? f : s->max_freq;
 	s->min_freq = (f < s->min_freq) ? f : s->min_freq;
@@ -179,14 +206,17 @@ add_waveform(double (*wf)(double, double), char *name, sample_buffer *s,
 }
 
 /*
- * add_real_waveforem( ... )
+ * real_waveforem( ... )
  *
- * Add a real waveform (no quadrature part) to the sample buffer.
+ * Add or max a real waveform (no quadrature part) to the sample buffer.
  * Amplitude will be -a to a (no DC bias)
  */
 static void
-add_real_waveform(double (*wf)(double, double), char *name, sample_buffer *s,
-						double f, double a, double p)
+real_waveform(char *name,
+			double (*wf)(double, double),
+			sample_t (*func)(sample_t, sample_t),
+			sample_buffer *s,
+			double f, double a, double p)
 {
 	double period = (double) s->r / f;
 	double ph = p / 2 * M_PI;
@@ -203,37 +233,61 @@ add_real_waveform(double (*wf)(double, double), char *name, sample_buffer *s,
 
 		i1 = modf(inphase, &inphase);
 		i = wf(i1, a);
-		s->data[k] += (sample_t) i;
+		s->data[k] = func((sample_t) i, s->data[k]);
 	}
 	s->max_freq = (f > s->max_freq) ? f : s->max_freq;
 	s->min_freq = (f < s->min_freq) ? f : s->min_freq;
-	if (s->type != SAMPLE_SIGNAL) {
-		s->type = SAMPLE_SIGNAL;
+	if (s->type == SAMPLE_UNKNOWN) {
+		s->type = SAMPLE_REAL_SIGNAL;
 	}
 }
 
 void
 add_cos(sample_buffer *s, double f, double a, double p)
 {
-	add_waveform(cosine, "add_cos", s, f, a, p);
+	waveform("add_cos", cosine, add, s, f, a, p);
+}
+
+void
+mix_cos(sample_buffer *s, double f, double a, double p)
+{
+	waveform("mix_cos", cosine, mix, s, f, a, p);
 }
 
 void
 add_cos_real(sample_buffer *s, double f, double a, double p)
 {
-	add_real_waveform(cosine, "add_cos_real", s, f, a, p);
+	real_waveform("add_cos_real", cosine, add, s, f, a, p);
+}
+
+void
+mix_cos_real(sample_buffer *s, double f, double a, double p)
+{
+	real_waveform("mix_cos_real", cosine, mix, s, f, a, p);
 }
 
 void
 add_sawtooth(sample_buffer *s, double f, double a, double p)
 {
-	add_waveform(sawtooth, "add_sawtooth", s, f, a, p);
+	waveform("add_sawtooth", sawtooth, add, s, f, a, p);
+}
+
+void
+mix_sawtooth(sample_buffer *s, double f, double a, double p)
+{
+	waveform("mix_sawtooth", sawtooth, mix, s, f, a, p);
 }
 
 void
 add_sawtooth_real(sample_buffer *s, double f, double a, double p)
 {
-	add_real_waveform(sawtooth, "add_sawtooth_real", s, f, a, p);
+	real_waveform("add_sawtooth_real", sawtooth, add, s, f, a, p);
+}
+
+void
+mix_sawtooth_real(sample_buffer *s, double f, double a, double p)
+{
+	real_waveform("mix_sawtooth_real", sawtooth, mix, s, f, a, p);
 }
 
 /*
@@ -246,7 +300,13 @@ add_sawtooth_real(sample_buffer *s, double f, double a, double p)
 void
 add_triangle(sample_buffer *s, double f, double a, double p)
 {
-	add_waveform(triangle, "add_triangle", s, f, a, p);
+	waveform("add_triangle", triangle, add, s, f, a, p);
+}
+
+void
+mix_triangle(sample_buffer *s, double f, double a, double p)
+{
+	waveform("mix_triangle", triangle, mix, s, f, a, p);
 }
 
 /*
@@ -259,7 +319,13 @@ add_triangle(sample_buffer *s, double f, double a, double p)
 void
 add_triangle_real(sample_buffer *s, double f, double a, double p)
 {
-	add_real_waveform(triangle, "add_triangle_real", s, f, a, p);
+	real_waveform("add_triangle_real", triangle, add, s, f, a, p);
+}
+
+void
+mix_triangle_real(sample_buffer *s, double f, double a, double p)
+{
+	real_waveform("mix_triangle_real", triangle, mix, s, f, a, p);
 }
 
 /*
@@ -271,7 +337,13 @@ add_triangle_real(sample_buffer *s, double f, double a, double p)
 void
 add_square(sample_buffer *s, double f, double a, double p)
 {
-	add_waveform(square, "add_square", s, f, a, p);
+	waveform("add_square", square, add, s, f, a, p);
+}
+
+void
+mix_square(sample_buffer *s, double f, double a, double p)
+{
+	waveform("mix_square", square, mix, s, f, a, p);
 }
 
 /*
@@ -283,7 +355,13 @@ add_square(sample_buffer *s, double f, double a, double p)
 void
 add_square_real(sample_buffer *s, double f, double a, double p)
 {
-	add_real_waveform(square, "add_square_real", s, f, a, p);
+	real_waveform("add_square_real", square, add, s, f, a, p);
+}
+
+void
+mix_square_real(sample_buffer *s, double f, double a, double p)
+{
+	real_waveform("mix_square_real", square, mix, s, f, a, p);
 }
 
 /*

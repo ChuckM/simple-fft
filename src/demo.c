@@ -192,7 +192,7 @@ main(int argc, char *argv[])
 		exit(1);
 	}
 	for (int i = 0; i < n_freqs; i++) {
-		add_cos(sig, freqs[i], 1.0);
+		add_cos(sig, freqs[i], 1.0, 0);
 	}
 	if (algo == USE_FFT) {
 		t = log(bins) / log(2);

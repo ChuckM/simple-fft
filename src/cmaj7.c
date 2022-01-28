@@ -21,6 +21,7 @@
 #include <dsp/signal.h>
 #include <dsp/windows.h>
 #include <dsp/fft.h>
+#include <dsp/plot.h>
 
 extern char *optarg;
 
@@ -71,6 +72,7 @@ add_zero_sin(sample_buffer *s, double f, double a)
 									   cos(2 * M_PI * f * i / s->r) * I));
 		set_minmax(s, i);
 	}
+	s->type = SAMPLE_SIGNAL;
 }
 
 /*
@@ -113,10 +115,10 @@ main(int argc, char *argv[])
 	/* C major 7th, C, E, G, Bb all from octave 4 */
 // #define EPSILON .00000000000000000000000000000000000000000000000000000000001
 #define EPSILON 0.01
-	add_cos_real(notes[0], C4, 1.0);
-	add_cos_real(notes[1], E4, 1.0);
-	add_cos_real(notes[2], G4, 1.0);
-	add_cos_real(notes[3], Bb4, 1.0);
+	add_cos_real(notes[0], C4, 1.0, 0);
+	add_cos_real(notes[1], E4, 1.0, 0);
+	add_cos_real(notes[2], G4, 1.0, 0);
+	add_cos_real(notes[3], Bb4, 1.0, 0);
 	for (int i = 0; i < notes[0]->n; i++) {
 		double sum;
 		sum = 0;
@@ -129,16 +131,21 @@ main(int argc, char *argv[])
 	add_zero_sin(sig, E4, 0.50);
 	add_zero_sin(sig, G4, 0.50);
 	add_zero_sin(sig, Bb4, 0.50);
-	of = fopen("plots/cmaj7.plot", "w");
-	plot_signal(of, sig, "chord", 0, (int)(.075*sr));
 	fft = compute_fft(sig, BINS, W_BH);
 	if (fft == NULL) {
 		fprintf(stderr, "FFT failed\n");
 		exit(1);
 	}
-
-	plot_fft(of, fft, "chord");
-
+	of = fopen("plots/cmaj7.plot", "w");
+	plot_data(of, sig, "chord");
+	plot_data(of, fft, "cfft");
+	multiplot_begin(of, "CMaj7^{th} Signal and its FFT", 2, 1);
+	plot(of, "Chord Signal", "chord", 
+					PLOT_X_TIME_MS, PLOT_Y_AMPLITUDE_NORMALIZED);
+	plot(of, "Chord FFT", "cfft", 
+			PLOT_X_FREQUENCY_KHZ, PLOT_Y_DB);
+	multiplot_end(of);
+#if 0
 	fprintf(of,"set title 'CMaj7^{th} (Frequency Domain)' font \"Arial,14\"\n");
 	fprintf(of, "set xtics font \"Arial,10\"\n");
 	fprintf(of, "set ytics font \"Arial,10\"\n");
@@ -153,5 +160,6 @@ main(int argc, char *argv[])
 	fprintf(of, "set ylabel 'Amplitude (V)' font \"Arial,12\"\n");
 	fprintf(of,"plot [0:0.06] $chord_data using chord_x_time_col:chord_y_i_norm_col with lines title 'Chord' lt rgb '#ff1010' lw 1.5\n");
 	fprintf(of,"unset multiplot\n");
+#endif
 	fclose(of);
 }

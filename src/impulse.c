@@ -19,6 +19,7 @@
 #include <dsp/signal.h>
 #include <dsp/windows.h>
 #include <dsp/fft.h>
+#include <dsp/plot.h>
 
 /*
  * This is a test program that is going to take the FFT
@@ -66,16 +67,9 @@ main(int argc, char *argv[])
 #endif
 	fft = compute_fft(buf, 8192, W_RECT);
 	of = fopen(PLOT, "w");
-	plot_fft(of, fft, "impulse");
-	fprintf(of, "set title 'Impulse FFT Plot (Rectangular Window)'\n");
-	fprintf(of, "set xlabel \"Frequency (kHz)\"\n");
-	fprintf(of, "set ylabel \"Magnitude (dB)\"\n");
-	fprintf(of, "set grid\n");
-/*	fprintf(of, "set xtics 0.1 0.05\n"); */
-	fprintf(of, "set nokey\n");
-	fprintf(of, 
-	  "plot [-0.5:0.5] $impulse_data using impulse_xnorm_col:impulse_yabs_col"
-				" with lines lt rgb \"#1010ff\"\n");
+	plot_data(of, fft, "impulse");
+	plot(of, "Impulse FFT Plot (Rectangular Window)", "impulse",
+					PLOT_X_NORMALIZED, PLOT_Y_DB);
 	fclose(of);
 	printf("Done.\n");
 }

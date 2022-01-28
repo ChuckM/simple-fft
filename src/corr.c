@@ -47,8 +47,8 @@ main(int argc, char *argv[])
 	a = alloc_buf(SAMPLE_RATE, SAMPLE_RATE);
 	b = alloc_buf(SAMPLE_RATE, SAMPLE_RATE);
 	/* real because we don't want to confuse yet */
-	add_cos_real(a, freq1, 1.0);
-	add_cos_real(b, freq2, 1.0);
+	add_cos_real(a, freq1, 1.0, 0);
+	add_cos_real(b, freq2, 1.0, 0);
 	correlation = 0.0;
 	for (int i = 0; i< a->n ; i++) {
 		correlation += a->data[i] * b->data[i];

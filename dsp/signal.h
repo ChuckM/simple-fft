@@ -92,25 +92,29 @@ typedef struct {
 sample_buffer *alloc_buf(int size, int sample_rate);
 sample_buffer *free_buf(sample_buffer *buf);
 
-/* validate the way I and Q are calculated */
-void add_test(sample_buffer *, double, double);
-void add_test_real(sample_buffer *, double, double);
-
 /* add a cosine wave, with both I & Q, or just I (_real()) */
 void add_cos(sample_buffer *, double f, double a, double p);
 void add_cos_real(sample_buffer *, double f, double a, double p);
+void mix_cos(sample_buffer *, double f, double a, double p);
+void mix_cos_real(sample_buffer *, double f, double a, double p);
 
 /* add a triangle wave, with both I & Q, or just I (_real()) */
 void add_triangle(sample_buffer *, double f, double a, double p);
 void add_triangle_real(sample_buffer *, double f, double a, double p);
+void mix_triangle(sample_buffer *, double f, double a, double p);
+void mix_triangle_real(sample_buffer *, double f, double a, double p);
 
 /* add a sawtooth wave, with both I & Q, or just I (_real()) */
 void add_sawtooth(sample_buffer *, double f, double a, double p);
 void add_sawtooth_real(sample_buffer *, double f, double a, double p);
+void mix_sawtooth(sample_buffer *, double f, double a, double p);
+void mix_sawtooth_real(sample_buffer *, double f, double a, double p);
 
 /* add a square wave, with both I & Q, or just I (_real()) */
 void add_square(sample_buffer *, double f, double a, double p);
 void add_square_real(sample_buffer *, double f, double a, double p);
+void mix_square(sample_buffer *, double f, double a, double p);
+void mix_square_real(sample_buffer *, double f, double a, double p);
 
 int store_signal(sample_buffer *signal, signal_format fmt, char *filename);
 sample_buffer *load_signal(char *filename);

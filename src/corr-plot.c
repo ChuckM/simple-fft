@@ -48,11 +48,11 @@ main(int argc, char *argv[])
 		iterations = atof(argv[3]);
 	}
 	if (argc == 5) {
-		phase = M_PI * atof(argv[4]);
+		phase = atof(argv[4]);
 	}
 	if ((freq < 0) || (freq < .0001) || (freq > SAMPLE_RATE / 2.0) ||
 		(span < 0) || (span < .0001) || (span > 500) ||
-		(phase < 0) || (phase > (2 * M_PI)) ||
+		(phase < 0) || (phase > (360)) ||
 		(iterations < .0001) || (iterations > 8.0)) {
 		fprintf(stderr, "Usage: corr-plot freq span [iterations] \n");
 		exit(1);
@@ -61,7 +61,7 @@ main(int argc, char *argv[])
 	a = alloc_buf(SAMPLE_RATE * 8, SAMPLE_RATE);
 	b = alloc_buf(SAMPLE_RATE * 8, SAMPLE_RATE);
 	/* real because we don't want to confuse yet */
-	add_cos_real(a, freq, 1.0);
+	add_cos_real(a, freq, 1.0, 0);
 	of = fopen(PLOTFILE, "w");
 	if (of == NULL) {
 		fprintf(stderr, "Unable to open %s\n", PLOTFILE);
@@ -72,7 +72,7 @@ main(int argc, char *argv[])
 	for (int i = 0; i < 500; i++) {
 		double q = freq-span + (2.0 * span * i) / 100.0;
 		clear_samples(b);
-		add_cos_phase_real(b, q, 1.0, phase);
+		add_cos_real(b, q, 1.0, phase);
 		correlation = 0.0;
 		for (int m = 0; m < (int)(SAMPLE_RATE * iterations); m++) {
 			correlation += b->data[m] * a->data[m];

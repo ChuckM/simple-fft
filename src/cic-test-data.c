@@ -27,7 +27,7 @@ main(int argc, char *argv[]) {
 
 	/* A buffer that holds 2 seconds of a 48 kSPS sine wave */
 	sb = alloc_buf(96000, 3072000);
-	add_cos(sb, freq, 1.0);
+	add_cos(sb, freq, 1.0, 0);
 
 	if (argc > 1) {
 		output = argv[1];

@@ -38,6 +38,49 @@
 #define EXP_LEN			20
 #define STARTING_FREQ	1000.0
 #define	FREQ_INC		0.5
+
+/* add_test
+ *
+ * XXX: move the test functions to a test program, out of signal.c
+ *
+ * This implements the inphase and quadrature values using a function
+ * which sets the quadrature value to the inphase value 25% earlier in
+ * the period (representing a 90 degree phase shift).
+ */
+void
+add_test(sample_buffer *b, double freq, double amp)
+{
+	for (int i = 0; i < b->n; i++) {
+		b->data[i] = amp * cos(2 * M_PI * __i_index(i, b->r, freq)) +
+					 amp * cos(2 * M_PI * __q_index(i, b->r, freq)) * I;
+	}
+	b->max_freq = (freq > b->max_freq) ? freq : b->max_freq;
+	b->min_freq = (freq < b->min_freq) ? freq : b->min_freq;
+	if (b->type != SAMPLE_SIGNAL) {
+		b->type = SAMPLE_SIGNAL;
+	}
+}
+
+/* add_test_real
+ *
+ * This function implements add_cos by using the inphase index funtion
+ * to verify that the inphase function is computing the same phase as
+ * the add_cos function does.
+ */
+void
+add_test_real(sample_buffer *b, double freq, double amp)
+{
+	for (int i = 0; i < b->n; i++) {
+		b->data[i] = amp * cos(2 * M_PI * __i_index(i, b->r, freq));
+	}
+	b->max_freq = (freq > b->max_freq) ? freq : b->max_freq;
+	b->min_freq = (freq < b->min_freq) ? freq : b->min_freq;
+	if (b->type == SAMPLE_UNKNOWN) {
+		b->type = SAMPLE_REAL_SIGNAL;
+	}
+}
+
+
 int
 main(int argc, char *argv[]) {
 	sample_buffer *src[EXP_LEN];

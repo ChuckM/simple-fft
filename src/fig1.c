@@ -11,6 +11,7 @@
 #include <complex.h>
 #include <dsp/signal.h>
 #include <dsp/fft.h>
+#include <dsp/plot.h>
 
 extern char *optarg;
 extern int optind, opterr, optopt;
@@ -26,7 +27,7 @@ main(int argc, char *argv[])
 	sample_buffer	*wave;
 	char name[48];
 	char plot_title[80];
-	int	make_it_real = 0;
+	int	make_it_real = 0;	/* apparently not implemented */
 	double phase = 0;
 	const char *optstring = "rw:p:";
 	int showphase = 0;
@@ -48,7 +49,7 @@ main(int argc, char *argv[])
 	}
 	snprintf(plot_title, sizeof(plot_title)-1, 
 			"Sine Waveform (Time Domain)");
-	add_sin(wave, 1000.0, 1.0);
+	add_cos(wave, 1000.0, 1.0, 270);
 	snprintf(name, 48, "plots/fig-1.data");
 
 	/* And now put the data into a gnuplot compatible file */
@@ -57,17 +58,10 @@ main(int argc, char *argv[])
 		fprintf(stderr, "Unable to open %s for writing.\n", name);
 		exit(1);
 	}
-	plot_signal(of, wave, "sig", 0, wave->n);
-	fprintf(of, 
-		"set xlabel \"Time (mS)\"\n"
-		"set ylabel \"Amplitude\"\n"
-		"set grid\n"
-		"set nokey\n"
-		"set title \"%s\"\n", plot_title);
-	fprintf(of, 
-		"	plot [0:.002] $sig_sig_data \\\n"
-		"		using sig_x_time_col:sig_y_i_col \\\n"
-		"		with lines lt rgb \"#1010ff\" lw 1.5");
-	fprintf(of, "\n");
+	plot_data(of, wave, "sig");
+	plot(of, plot_title, "sig",
+			PLOT_X_TIME_MS, PLOT_Y_AMPLITUDE);
 	fclose(of);
+	printf("Done.\n");
+
 }

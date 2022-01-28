@@ -30,6 +30,7 @@
 #include <complex.h>
 #include <dsp/signal.h>
 #include <dsp/fft.h>
+#include <dsp/plot.h>
 
 #define SAMPLE_RATE	10000
 #define BINS		8192
@@ -225,32 +226,32 @@ main(int argc, char *argv[])
 		switch (wavetype) {
 			default:
 			case 0:
-				add_cos_real(sig1, demo_freq, 1.0);
+				add_cos_real(sig1, demo_freq, 1.0, 0);
 				break;
 			case 1:
-				add_triangle_real(sig1, demo_freq, 1.0);
+				add_triangle_real(sig1, demo_freq, 1.0, 0);
 				break;
 			case 2:
-				add_square_real(sig1, demo_freq, 1.0);
+				add_square_real(sig1, demo_freq, 1.0, 0);
 				break;
 			case 3:
-				add_sawtooth_real(sig1, demo_freq, 1.0);
+				add_sawtooth_real(sig1, demo_freq, 1.0, 0);
 				break;
 		}
 	} else {
 		switch (wavetype) {
 			default:
 			case 0:
-				add_cos(sig1, demo_freq, 1.0);
+				add_cos(sig1, demo_freq, 1.0, 0);
 				break;
 			case 1:
-				add_triangle(sig1, demo_freq, 1.0);
+				add_triangle(sig1, demo_freq, 1.0, 0);
 				break;
 			case 2:
-				add_square(sig1, demo_freq, 1.0);
+				add_square(sig1, demo_freq, 1.0, 0);
 				break;
 			case 3:
-				add_sawtooth(sig1, demo_freq, 1.0);
+				add_sawtooth(sig1, demo_freq, 1.0, 0);
 				break;
 		}
 	}
@@ -304,10 +305,11 @@ main(int argc, char *argv[])
 	fft3 = compute_fft(sig2, BINS, W_RECT);
 	normalized = 0;
 	of = fopen("plots/tp5.plot", "w");
-	plot_fft(of, fft1, "fft1");
-	plot_signal(of, sig1, "sig1", 0, sig1->n);
-	plot_fft(of, fft3, "fft3");
-	plot_signal(of, sig2, "sig2", 0, sig2->n);
+	plot_data(of, fft1, "fft1");
+	plot_data(of, sig1, "sig1");
+	plot_data(of, fft3, "fft3");
+	plot_data(of, sig2, "sig2");
+	multiplot_begin(of, "Inverting things", 2, 2);
 	fprintf(of, "set grid\n");
 	fprintf(of, "red = 0xcf1010\n");
 	fprintf(of, "blue = 0x1010cf\n");

@@ -28,7 +28,9 @@ SRC_DIR = ./src
 
 LIB_SRC_DIR = ./src/lib
 
-TEST_PROGRAMS = plot-test cic-test fft-test filt-test tp2 tp3 tp4 tp5 tp6
+# tp2
+TEST_PROGRAMS = plot-test cic-test fft-test filt-test tp1\
+				 tp3 tp4 tp5 tp6
 
 PROGRAMS = demo waves hann bh dft_test \
 	   corr corr-plot multi-corr-plot filt-resp \

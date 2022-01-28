@@ -55,41 +55,41 @@ main(int argc, char *argv[])
 	}
 
 	/* Add some tones to it, all should be < 1/2 SAMPLE_RATE */
-	add_cos(test, 1024.0, 1.0); 	// 1 kHz
+	add_cos(test, 1024.0, 1.0, 0); 	// 1 kHz
 #ifdef BOUNDARY_PROBLEM
-	add_cos(test, 1750.0, 1.0);		// 1.750 kHz
+	add_cos(test, 1750.0, 1.0, 0);		// 1.750 kHz
 #else
-	add_cos(test, 1752.0, 1.0);		// 1.752 kHz
+	add_cos(test, 1752.0, 1.0, 0);		// 1.752 kHz
 #endif
-	add_cos(test, 3000.0, 1.0); 	// 3 kHz
+	add_cos(test, 3000.0, 1.0, 0); 	// 3 kHz
 
-	/* Now compute the FFT */
-	fft = compute_fft(test, bins, wf);
-
-	if (! fft) {
-		fprintf(stderr, "FFT was not calculated.\n");
-		exit(1);
-	}
-
-	/* And now put the data into a gnuplot compatible file */
 	of = fopen("plots/fft_test.plot", "w");
 	if (of == NULL) {
 		fprintf(stderr, "Unable to open ./plots/fft_test.data for writing.\n");
 		exit(1);
 	}
-	plot_fft_data(of, fft, "fft");
-	switch (wf) {
-		default:
-		case W_RECT:
-			plot_fft(of, "FFT (Rectangular Window)", NULL, PLOT_X_NORMALIZED);
-			break;
-		case W_BH:
-			plot_fft(of, "FFT (Blackman-Harris Window)", NULL, PLOT_X_NORMALIZED);
-			break;
-		case W_HANN:
-			plot_fft(of, "FFT (Hanning Window)", NULL, PLOT_X_NORMALIZED);
-			break;
-	}
+
+	/* Now compute the FFT with different window functions */
+	fft = compute_fft(test, bins, W_BH);
+	plot_data(of, fft, "bh");
+	free_buf(fft);
+	fft = compute_fft(test, bins, W_RECT);
+	plot_data(of, fft, "rect");
+	free_buf(fft);
+	fft = compute_fft(test, bins, W_HANN);
+	plot_data(of, fft, "hann");
+
+	/* And now put the data into a gnuplot compatible file */
+	multiplot_begin(of, "FFT with Different Window Functions", 2, 2);
+	plot(of, "FFT (Rectangular Window)", "rect", 
+						PLOT_X_NORMALIZED, PLOT_Y_DB_NORMALIZED);
+	plot(of, "FFT (Blackman-Harris Window)", "bh", 
+				PLOT_X_NORMALIZED, PLOT_Y_DB_NORMALIZED);
+	plot(of, "FFT (Hanning Window)", "hann",
+						PLOT_X_NORMALIZED, PLOT_Y_DB_NORMALIZED);
+	plot(of, "FFT with frequencies (Rectangular Window)", "rect",
+						PLOT_X_REAL_FREQUENCY_KHZ, PLOT_Y_DB_NORMALIZED);
+	multiplot_end(of);
 	fclose(of);
 	printf("Done.\n");
 }

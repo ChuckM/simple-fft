@@ -49,76 +49,27 @@ sample_buffer *complex_signal;
 sample_buffer *hires;
 
 void
-test_1(void)
-{
-	FILE *pf;
-	sample_buffer *fft;
-
-	fft = compute_fft(real_signal, fft_bins, W_BH);
-	printf("Generating an FFT plot into %s ...\n", plot_file);
-	pf = fopen(plot_file, "w");
-	plot_data(pf, fft, "fft");
-	plot(pf, "Fourier Transform (Blackman-Harris Window)",
-					"fft", PLOT_X_SAMPLERATE, PLOT_Y_DB);
-	fclose(pf);
-	
-}
-
-void
-test_2(void)
-{
-	FILE *pf;
-	sample_buffer *fft;
-
-	fft = compute_fft(complex_signal, fft_bins, W_BH);
-	printf("Generating an FFT plot into %s ...\n", plot_file);
-	pf = fopen(plot_file, "w");
-	plot_data(pf, fft, "fft");
-	plot(pf, "Fourier Transform (Blackman-Harris Window)",
-					"fft", PLOT_X_FREQUENCY, PLOT_Y_DB);
-	fclose(pf);
-}
-
-void
-test_3(void)
-{
-	FILE *pf;
-	sample_buffer *fft;
-
-	printf("Generating an signal plot into %s ...\n", plot_file);
-	pf = fopen(plot_file, "w");
-	plot_data(pf, hires, "tone");
-	plot(pf, "Four tone complex (analytic) signal",
-					"tone", PLOT_X_TIME_MS, PLOT_Y_AMPLITUDE);
-	fclose(pf);
-}
-
-void
-test_4(void)
-{
-	FILE *pf;
-	sample_buffer *fft;
-
-	printf("Generating an signal plot into %s ...\n", plot_file);
-	pf = fopen(plot_file, "w");
-	plot_data(pf, hires, "tone");
-	plot(pf, "Four tone complex (REAL) signal",
-					"tone", PLOT_X_TIME_MS, PLOT_Y_REAL_AMPLITUDE);
-	fclose(pf);
-}
-
-void
-fft_test(char *title, int r, plot_scale_t x, plot_scale_t y)
+fft_test(char *title, plot_scale_t x, plot_scale_t y)
 {
 	FILE		 	*pf;
 	sample_buffer	*fft;
 
+	x = (x == PLOT_SCALE_UNDEFINED) ? PLOT_X_FREQUENCY_KHZ : x;
+	y = (y == PLOT_SCALE_UNDEFINED) ? PLOT_Y_DB_NORMALIZED : y;
+	title = (title == NULL) ? "FFT Plot Test" : title;
+
 	printf("Generating an FFT plot with user X and Y scales ...\n");
 	pf = fopen(plot_file, "w");
-	if (r == 1) {
-		fft = compute_fft(real_signal, fft_bins, W_BH);
-	} else {
-		fft = compute_fft(complex_signal, fft_bins, W_BH);
+	switch (x) {
+		case PLOT_X_REAL_FREQUENCY:
+		case PLOT_X_REAL_FREQUENCY_KHZ:
+		case PLOT_X_REAL_NORMALIZED:
+		case PLOT_X_REAL_SAMPLERATE:
+			fft = compute_fft(real_signal, fft_bins, W_BH);
+			break;
+		default:	
+			fft = compute_fft(complex_signal, fft_bins, W_BH);
+			break;
 	}
 	plot_data(pf, fft, "fft");
 	plot(pf, title, "fft", x, y);
@@ -126,13 +77,43 @@ fft_test(char *title, int r, plot_scale_t x, plot_scale_t y)
 }
 
 void
-signal_test(char *title, int r, plot_scale_t x, plot_scale_t y)
+signal_test(char *title, plot_scale_t x, plot_scale_t y)
 {
 	FILE *pf;
+
+	x = (x == PLOT_SCALE_UNDEFINED) ? PLOT_X_TIME_MS : x;
+	y = (y == PLOT_SCALE_UNDEFINED) ? PLOT_Y_AMPLITUDE_NORMALIZED : y;
+	title = (title == NULL) ? "Signal Plot Test" : title;
+
 	printf("Generating an signal plot with user X and Y scales ...\n");
 	pf = fopen(plot_file, "w");
 	plot_data(pf, hires, "tone");
 	plot(pf, title, "tone", x, y);
+	fclose(pf);
+}
+
+void
+multiplot_test(char *title, plot_scale_t x, plot_scale_t y)
+{
+	FILE *pf;
+	sample_buffer *fft;
+
+	/* not used by multiplot test */
+	x = (x != PLOT_SCALE_UNDEFINED) ? PLOT_SCALE_UNDEFINED : x;
+	y = (y != PLOT_SCALE_UNDEFINED) ? PLOT_SCALE_UNDEFINED : y;
+	title = (title == NULL) ? "Multiple Plot Test" : title;
+
+	printf("Generating a test multiplot\n");
+	fft = compute_fft(complex_signal, fft_bins, W_BH);
+	pf = fopen(plot_file, "w");
+	plot_data(pf, hires, "tone");
+	plot_data(pf, fft, "fft");
+	multiplot_begin(pf, title, 1, 2);
+	plot(pf, "Test Tone Data", "tone", PLOT_X_TIME_MS, 
+											PLOT_Y_AMPLITUDE_NORMALIZED);
+	plot(pf, "Test Tone FFT", "fft", PLOT_X_FREQUENCY_KHZ, 
+											PLOT_Y_DB_NORMALIZED);
+	multiplot_end(pf);
 	fclose(pf);
 }
 
@@ -271,24 +252,58 @@ parse_y_opt(char *o)
 	return PLOT_SCALE_UNDEFINED;
 }
 
+void show_options(void);
+
+void
+show_options(void)
+{
+	printf("This program generates some data and use that data in a plot.\n");
+	printf("Various options are available:\n");
+	printf("    -F [-t <title>] [-x <axis>] [-y <axis>]\n");
+	printf("        Plots an FFT of the test signal. By default it picks a\n");
+	printf("        generic title, the kHz frequency X axis, and the\n");
+	printf("        normalized decibels Y axis (0 dB to -xxx dB)\n");
+	printf("        These defaults can be changed with these options:\n");
+	printf("            The -t option takes a string to put into the title\n");
+	printf("            The -x option selects the X axis (see below)\n");
+	printf("            The -y option selects the Y axis (see below)\n\n");
+	printf("    -S [-t <title>] [-x <axis>] [-y <axis>]\n");
+	printf("        Plots the test signal the program generates, the\n");
+	printf("        options are the same as they are for the FFT.\n\n");
+	printf("    -M [-t <title>]\n");
+	printf("        Generates a multiplot (used both a signal plot and an\n");
+	printf("        FFT plot for its data. Title option sets the main\n");
+	printf("        title.\n\n");
+	printf("Axis choices are a 1 to 3 letter abbreviation:\n");
+	printf("  X Axis:\n");
+	printf("    f\tFrequency in Hz\n");
+	printf("	rf\tReal Frequency (0 to Nyqist)\n");
+	printf("    fk\tFrequency in kHz\n");
+	printf("    rfk\tRea Frequency in kHz\n");
+	printf("    n\tFrequency Normalized (-0.5 to 0.5)\n");
+	printf("	rfn\tReal Frequency Normalized (0 to 0.5)\n");
+	exit(0);
+}
+
 int
 main(int argc, char *argv[])
 {
 	int	test_num = 1;
-	const char *options = "FSrat:T:x:y:";
+	const char *options = "hMFSt:x:y:";
 	plot_scale_t	x, y;
-	int	plot_real = 0;
 	char *title;
+	void (*test_func)(char *t, plot_scale_t x, plot_scale_t y);
 	char	opt;
 
 	real_signal = alloc_buf(BUF_SIZE, SAMPLE_RATE);
 	complex_signal = alloc_buf(BUF_SIZE, SAMPLE_RATE);
 	hires = alloc_buf(10000, SAMPLE_RATE*20);
 	/* some defaults for the axis */
-	x = PLOT_X_FREQUENCY_KHZ;
-	y = PLOT_Y_DB;
-	title = "Generic Test Plot";
-	printf("Plot function exercising code\n");
+	x = y = PLOT_SCALE_UNDEFINED;
+
+	printf("Plot function exercising code, use -h for options.\n");
+	title = NULL;
+	test_func = &fft_test;
 
 	/*
 	 * parse options
@@ -298,25 +313,20 @@ main(int argc, char *argv[])
 			default:
 			case ':':
 			case '?':
-				fprintf(stderr, "usage: %s [-T <num>]\n", argv[0]);
+			case 'h':
+				show_options();
 				exit(1);
-			case 'r':
-				plot_real = 1;
-				break;
-			case 'a':
-				plot_real = 0;
-				break;
 			case 't':
 				title = optarg;
 				break;
-			case 'T':
-				test_num = atol(optarg);
-				break;
 			case 'F':
-				test_num = 10;
+				test_func = &fft_test;
 				break;
 			case 'S':
-				test_num = 11;
+				test_func = &signal_test;
+				break;
+			case 'M':
+				test_func = &multiplot_test;
 				break;
 			case 'x':
 				x = parse_x_opt(optarg);
@@ -346,25 +356,5 @@ main(int argc, char *argv[])
 		add_cos(hires, tone_spread[i], 0.5, 0);
 	}
 
-	switch (test_num) {
-		default:
-		case 1:
-			test_1();
-			break;
-		case 2:
-			test_2();
-			break;
-		case 3:
-			test_3();
-			break;
-		case 4:
-			test_4();
-			break;
-		case 10:
-			fft_test(title, plot_real, x, y);
-			break;
-		case 11:
-			signal_test(title, plot_real, x, y);
-			break;
-	}
+	test_func(title, x, y);
 }

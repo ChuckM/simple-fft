@@ -22,9 +22,9 @@ main(int argc, char *argv[]) {
 	printf("Store and reload a sample signal\n");
 	test_fmt = FMT_IQ_D;
 	signal = alloc_buf(8192, 8192);
-	add_cos(signal, 1000.0, 1.0);
-	add_cos(signal, 1200.0, 1.0);
-	add_cos(signal, 1400.0, 1.0);
+	add_cos(signal, 1000.0, 1.0, 0);
+	add_cos(signal, 1200.0, 1.0, 0);
+	add_cos(signal, 1400.0, 1.0, 0);
 	printf("Base signal: \n");
 	if (! store_signal(signal, test_fmt, SIGNAL_FILE)) {
 		fprintf(stderr, "That failed\n");

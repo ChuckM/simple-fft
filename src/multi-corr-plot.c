@@ -54,7 +54,7 @@ main(int argc, char *argv[])
 	a = alloc_buf(SAMPLE_RATE * 8, SAMPLE_RATE);
 	b = alloc_buf(SAMPLE_RATE * 8, SAMPLE_RATE);
 	/* real because we don't want to confuse yet */
-	add_cos_real(a, freq, 1.0);
+	add_cos_real(a, freq, 1.0, 0);
 	of = fopen(PLOTFILE, "w");
 	if (of == NULL) {
 		fprintf(stderr, "Unable to open %s\n", PLOTFILE);
@@ -71,7 +71,7 @@ main(int argc, char *argv[])
 	for (int i = 0; i < 100; i++) {
 		double q = freq-span + (2.0 * span * i) / 100.0;
 		clear_samples(b);
-		add_cos(b, q, 1.0);
+		add_cos(b, q, 1.0, 0);
 		ratio = SAMPLE_RATIO;
 		for (int k = 0; k < NUM_PLOTS; k++) {
 			c[k] = 0;

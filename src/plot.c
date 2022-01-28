@@ -163,37 +163,6 @@ __plot(FILE *f, plot_t *plot)
 	return 0;
 }
 
-#if 0
-/*
- * multiplot(...)
- *
- * Since a number of my plots are in fact nested plots, this code lets me
- * do those. Basically gnuplot easily does n x m plots (automatic layout)
- * and so we use that to put multiple related plots into the one graph.
- */
-int
-multiplot(FILE *f, char *name, multi_plot_t *plot)
-{
-	/*
-	 *  Prepare for multiple plots
-	 */
-	if (plot->title != NULL) {
-		fprintf(f, "set multiplot title '%s' font 'Arial,16' \\\n",
-															plot->title);
-	} else {
-		fprintf(f, "set multiplot \\\n");
-	}
-	fprintf(f, "\tlayout %d,%d\n", plot->rows, plot->cols);
-	for (int i = 0; i < plot->nplots; i++) {
-		subplot_t *p = plot->plots + i;
-		char *n = (p->name != NULL) ? p->name : name;
-		plot_data(f, n, p->plot);
-	}
-	fprintf(f, "unset multiplot\n");
-	return 0;
-}
-#endif
-
 /*
  * Writes out the values of the FFT in a gnuplot compatible way, the output
  * file should already be open. The output is appended to that file.
@@ -258,10 +227,10 @@ __plot_fft_data(FILE *of, sample_buffer *fft, char *name)
 	 * Frequency (Real)
 	 */
 	fprintf(of, "#\n# Frequency X axis (real) (freq_min, nyquist)\n#\n");
-	fprintf(of, "%s_x_freq = 2\n", name);
-	fprintf(of, "%s_x_freq_min = 0\n", name);
-	fprintf(of, "%s_x_freq_max = %f\n", name, nyquist);
-	fprintf(of, "%s_x_freq_tics = 'set xtics %f'\n", name,
+	fprintf(of, "%s_x_freq_real = 2\n", name);
+	fprintf(of, "%s_x_freq_real_min = 0\n", name);
+	fprintf(of, "%s_x_freq_real_max = %f\n", name, nyquist);
+	fprintf(of, "%s_x_freq_real_tics = 'set xtics %f'\n", name,
 									((double) nyquist / 10.0));
 
 	/*
@@ -353,12 +322,12 @@ __plot_fft_data(FILE *of, sample_buffer *fft, char *name)
 	fprintf(of, "%s_y_mag_max = %f\n", name, fft->sample_max);
 
 	fprintf(of, "%s_y_db_norm = 6\n", name);
-	fprintf(of, "%s_y_db_norm_max = 0\n", name);
+	fprintf(of, "%s_y_db_norm_max = 10\n", name);
 	fprintf(of, "%s_y_db_norm_min = %f\n", name, -(db_max - db_min));
 
 	fprintf(of, "%s_y_db = 7\n", name);
-	fprintf(of, "%s_y_db_min = %f\n", name, db_min);
-	fprintf(of, "%s_y_db_max = %f\n", name, db_max);
+	fprintf(of, "%s_y_db_min = %f\n", name, db_min * 1.1);
+	fprintf(of, "%s_y_db_max = %f\n", name, db_max * 1.1);
 
 	fprintf(of,"$%s_data << EOD\n", name);
 	fprintf(of, "#\n# Columns are:\n");
@@ -491,15 +460,15 @@ __plot_signal_data(FILE *of, sample_buffer *sig, char *name)
 	 * Y amplitude normalized (Real)
 	 */
 	fprintf(of, "%s_y_amplitude_real_norm = 5\n", name);
-	fprintf(of, "%s_y_amplitude_real_norm_min = -0.5\n", name);
-	fprintf(of, "%s_y_amplitude_real_norm_max = 0.5\n", name);
+	fprintf(of, "%s_y_amplitude_real_norm_min = -0.55\n", name);
+	fprintf(of, "%s_y_amplitude_real_norm_max = 0.55\n", name);
 
 	/*
 	 * Y amplitude normalized (Analytic)
 	 */
 	fprintf(of, "%s_y_amplitude_analytic_norm = 6\n", name);
-	fprintf(of, "%s_y_amplitude_analytic_norm_min = -0.5\n", name);
-	fprintf(of, "%s_y_amplitude_analytic_norm_max = 0.5\n", name);
+	fprintf(of, "%s_y_amplitude_analytic_norm_min = -0.55\n", name);
+	fprintf(of, "%s_y_amplitude_analytic_norm_max = 0.55\n", name);
 
 	fprintf(of, "$%s_data << EOD\n", name);
 	fprintf(of, "#\n# Columns are:\n");
@@ -536,6 +505,7 @@ plot_data(FILE *f, sample_buffer *buf, char *name)
 			fprintf(stderr, "Unknown buffer type\n");
 			return -1;
 		case SAMPLE_SIGNAL:
+		case SAMPLE_REAL_SIGNAL:
 			return (__plot_signal_data(f, buf, name));
 		case SAMPLE_FFT:
 			return (__plot_fft_data(f, buf, name));
@@ -621,6 +591,7 @@ plot(FILE *f, char *title, char *name, plot_scale_t x, plot_scale_t y)
 		__plot_params.lines[0].title = "FFT";
 		__plot_params.lines[0].y = &__scales[y];
 		__plot_params.lines[0].color = 0xc010c0;
+		__plot_params.k = PLOT_KEY_NONE;
 		__plot_params.nlines = 1;		/* One line of data to plot */
 	} else {
 		plot_scale_t y1, y2;
@@ -654,3 +625,17 @@ plot(FILE *f, char *title, char *name, plot_scale_t x, plot_scale_t y)
 	return __plot(f, &__plot_params);
 }
 
+int
+multiplot_begin(FILE *f, char *title, int rows, int cols)
+{
+	fprintf(f, "set multiplot title '%s' font 'Arial,14'\\\n", title);
+	fprintf(f, "\t layout %d, %d\n", rows, cols);
+	return 0;
+}
+
+int
+multiplot_end(FILE *f)
+{
+	fprintf(f, "unset multiplot\n");
+	return 0;
+}

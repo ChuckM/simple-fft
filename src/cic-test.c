@@ -25,6 +25,7 @@
 #include <dsp/signal.h>
 #include <dsp/fft.h>
 #include <dsp/cic.h>
+#include <dsp/plot.h>
 
 struct cic_filter_t *filter;
 
@@ -119,6 +120,7 @@ main(int argc, char *argv[])
 	sample_buffer	*fir;
 	sample_buffer	*fir2;
 	sample_buffer	*fir_fft;
+	char	title[80];
 
 	/* Stages (s), "M" factor (1 or 2), and decimation rate (r) */
 	const char	*options = "n:m:d:o:";
@@ -302,17 +304,10 @@ main(int argc, char *argv[])
 		exit(1);
 	}
 	fir_fft = compute_fft(fir, 8192, W_RECT);
-	plot_fft(of, fir_fft, "cic");
-	fprintf(of, "set title 'Magnitude Response for CIC Filter (N=%d, M=%d, D=%d)'\n",
-			N, M, D);
-	fprintf(of, "set xlabel 'Frequency (normalized)\n");
-	fprintf(of, "set ylabel 'Magnitude (dB)\n");
-	fprintf(of, "set nokey \n"); 
-	fprintf(of, "set grid\n");
-	fprintf(of, "set xrange [0.0:0.5]\n");
-	fprintf(of, "set yrange [-250.0:0.0]\n");
-	fprintf(of, "plot $cic_fft_data using cic_xnorm_col:cic_ydb_col"
-					" with lines lc 'blue'\n");
+	plot_data(of, fir_fft, "cic");
+	snprintf(title, sizeof(title), 
+		"Magnitude Response for CIC Filter (N=%d, M=%d, D=%d)", N, M, D);
+	plot(of, title, "cic", PLOT_X_REAL_NORMALIZED, PLOT_Y_DB_NORMALIZED);
 	fclose(of);
 	printf("Done (plotting).\n");
 }

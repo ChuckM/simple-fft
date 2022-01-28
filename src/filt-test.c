@@ -29,6 +29,7 @@
 #include <dsp/filter.h>
 #include <dsp/windows.h>
 #include <dsp/fft.h>
+#include <dsp/plot.h>
 
 extern char *optarg;
 extern int	optind, opterr, optopt;
@@ -182,8 +183,8 @@ main(int argc, char *argv[])
 	}
 	filt_resp = compute_fft(filter_coefficients, BINS, W_RECT);
 	sig = alloc_buf(SAMPLE_SIZE, SAMPLE_RATE);
-	add_cos(sig, SAMPLE_RATE / 8.0, 1.0);
-	add_cos(sig, 3.0 * SAMPLE_RATE / 8.0, 1.0);
+	add_cos(sig, SAMPLE_RATE / 8.0, 1.0, 0);
+	add_cos(sig, 3.0 * SAMPLE_RATE / 8.0, 1.0, 0);
 	filtered_sig = fir_filter(sig, filt);
 	fft_orig = compute_fft(sig, BINS, W_BH);
 	fft_filtered = compute_fft(filtered_sig, BINS, W_BH);
@@ -193,6 +194,19 @@ main(int argc, char *argv[])
 		set_minmax(filt_resp, i);
 	}
 	of = fopen(OUTPUT, "w");
+	plot_data(of, fft_orig, "ffto");
+	plot_data(of, fft_filtered, "fftf");
+	plot_data(of, filt_resp, "fftr");
+	multiplot_begin(of, "Filter testing", 2, 2);
+	plot(of, "Original FFT", "ffto",
+			PLOT_X_NORMALIZED, PLOT_Y_DB_NORMALIZED);
+	plot(of, "Filtered FFT", "fftf",
+			PLOT_X_NORMALIZED, PLOT_Y_DB_NORMALIZED);
+	plot(of, "Filter Response FFT", "fftr",
+			PLOT_X_NORMALIZED, PLOT_Y_DB_NORMALIZED);
+	multiplot_end(of);
+	fclose(of);
+#if 0
 	fprintf(of, "$plot << EOD\n");
 	fprintf(of, "Frequency	\"Original Signal\" \"Filtered Signal\""
 				" \"Filter Frequency Response\"\n");
@@ -223,4 +237,6 @@ main(int argc, char *argv[])
 "plot [0:1.0] $plot using 1:3 with lines lt rgb '#ff1010',\\\n"
 "              \"\" using 1:4 with lines lt rgb '#1010ff'\n"
 "unset multiplot\n", (normalized != 0) ? "normalized" : "dB");
+#endif
+	printf("Done.\n");
 }
