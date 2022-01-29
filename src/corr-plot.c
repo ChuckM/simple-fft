@@ -30,8 +30,8 @@
 int
 main(int argc, char *argv[])
 {
-	sample_buffer *a;
-	sample_buffer *b;
+	sample_buf_t *a;
+	sample_buf_t *b;
 	FILE	*of;
 	double freq, span;
 	complex double correlation;

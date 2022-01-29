@@ -42,10 +42,10 @@
  *  In evaluating that code and mine, I got to internalize the relationship
  *  of the rotation angle to the fundamental frequency.
  */
-sample_buffer *
-compute_dft(sample_buffer *input, int bins, 
+sample_buf_t *
+compute_dft(sample_buf_t *input, int bins, 
 						double fs, double fe, window_function win) {
-	sample_buffer *res = alloc_buf(bins, input->r);
+	sample_buf_t *res = alloc_buf(bins, input->r);
 	complex double root, rotation;
 	double bin_width = (fe - fs) / (double) bins;
 	double bin_center = bin_width / 2.0;
@@ -96,7 +96,7 @@ compute_dft(sample_buffer *input, int bins,
  * Much of this comes from the FFT version
  */
 int
-plot_dft(FILE *of, sample_buffer *dft, char *tag, double fs, double fe)
+plot_dft(FILE *of, sample_buf_t *dft, char *tag, double fs, double fe)
 {
 	/* insure MIN and MAX are accurate */
 	dft->sample_max = 0;

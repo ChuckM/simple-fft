@@ -27,8 +27,8 @@ struct cic_filter_t {
 };
 
 /* apply the filter to a sample buffer */
-sample_buffer *cic_decimate(sample_buffer *inp, struct cic_filter_t *cic);
-sample_buffer *cic_interpolate(sample_buffer *inp, struct cic_filter_t *cic);
+sample_buf_t *cic_decimate(sample_buf_t *inp, struct cic_filter_t *cic);
+sample_buf_t *cic_interpolate(sample_buf_t *inp, struct cic_filter_t *cic);
 
 /* reset the filter state to initial state */
 void cic_reset(struct cic_filter_t *filter);

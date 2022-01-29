@@ -7,6 +7,6 @@
 #include <dsp/signal.h>
 #include <dsp/windows.h>
 
-sample_buffer *compute_fft(sample_buffer *s, int bins, window_function);
-sample_buffer *compute_ifft(sample_buffer *s);
+sample_buf_t *compute_fft(sample_buf_t *s, int bins, window_function);
+sample_buf_t *compute_ifft(sample_buf_t *s);
 

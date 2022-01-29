@@ -39,11 +39,11 @@ PROGRAMS = demo waves hann bh dft_test \
 	   genplot fig1 $(TEST_PROGRAMS)
 
 HEADERS = cic.h dft.h fft.h filter.h plot.h \
-			remez.h signal.h windows.h
+			remez.h sample.h signal.h windows.h
 
 LDFLAGS = -lm 
 
-LIB_SRC = signal.c plot.c cic.c fft.c dft.c windows.c filter.c
+LIB_SRC = signal.c sample.c plot.c cic.c fft.c dft.c windows.c filter.c
 
 LIB = $(LIB_DIR)/libsdsp.a
 

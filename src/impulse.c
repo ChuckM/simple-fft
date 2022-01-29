@@ -40,8 +40,8 @@
 int
 main(int argc, char *argv[])
 {
-	sample_buffer *buf;
-	sample_buffer *fft;
+	sample_buf_t *buf;
+	sample_buf_t *fft;
 	int		ndx = 0;
 	FILE	*of;
 

@@ -32,18 +32,19 @@
 #include <dsp/fft.h>
 #include <dsp/plot.h>
 
-#define SAMPLE_RATE	10000
-#define BINS		8192
+#define SAMPLE_RATE	20480
+#define BINS		1024
 
-sample_buffer *
-method_1(sample_buffer *fft)
+sample_buf_t *
+method_1(sample_buf_t *fft)
 {
-	sample_buffer *res = alloc_buf(fft->n, fft->r);
-	sample_buffer *ifft;
+	sample_buf_t *res = alloc_buf(fft->n, fft->r);
+	sample_buf_t *ifft;
 
 	if (res == NULL) {
 		return NULL;
 	}
+	res->type = SAMPLE_SIGNAL;
 	res->data[0] = fft->data[0];
 	for (int k = 1; k < fft->n; k++) {
 		res->data[k] = fft->data[fft->n - k];
@@ -60,15 +61,16 @@ method_1(sample_buffer *fft)
 	return ifft;
 }
 
-sample_buffer *
-method_2(sample_buffer *fft)
+sample_buf_t *
+method_2(sample_buf_t *fft)
 {
-	sample_buffer	*res;
+	sample_buf_t	*res;
 
 	res = compute_fft(fft, fft->n, W_RECT);
 	if (res == NULL) {
 		return NULL;
 	}
+	res->type = SAMPLE_SIGNAL;
 
 	/* swap in place and divide by N */
 	res->data[0] = res->data[0] / (double) res->n;
@@ -82,11 +84,11 @@ method_2(sample_buffer *fft)
 	return res;
 }
 
-sample_buffer *
-method_3(sample_buffer *fft)
+sample_buf_t *
+method_3(sample_buf_t *fft)
 {
-	sample_buffer	*tmp = alloc_buf(fft->n, fft->r);
-	sample_buffer	*res;
+	sample_buf_t	*tmp = alloc_buf(fft->n, fft->r);
+	sample_buf_t	*res;
 
 	if (tmp == NULL) {
 		return NULL;
@@ -100,6 +102,7 @@ method_3(sample_buffer *fft)
 		free_buf(tmp);
 		return NULL;
 	}
+	res->type = SAMPLE_SIGNAL;
 	for (int k = 0; k < res->n; k++) {
 		res->data[k] = cimag(res->data[k])/(double) res->n +
 						creal(res->data[k])/(double) res->n * I;
@@ -108,11 +111,11 @@ method_3(sample_buffer *fft)
 	return res;
 }
 
-sample_buffer *
-method_4(sample_buffer *fft)
+sample_buf_t *
+method_4(sample_buf_t *fft)
 {
-	sample_buffer	*res;
-	sample_buffer	*tmp = alloc_buf(fft->n, fft->r);
+	sample_buf_t	*res;
+	sample_buf_t	*tmp = alloc_buf(fft->n, fft->r);
 	
 	if (tmp == NULL) {
 		return NULL;
@@ -125,6 +128,7 @@ method_4(sample_buffer *fft)
 		free_buf(tmp);
 		return NULL;
 	}
+	res->type = SAMPLE_SIGNAL;
 	for (int k = 0; k < res->n; k++) {
 		res->data[k] = creal(res->data[k]) - cimag(res->data[k]) * I;
 	}
@@ -152,15 +156,15 @@ usage(char *bin) {
 int
 main(int argc, char *argv[])
 {
-	sample_buffer	*sig1;
-	sample_buffer	*sig2;
-	sample_buffer	*fft1, *fft2, *fft3;
-	sample_buffer	*ifft;
+	sample_buf_t	*sig1;
+	sample_buf_t	*sig2;
+	sample_buf_t	*fft1, *fft2, *fft3;
+	sample_buf_t	*ifft;
 	FILE	*of;
 	char 	*title;
 	int		wavetype = 0;
 	int normalized = 0;
-	int		method = 4;
+	int		method = 5;
 	int		real_signal = 0;
 	int		do_hilbert = 0;
 	int		truncate_signal = 0;
@@ -216,10 +220,8 @@ main(int argc, char *argv[])
 	}
 	printf("Building initial signal\n");
 	/* pick a frequency that shows up in bin 250 */
-	demo_freq = ((double) (SAMPLE_RATE) / (double) (BINS)) * 250;
-	period = ceil((double)(SAMPLE_RATE) / demo_freq);
-	w_start = 1000.0 * (period / (double) SAMPLE_RATE);
-	w_end = 1000.0 * ((4.0 * period) / (double) SAMPLE_RATE);
+//	demo_freq = ((double) (SAMPLE_RATE) / (double) (BINS)) * 250;
+	demo_freq = 500.0;
 
 	printf("Adding signal @ %f Hz\n", demo_freq);
 	if (real_signal) {
@@ -255,8 +257,17 @@ main(int argc, char *argv[])
 				break;
 		}
 	}
-	fft1 = compute_fft(sig1, BINS, W_RECT);
-	fft2 = fft1; /* Default is to display this */
+	fft1 = compute_fft(sig1, BINS, W_BH);
+
+	of = fopen("plots/tp5-debug.plot", "w");
+	plot_data(of, fft1, "fft1");
+	plot_data(of, sig1, "sig1");
+	multiplot_begin(of, "Debugging plot", 1, 2);
+	plot(of, "Signal", "sig1", PLOT_X_TIME_MS, PLOT_Y_AMPLITUDE);
+	plot(of, "FFT", "fft1", PLOT_X_FREQUENCY_KHZ, PLOT_Y_DB_NORMALIZED);
+	multiplot_end(of);
+	fclose(of);
+
 	if (real_signal && do_hilbert) {
 		fft2 = alloc_buf(BINS, SAMPLE_RATE);
 		/*
@@ -279,27 +290,36 @@ main(int argc, char *argv[])
 			fft2->data[i] = 2 * fft1->data[i];
 		}
 	}
-	printf("Now inverting it ... \n");
-	title = "Method 4";
+	printf("Now inverting it ... ");
+	title = "Library Call";
 	switch (method) {
 		case 1:
 			title = "Method 1";
-			sig2 = method_1(fft2);
+			printf(" Using Method 1\n");
+			sig2 = method_1(fft1);
 			break;
 		case 2:
 			title = "Method 2";
-			sig2 = method_2(fft2);
+			printf(" Using Method 2\n");
+			sig2 = method_2(fft1);
 			break;
 		case 3:
 			title = "Method 3";
-			sig2 = method_3(fft2);
+			printf(" Using Method 3\n");
+			sig2 = method_3(fft1);
 			break;
-		default:
 		case 4:
 			title = "Method 4";
-			sig2 = method_4(fft2);
+			printf(" Using Method 4\n");
+			sig2 = method_4(fft1);
+			break;
+		default:
+			title = "Library function call";
+			printf(" Using the library function convert_ifft()\n");
+			sig2 = compute_ifft(fft1);
 			break;
 	}
+	sig2->min_freq = 500.0;
 
 	/* FFT of the inverted FFT */
 	fft3 = compute_fft(sig2, BINS, W_RECT);
@@ -310,58 +330,14 @@ main(int argc, char *argv[])
 	plot_data(of, fft3, "fft3");
 	plot_data(of, sig2, "sig2");
 	multiplot_begin(of, "Inverting things", 2, 2);
-	fprintf(of, "set grid\n");
-	fprintf(of, "red = 0xcf1010\n");
-	fprintf(of, "blue = 0x1010cf\n");
-	fprintf(of,"set multiplot layout 2, 2\n");
-	fprintf(of,"set xtics out font 'Arial,8' offset 0,.5\n");
-	fprintf(of,"set title font 'Arial, 12'\n");
-	fprintf(of,"set xlabel font 'Arial, 10' offset 0,1\n");
-	fprintf(of,"set ylabel font 'Arial, 10' offset 1,0\n");
-	fprintf(of,"set key opaque font 'Arial,8' box lw 2\n");
-	fprintf(of,"set xtics 1\n");
-	fprintf(of,"set title '%s' offset 0,-1\n", "Original Signal");
-	fprintf(of,"set xlabel 'Time (mS)'\n");
-	fprintf(of,"set ylabel 'Amplitude (normalized))'\n");
-	fprintf(of,"plot [%f:%f] $sig1_data using \\\n"
-			   "    sig1_x_time_ms:sig1_y_i_norm \\\n"
-			   "	with lines lt rgb blue lw 1.5 \\\n"
-			   "	title '(I)', \\\n", w_start, w_end);
-	fprintf(of,"	$sig1_data using \\\n"
-			   "    sig1_x_time_ms:sig1_y_q_norm \\\n"
-			   "	with lines lt rgb red lw 1.5 \\\n"
-			   "	title '(Q)' \n");
-	fprintf(of,"set title '%s' offset 0,-1\n", title);
-	fprintf(of,"set xlabel 'Frequency'\n");
-	fprintf(of,"set ylabel 'Magnitude (%s)'\n", 
-					(normalized) ? "normalized" : "dB");
-	fprintf(of,"set nokey\n");
-	fprintf(of,"set xtics .25\n");
-	fprintf(of,"plot [-0.50:0.50] $fft1_data using \\\n"
-			   "    fft1_x_norm:fft1%s with lines title 'FFT1'\n",
-					(normalized) ? "_y_mag" : "_y_db");
-	fprintf(of,"set title '%s' offset 0,-1 \n", "Re-Generated Signal");
-	fprintf(of,"set key opaque font 'arial,8' box lw 2\n");
-	fprintf(of,"set xtics 1\n");
-	fprintf(of,"set xlabel 'Time (mS)'\n");
-	fprintf(of,"set ylabel 'Amplitude (normalized))'\n");
-	fprintf(of,"plot [%f:%f] $sig2_data using \\\n"
-			   "	sig2_x_time_ms:sig2_y_i_norm\\\n"
-			   "	with lines lt rgb blue lw 1.5 \\\n"
-			   "	title '(I)', \\\n", w_start, w_end);
-	fprintf(of,"	$sig2_data using \\\n"
-			   "    sig2_x_time_ms:sig2_y_q_norm \\\n"
-			   "	with lines lt rgb red lw 1.5 \\\n"
-			   "	title '(Q)'\n");
-	fprintf(of,"set title '%s' offset 0,-1\n", title);
-	fprintf(of,"set nokey\n");
-	fprintf(of,"set xtics .25\n");
-	fprintf(of,"set xlabel 'Frequency'\n");
-	fprintf(of,"set ylabel 'Magnitude (%s)'\n", 
-					(normalized) ? "normalized" : "dB");
-	fprintf(of,"plot [-0.50:0.50] $fft3_data using \\\n"
-			   "	fft3_x_norm:fft3%s with lines title 'FFT2'\n",
-					(normalized) ? "_y_mag" : "_y_db");
-	fprintf(of,"unset multiplot\n");
+	plot(of, "Original Signal", "sig1",
+				PLOT_X_TIME_MS, PLOT_Y_AMPLITUDE);
+	plot(of, "Original Signal FFT", "fft1",
+				PLOT_X_FREQUENCY_KHZ, PLOT_Y_DB_NORMALIZED);
+	plot(of, "Modified Signal", "sig2",
+				PLOT_X_TIME_MS, PLOT_Y_AMPLITUDE);
+	plot(of, "Modified Signal FFT", "fft3",
+				PLOT_X_FREQUENCY_KHZ, PLOT_Y_DB_NORMALIZED);
+	multiplot_end(of);
 	fclose(of);
 }

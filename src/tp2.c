@@ -48,7 +48,7 @@
  * the period (representing a 90 degree phase shift).
  */
 void
-add_test(sample_buffer *b, double freq, double amp)
+add_test(sample_buf_t *b, double freq, double amp)
 {
 	for (int i = 0; i < b->n; i++) {
 		b->data[i] = amp * cos(2 * M_PI * __i_index(i, b->r, freq)) +
@@ -68,7 +68,7 @@ add_test(sample_buffer *b, double freq, double amp)
  * the add_cos function does.
  */
 void
-add_test_real(sample_buffer *b, double freq, double amp)
+add_test_real(sample_buf_t *b, double freq, double amp)
 {
 	for (int i = 0; i < b->n; i++) {
 		b->data[i] = amp * cos(2 * M_PI * __i_index(i, b->r, freq));
@@ -83,8 +83,8 @@ add_test_real(sample_buffer *b, double freq, double amp)
 
 int
 main(int argc, char *argv[]) {
-	sample_buffer *src[EXP_LEN];
-	sample_buffer *fft[EXP_LEN];
+	sample_buf_t *src[EXP_LEN];
+	sample_buf_t *fft[EXP_LEN];
 	int	ndx;
 	double freq = STARTING_FREQ;
 	FILE *of;

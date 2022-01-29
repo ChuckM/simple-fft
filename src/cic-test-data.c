@@ -21,7 +21,7 @@ double freq = 3000.0; /* 3KHz */
 
 int
 main(int argc, char *argv[]) {
-	sample_buffer *sb;
+	sample_buf_t *sb;
 	FILE *of;
 	double qe;
 

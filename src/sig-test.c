@@ -7,15 +7,15 @@
 #include <stdlib.h>
 #include <dsp/signal.h>
 
-void dump_signal(sample_buffer *sig1, sample_buffer *sig2, signal_format fmt);
+void dump_signal(sample_buf_t *sig1, sample_buf_t *sig2, signal_format fmt);
 
 #define SIGNAL_FILE		"./signals/test.signal"
 #define TEST_SIGNAL_FILE		"./signals/re-test.signal"
 
 int
 main(int argc, char *argv[]) {
-	sample_buffer *signal;
-	sample_buffer *test_signal;
+	sample_buf_t *signal;
+	sample_buf_t *test_signal;
 	signal_format	test_fmt;
 	int	diff;
 
@@ -72,7 +72,7 @@ main(int argc, char *argv[]) {
 static uint8_t	dump_data_buf[2048];
 
 void
-dump_signal(sample_buffer *sig1, sample_buffer *sig2, signal_format fmt)
+dump_signal(sample_buf_t *sig1, sample_buf_t *sig2, signal_format fmt)
 {
 	size_t		buf_size;
 	uint8_t		*data_buf;

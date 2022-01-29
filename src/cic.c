@@ -62,10 +62,10 @@ static inline int __comb_value(struct cic_stage_t *s, int m)
  * The filter structure defines, 'R' (input to output sample ratio),
  * 'N' the number of stages, and 'M' for the combs (can be 1 or 2).
  */
-sample_buffer *
-cic_decimate(sample_buffer *inp, struct cic_filter_t *cic)
+sample_buf_t *
+cic_decimate(sample_buf_t *inp, struct cic_filter_t *cic)
 {
-	sample_buffer	*res;
+	sample_buf_t	*res;
 	int				xn, ndx = 0;
 	uint32_t		res_ndx = 0; /* index into sample buffers */
 

@@ -35,10 +35,10 @@
 
 int
 main(int argc, char *argv[]) {
-	sample_buffer *src;
-	sample_buffer *fft;
-	sample_buffer *fft2;
-	sample_buffer *src2;
+	sample_buf_t *src;
+	sample_buf_t *fft;
+	sample_buf_t *fft2;
+	sample_buf_t *src2;
 	FILE *of;
 
 	/* allocate 8K samples at an 8K rate */

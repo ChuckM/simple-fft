@@ -24,11 +24,11 @@
 
 int
 main(int argc, char *argv[]) {
-	sample_buffer 	*r;
-	sample_buffer	*iq;
-	sample_buffer	*iq2;
-	sample_buffer	*fft1;
-	sample_buffer	*fft2;
+	sample_buf_t 	*r;
+	sample_buf_t	*iq;
+	sample_buf_t	*iq2;
+	sample_buf_t	*fft1;
+	sample_buf_t	*fft2;
 	double	diffs[SAMPLE_RATE];
 	FILE	*of;
 

@@ -42,105 +42,87 @@
 						  (((c) & 0xff) << 8) |\
 						   ((d) & 0xff) )
 
-
 /*
- * alloc_buf( ... )
+ * Wave form builder
  *
- * Allocate a sample buffer.
- */
-sample_buffer *
-alloc_buf(int size, int sample_rate) {
-	sample_buffer *res;
-
-	res = malloc(sizeof(sample_buffer));
-	res->data = malloc(sizeof(sample_t) * size);
-	res->n = size;
-	res->r = sample_rate;
-	/*
-	 *  Initialize min/max to values that will always trigger
-	 *  an update on first signal.
-	 */
-	res->max_freq = 0;
-	res->min_freq = (double)(sample_rate);
-	res->type = SAMPLE_UNKNOWN;
-	res->nxt = NULL;
-	/* clear it to zeros */
-	reset_minmax(res);
-	clear_samples(res);
-
-	/* return, data and 'n' are initialized */
-	return res;
-}
-
-/*
- * free_buf(...)
+ * The structure of this code is as follows:
  *
- * Free a buffer allocated with alloc_buf(). If it has a chained
- * buffer linked in, return that pointer.
- */
-sample_buffer *
-free_buf(sample_buffer *sb)
-{
-	sample_buffer *nxt = (sample_buffer *) sb->nxt;
-	if (sb->data != NULL) {
-		free(sb->data);
-	}
-	sb->data = 0x0;
-	sb->n = 0;
-	sb->nxt = NULL;
-	free(sb);
-	return (nxt);
-}
-
-/*
- * Wave form index
+ * There are two functions, one that generates a 'sample' based on
+ * the wave form type (cos, triangle, sawtooth, square), and one
+ * that integrates it into the sample buffer (add, multiply (aka mix))
  *
- * Each point on the waveform is described by frequency, index,
- * and sample rate.
+ * Each sample of a waveform is described by frequency, sample index,
+ * sample rate, and phase.
  *
  * Sample Rate is Fs in "samples/second"
  * Frequency if f in "cycles/second"
- * N is sample number
+ * N is sample index number
  * p is the period as a fraction of 1.0
+ * po is the phase offset as a fraction of 1.0
  *
- * And so p = (f * N) / Fs or cycles              second
- *                            ------  * sample  * ------ = cycle
- *                            second              sample
+ * 							  cycles			seconds
+ * And so p = (f * N) / Fs == ------  * index * ------- = cycle
+ *                            second             sample
  *
  * period is the time through a single cycle. Multiply it by
  * 2 pi radians for sin or cos, or a another wave function.
  *
- * Index is a fraction since index.
- * Phase is passed in radians and converted to an index by dividing
- * by 2-pi. So pi/2 radians (90 degress) is 1/4 or 0.25 "ahead"
+ * Phase is passed in degrees and converted to an index by dividing
+ * by 360. So pi/2 radians (90 degress) is 1/4 or 0.25 "ahead"
  * of the current sample.
+ *
+ * Thus to compute a sample we need the amplitude and where we are in the
+ * period (which is p + phase modulo 1.0) 
  */
 
+/*
+ * Cosine is amplitude * cos(2*pi * x) where x is 0 - .99.
+ */
 static double
-cosine(double i, double a)
+cosine(double x, double a)
 {
-	return a * cos(i * 2 * M_PI);
+	return a * cos(x * 2 * M_PI);
 }
 
+/*
+ * Sawtooth is a linear function
+ * 		2a*x - a	while (0.0 <= x < 1.0)
+ */
 static double
-sawtooth(double i, double a)
+sawtooth(double x, double a)
 {
-	return (a * i * 2) - a;
+	return (2 * a * x) - a;
 }
 
+/*
+ * Triangle is two linear functions (one between 0 - .499, and the
+ * other between .5 - .999)
+ * 		 4*ax - a		while (0.0 <= x < 0.5)
+ *	 	-4*ax + 3a		while (0.5 <= x < 1.0)
+ */
 static double
-triangle(double i, double a)
+triangle(double x, double a)
 {
-	return (i < 0.5) ? (4 * a * i) - a :
-					   3 * a - (4 * a * i);
+	return (x < 0.5) ? (4 * a * x) - a :
+					   3 * a - (4 * a * x);
 }
 
+/*
+ * Square is actually discontinuous and takes on two values, -a and a
+ * 	 -ax while (0.0 <= x < 0.5)
+ * 	  ax while (0.5 <= x < 1.0)
+ */
 static double
-square(double i, double a)
+square(double x, double a)
 {
-	return (i < 0.5) ? -a : a;
+	return (x < 0.5) ? -a : a;
 }
 
+/*
+ * These are the two 'modification' functions, one is add and the
+ * other multiply. In radio systems multiplying two signals is called
+ * mixing.
+ */
 static
 sample_t
 add(sample_t a, sample_t b)
@@ -156,16 +138,19 @@ mix(sample_t a, sample_t b)
 }
 
 /*
- * waveform( ... )
+ * __signal( ... )
  *
- * Add a waveform to the sample buffer.
- * Amplitude will be -a to a (no DC bias)
+ * This is then the generate signal builder. Using the passed in waveform
+ * function and modification function, it creates an analytic signal
+ * using by setting the real part to the waveform of interest and the
+ * imaginary (or quadrature) part to the same waveform offset by -90 degrees
+ * of phase. 
  */
 static void
-waveform(char *name,
+__signal(char *name,
 			double (*wf)(double, double),
 			sample_t (*func)(sample_t, sample_t),
-			sample_buffer *s,
+			sample_buf_t *s,
 			double f, double a, double p)
 {
 	double period = (double) s->r / f;
@@ -206,22 +191,23 @@ waveform(char *name,
 }
 
 /*
- * real_waveforem( ... )
+ * __real_signal( ... )
  *
- * Add or max a real waveform (no quadrature part) to the sample buffer.
- * Amplitude will be -a to a (no DC bias)
+ * This is the generic form of creating a real signal (so no quadrature part)
+ * As with __signal() above, it uses the waveform function and modifier
+ * function that are passed in to augment the sample buffer.
  */
 static void
-real_waveform(char *name,
+__real_signal(char *name,
 			double (*wf)(double, double),
 			sample_t (*func)(sample_t, sample_t),
-			sample_buffer *s,
+			sample_buf_t *s,
 			double f, double a, double p)
 {
 	double period = (double) s->r / f;
-	double ph = p / 2 * M_PI;
+	double ph = p / 360;
 
-	if ((p < 0) || (p >= 2 * M_PI)) {
+	if ((p < 0) || (p >= 360)) {
 		fprintf(stderr, "Illegal phase passed to %s()\n", name);
 		return;
 	}
@@ -237,57 +223,57 @@ real_waveform(char *name,
 	}
 	s->max_freq = (f > s->max_freq) ? f : s->max_freq;
 	s->min_freq = (f < s->min_freq) ? f : s->min_freq;
-	if (s->type == SAMPLE_UNKNOWN) {
+	if (s->type != SAMPLE_SIGNAL) {
 		s->type = SAMPLE_REAL_SIGNAL;
 	}
 }
 
 void
-add_cos(sample_buffer *s, double f, double a, double p)
+add_cos(sample_buf_t *s, double f, double a, double p)
 {
-	waveform("add_cos", cosine, add, s, f, a, p);
+	__signal("add_cos", cosine, add, s, f, a, p);
 }
 
 void
-mix_cos(sample_buffer *s, double f, double a, double p)
+mix_cos(sample_buf_t *s, double f, double a, double p)
 {
-	waveform("mix_cos", cosine, mix, s, f, a, p);
+	__signal("mix_cos", cosine, mix, s, f, a, p);
 }
 
 void
-add_cos_real(sample_buffer *s, double f, double a, double p)
+add_cos_real(sample_buf_t *s, double f, double a, double p)
 {
-	real_waveform("add_cos_real", cosine, add, s, f, a, p);
+	__real_signal("add_cos_real", cosine, add, s, f, a, p);
 }
 
 void
-mix_cos_real(sample_buffer *s, double f, double a, double p)
+mix_cos_real(sample_buf_t *s, double f, double a, double p)
 {
-	real_waveform("mix_cos_real", cosine, mix, s, f, a, p);
+	__real_signal("mix_cos_real", cosine, mix, s, f, a, p);
 }
 
 void
-add_sawtooth(sample_buffer *s, double f, double a, double p)
+add_sawtooth(sample_buf_t *s, double f, double a, double p)
 {
-	waveform("add_sawtooth", sawtooth, add, s, f, a, p);
+	__signal("add_sawtooth", sawtooth, add, s, f, a, p);
 }
 
 void
-mix_sawtooth(sample_buffer *s, double f, double a, double p)
+mix_sawtooth(sample_buf_t *s, double f, double a, double p)
 {
-	waveform("mix_sawtooth", sawtooth, mix, s, f, a, p);
+	__signal("mix_sawtooth", sawtooth, mix, s, f, a, p);
 }
 
 void
-add_sawtooth_real(sample_buffer *s, double f, double a, double p)
+add_sawtooth_real(sample_buf_t *s, double f, double a, double p)
 {
-	real_waveform("add_sawtooth_real", sawtooth, add, s, f, a, p);
+	__real_signal("add_sawtooth_real", sawtooth, add, s, f, a, p);
 }
 
 void
-mix_sawtooth_real(sample_buffer *s, double f, double a, double p)
+mix_sawtooth_real(sample_buf_t *s, double f, double a, double p)
 {
-	real_waveform("mix_sawtooth_real", sawtooth, mix, s, f, a, p);
+	__real_signal("mix_sawtooth_real", sawtooth, mix, s, f, a, p);
 }
 
 /*
@@ -298,15 +284,15 @@ mix_sawtooth_real(sample_buffer *s, double f, double a, double p)
  * having a DC component.
  */
 void
-add_triangle(sample_buffer *s, double f, double a, double p)
+add_triangle(sample_buf_t *s, double f, double a, double p)
 {
-	waveform("add_triangle", triangle, add, s, f, a, p);
+	__signal("add_triangle", triangle, add, s, f, a, p);
 }
 
 void
-mix_triangle(sample_buffer *s, double f, double a, double p)
+mix_triangle(sample_buf_t *s, double f, double a, double p)
 {
-	waveform("mix_triangle", triangle, mix, s, f, a, p);
+	__signal("mix_triangle", triangle, mix, s, f, a, p);
 }
 
 /*
@@ -317,15 +303,15 @@ mix_triangle(sample_buffer *s, double f, double a, double p)
  * having a DC component.
  */
 void
-add_triangle_real(sample_buffer *s, double f, double a, double p)
+add_triangle_real(sample_buf_t *s, double f, double a, double p)
 {
-	real_waveform("add_triangle_real", triangle, add, s, f, a, p);
+	__real_signal("add_triangle_real", triangle, add, s, f, a, p);
 }
 
 void
-mix_triangle_real(sample_buffer *s, double f, double a, double p)
+mix_triangle_real(sample_buf_t *s, double f, double a, double p)
 {
-	real_waveform("mix_triangle_real", triangle, mix, s, f, a, p);
+	__real_signal("mix_triangle_real", triangle, mix, s, f, a, p);
 }
 
 /*
@@ -335,15 +321,15 @@ mix_triangle_real(sample_buffer *s, double f, double a, double p)
  * Note that it goes from -1/2a to +1/2a to avoid a DC component.
  */
 void
-add_square(sample_buffer *s, double f, double a, double p)
+add_square(sample_buf_t *s, double f, double a, double p)
 {
-	waveform("add_square", square, add, s, f, a, p);
+	__signal("add_square", square, add, s, f, a, p);
 }
 
 void
-mix_square(sample_buffer *s, double f, double a, double p)
+mix_square(sample_buf_t *s, double f, double a, double p)
 {
-	waveform("mix_square", square, mix, s, f, a, p);
+	__signal("mix_square", square, mix, s, f, a, p);
 }
 
 /*
@@ -353,15 +339,15 @@ mix_square(sample_buffer *s, double f, double a, double p)
  * Note that it goes from -1/2a to +1/2a to avoid a DC component.
  */
 void
-add_square_real(sample_buffer *s, double f, double a, double p)
+add_square_real(sample_buf_t *s, double f, double a, double p)
 {
-	real_waveform("add_square_real", square, add, s, f, a, p);
+	__real_signal("add_square_real", square, add, s, f, a, p);
 }
 
 void
-mix_square_real(sample_buffer *s, double f, double a, double p)
+mix_square_real(sample_buf_t *s, double f, double a, double p)
 {
-	real_waveform("mix_square_real", square, mix, s, f, a, p);
+	__real_signal("mix_square_real", square, mix, s, f, a, p);
 }
 
 /*
@@ -497,7 +483,7 @@ decode_int32(FILE *f) {
 }
 
 int
-store_signal(sample_buffer *sig, signal_format fmt, char *filename)
+store_signal(sample_buf_t *sig, signal_format fmt, char *filename)
 {
 	FILE	*of;
 	size_t		buf_size;
@@ -696,10 +682,10 @@ read_header(FILE *f) {
  *
  * Read in a signal from a file.
  */
-sample_buffer *
+sample_buf_t *
 load_signal(char *filename)
 {
-	sample_buffer	*res;
+	sample_buf_t	*res;
 	struct stat	s;
 	FILE		*f;
 	struct signal_header *head;

@@ -44,15 +44,15 @@ extern char *optarg;
 extern int optind, opterr, optopt;
 
 /* A place to hold our test signals */
-sample_buffer *real_signal;
-sample_buffer *complex_signal;
-sample_buffer *hires;
+sample_buf_t *real_signal;
+sample_buf_t *complex_signal;
+sample_buf_t *hires;
 
 void
 fft_test(char *title, plot_scale_t x, plot_scale_t y)
 {
 	FILE		 	*pf;
-	sample_buffer	*fft;
+	sample_buf_t	*fft;
 
 	x = (x == PLOT_SCALE_UNDEFINED) ? PLOT_X_FREQUENCY_KHZ : x;
 	y = (y == PLOT_SCALE_UNDEFINED) ? PLOT_Y_DB_NORMALIZED : y;
@@ -96,7 +96,7 @@ void
 multiplot_test(char *title, plot_scale_t x, plot_scale_t y)
 {
 	FILE *pf;
-	sample_buffer *fft;
+	sample_buf_t *fft;
 
 	/* not used by multiplot test */
 	x = (x != PLOT_SCALE_UNDEFINED) ? PLOT_SCALE_UNDEFINED : x;

@@ -45,8 +45,8 @@ main(int argc, char *argv[])
 {
 	char *optstring = "f:s:m:hb:w:a:o:";
 	int	half_freq = 0;
-	sample_buffer	*sig;
-	sample_buffer	*ft;			// fourier transform
+	sample_buf_t	*sig;
+	sample_buf_t	*ft;			// fourier transform
 	window_function wf = W_BH;
 	double sample_rate = SAMPLE_RATE;
 	int	algo = USE_FFT;

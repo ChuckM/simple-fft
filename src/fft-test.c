@@ -39,8 +39,9 @@
 int
 main(int argc, char *argv[])
 {
-	sample_buffer	*test;
-	sample_buffer	*fft;
+	sample_buf_t	*test;
+	sample_buf_t	*fft;
+	sample_buf_t	*isig;
 	FILE			*of;
 	window_function wf = W_BH;
 	int bins = BINS;
@@ -73,22 +74,35 @@ main(int argc, char *argv[])
 	fft = compute_fft(test, bins, W_BH);
 	plot_data(of, fft, "bh");
 	free_buf(fft);
-	fft = compute_fft(test, bins, W_RECT);
-	plot_data(of, fft, "rect");
-	free_buf(fft);
+
 	fft = compute_fft(test, bins, W_HANN);
 	plot_data(of, fft, "hann");
+	free_buf(fft);
+
+	fft = compute_fft(test, bins, W_RECT);
+	plot_data(of, fft, "rect");
+
+	isig = compute_ifft(fft);
+	isig->min_freq = 1024;
+	isig->max_freq = 3000;
+	plot_data(of, isig, "sig2");
+	plot_data(of, test, "sig1");
+
 
 	/* And now put the data into a gnuplot compatible file */
-	multiplot_begin(of, "FFT with Different Window Functions", 2, 2);
-	plot(of, "FFT (Rectangular Window)", "rect", 
+	multiplot_begin(of, "FFT with Different Window Functions", 3, 2);
+	plot(of, "Rectangular Window", "rect", 
 						PLOT_X_NORMALIZED, PLOT_Y_DB_NORMALIZED);
-	plot(of, "FFT (Blackman-Harris Window)", "bh", 
+	plot(of, "Blackman-Harris Window", "bh", 
 				PLOT_X_NORMALIZED, PLOT_Y_DB_NORMALIZED);
-	plot(of, "FFT (Hanning Window)", "hann",
+	plot(of, "Hanning Window", "hann",
 						PLOT_X_NORMALIZED, PLOT_Y_DB_NORMALIZED);
-	plot(of, "FFT with frequencies (Rectangular Window)", "rect",
+	plot(of, "Rectangular Window", "rect",
 						PLOT_X_REAL_FREQUENCY_KHZ, PLOT_Y_DB_NORMALIZED);
+	plot(of, "Original Signal", "sig1",
+						PLOT_X_TIME_MS, PLOT_Y_AMPLITUDE_NORMALIZED);
+	plot(of, "Signal recovered with IFFT", "sig2",
+						PLOT_X_TIME_MS, PLOT_Y_AMPLITUDE_NORMALIZED);
 	multiplot_end(of);
 	fclose(of);
 	printf("Done.\n");

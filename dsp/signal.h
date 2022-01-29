@@ -22,6 +22,7 @@
 #include <stdint.h>
 #include <string.h> /* for memset */
 #include <math.h>
+#include <dsp/sample.h>
 #include <complex.h>
 
 /*
@@ -40,33 +41,6 @@ typedef enum {
 	FMT_IX_I32		// Real only data as 32 bit int
 } signal_format;
 
-typedef enum {
-	SAMPLE_UNKNOWN,
-	SAMPLE_FFT,
-	SAMPLE_REAL_SIGNAL,		/* signal only has inphase data */
-	SAMPLE_SIGNAL			/* signal has both inphase and quadrature data */
-} sample_buffer_type;
-
-/* this is the sample type for the sample buffer */
-typedef complex double sample_t;
-
-/*
- * This is a bucket of samples, is is 'n' samples long.
- * And it represents collecting them at a rate 'r' per
- * second. So a total of n / r seconds worth of signal.
- */
-typedef struct {
-	double			sample_min,		/* min value in buffer */
-					sample_max;		/* max value in buffer */
-	double			max_freq;		/* Maximum frequency */
-	double			min_freq;		/* Minimum frequency */
-	int				n;				/* number of samples */
-	int				r;				/* sample rate in Hz */
-	sample_buffer_type	type;		/* type of samples */
-	struct sample_buffer *nxt;		/* chained buffer */
-	sample_t	*data;				/* sample data */
-} sample_buffer;
-
 /*
  * Some syntactic sugar to make this oft used code
  */
@@ -79,43 +53,31 @@ typedef struct {
 				  s->sample_max = max(s->sample_max, cmag((s)->data[ndx])); }
 
 #define reset_minmax(s)		s->sample_min = s->sample_max = 0
-#define clear_samples(s)	memset(s->data, 0, sizeof(sample_t) * s->n)
-
-/* the oft maligned multi-character constant */
-#define MCC(a, b, c, d)	( (((a) & 0xff) << 24) |\
-						  (((b) & 0xff) << 16) |\
-						  (((c) & 0xff) << 8) |\
-						   ((d) & 0xff) )
-
-
-/* sample buffer management */
-sample_buffer *alloc_buf(int size, int sample_rate);
-sample_buffer *free_buf(sample_buffer *buf);
 
 /* add a cosine wave, with both I & Q, or just I (_real()) */
-void add_cos(sample_buffer *, double f, double a, double p);
-void add_cos_real(sample_buffer *, double f, double a, double p);
-void mix_cos(sample_buffer *, double f, double a, double p);
-void mix_cos_real(sample_buffer *, double f, double a, double p);
+void add_cos(sample_buf_t *, double f, double a, double p);
+void add_cos_real(sample_buf_t *, double f, double a, double p);
+void mix_cos(sample_buf_t *, double f, double a, double p);
+void mix_cos_real(sample_buf_t *, double f, double a, double p);
 
 /* add a triangle wave, with both I & Q, or just I (_real()) */
-void add_triangle(sample_buffer *, double f, double a, double p);
-void add_triangle_real(sample_buffer *, double f, double a, double p);
-void mix_triangle(sample_buffer *, double f, double a, double p);
-void mix_triangle_real(sample_buffer *, double f, double a, double p);
+void add_triangle(sample_buf_t *, double f, double a, double p);
+void add_triangle_real(sample_buf_t *, double f, double a, double p);
+void mix_triangle(sample_buf_t *, double f, double a, double p);
+void mix_triangle_real(sample_buf_t *, double f, double a, double p);
 
 /* add a sawtooth wave, with both I & Q, or just I (_real()) */
-void add_sawtooth(sample_buffer *, double f, double a, double p);
-void add_sawtooth_real(sample_buffer *, double f, double a, double p);
-void mix_sawtooth(sample_buffer *, double f, double a, double p);
-void mix_sawtooth_real(sample_buffer *, double f, double a, double p);
+void add_sawtooth(sample_buf_t *, double f, double a, double p);
+void add_sawtooth_real(sample_buf_t *, double f, double a, double p);
+void mix_sawtooth(sample_buf_t *, double f, double a, double p);
+void mix_sawtooth_real(sample_buf_t *, double f, double a, double p);
 
 /* add a square wave, with both I & Q, or just I (_real()) */
-void add_square(sample_buffer *, double f, double a, double p);
-void add_square_real(sample_buffer *, double f, double a, double p);
-void mix_square(sample_buffer *, double f, double a, double p);
-void mix_square_real(sample_buffer *, double f, double a, double p);
+void add_square(sample_buf_t *, double f, double a, double p);
+void add_square_real(sample_buf_t *, double f, double a, double p);
+void mix_square(sample_buf_t *, double f, double a, double p);
+void mix_square_real(sample_buf_t *, double f, double a, double p);
 
-int store_signal(sample_buffer *signal, signal_format fmt, char *filename);
-sample_buffer *load_signal(char *filename);
+int store_signal(sample_buf_t *signal, signal_format fmt, char *filename);
+sample_buf_t *load_signal(char *filename);
 

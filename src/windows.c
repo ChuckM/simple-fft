@@ -16,7 +16,7 @@
  * the Hann window and the Blackman-Harris 4 element periodic window.
  *
  * Each window has two variants, the 'return the value for a given indice
- * in a given range' and 'apply the window to a sample_buffer'
+ * in a given range' and 'apply the window to a sample_buf_t'
  * 
  */
 
@@ -43,7 +43,7 @@ hann_window_function(int k, int N)
  * from 0 to 'bins'.
  */
 void
-hann_window_buffer(sample_buffer *b, int bins)
+hann_window_buffer(sample_buf_t *b, int bins)
 {
 	double hann;
 
@@ -79,7 +79,7 @@ bh_window_function(int k, int N)
  * passed in buffer. 
  */
 void
-bh_window_buffer(sample_buffer *b, int bins)
+bh_window_buffer(sample_buf_t *b, int bins)
 {
 	double bh;
 
@@ -104,6 +104,6 @@ rect_window_function(int i, int k)
  * The rectangle function is a constant 1.0
  */
 void
-rect_window_buffer(sample_buffer *b, int bins)
+rect_window_buffer(sample_buf_t *b, int bins)
 {
 }

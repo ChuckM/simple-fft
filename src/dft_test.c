@@ -38,8 +38,8 @@
 int
 main(int argc, char *argv[])
 {
-	sample_buffer	*test;
-	sample_buffer	*dft;
+	sample_buf_t	*test;
+	sample_buf_t	*dft;
 	FILE			*of;
 	window_function wf = W_RECT;
 	int bins = BINS;

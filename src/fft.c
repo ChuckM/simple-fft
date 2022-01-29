@@ -39,8 +39,8 @@
  * Compute the complex FFT in 'n' bins given the sample
  * buffer. 
  */
-sample_buffer *
-compute_fft(sample_buffer *iq, int bins, window_function window)
+sample_buf_t *
+compute_fft(sample_buf_t *iq, int bins, window_function window)
 {
 	int i, j, k;
 	int bits;
@@ -48,7 +48,7 @@ compute_fft(sample_buffer *iq, int bins, window_function window)
 	double (*win_func)(int, int);
 	complex double alpha, uri, ur;
 	complex double *fft_result;
-	sample_buffer *result;
+	sample_buf_t *result;
 
 	/* and they must be a power of 2 */
 	t = log(bins) / log(2);
@@ -67,6 +67,7 @@ compute_fft(sample_buffer *iq, int bins, window_function window)
 	 */
 	result = alloc_buf(bins, iq->r);
 	result->type = SAMPLE_FFT;
+	result->nxt = NULL;
 	fft_result = result->data;
 	switch (window) {
 		case W_RECT:
@@ -224,10 +225,10 @@ compute_fft(sample_buffer *iq, int bins, window_function window)
  * FFT. This uses an algorithm described by Rick Lyons in his note
  * "Four Ways to Compute and Inverse FFT USing the Forward FFT Algorithm"
  */
-sample_buffer *
-compute_ifft(sample_buffer *fft)
+sample_buf_t *
+compute_ifft(sample_buf_t *fft)
 {
-	sample_buffer	*res;
+	sample_buf_t	*res;
 
 	res = compute_fft(fft, fft->n, W_RECT);
 	if (res == NULL) {

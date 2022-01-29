@@ -54,7 +54,7 @@ extern char *optarg;
  * fidelity.
  */
 void
-add_zero_sin(sample_buffer *s, double f, double a)
+add_zero_sin(sample_buf_t *s, double f, double a)
 {
 	int	i;
 
@@ -85,9 +85,9 @@ add_zero_sin(sample_buffer *s, double f, double a)
 int
 main(int argc, char *argv[])
 {
-	sample_buffer	*sig;
-	sample_buffer	*fft;
-	sample_buffer	*notes[4];
+	sample_buf_t	*sig;
+	sample_buf_t	*fft;
+	sample_buf_t	*notes[4];
 	const char *options = "s:";
 	int		sr = SAMPLE_RATE;
 	FILE	*of;

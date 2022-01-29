@@ -70,8 +70,8 @@ int
 main(int argc, char *argv[])
 {
 	FILE *inp, *of;
-	sample_buffer	*sb;
-	sample_buffer	*fft;
+	sample_buf_t	*sb;
+	sample_buf_t	*fft;
 	uint8_t		buf[BUF_SIZE];
 
 	/* resulting signal has 3.072MSPS/BITS_PER_SAMPLE sample rate */

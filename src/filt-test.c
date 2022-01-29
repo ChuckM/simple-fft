@@ -137,12 +137,12 @@ struct fir_filter_t my_filter = {
 int
 main(int argc, char *argv[])
 {
-	sample_buffer	*sig;
-	sample_buffer	*filtered_sig;
-	sample_buffer	*fft_orig;
-	sample_buffer	*filt_resp;
-	sample_buffer	*filter_coefficients;
-	sample_buffer	*fft_filtered;
+	sample_buf_t	*sig;
+	sample_buf_t	*filtered_sig;
+	sample_buf_t	*fft_orig;
+	sample_buf_t	*filt_resp;
+	sample_buf_t	*filter_coefficients;
+	sample_buf_t	*fft_filtered;
 	struct fir_filter_t	*filt = &my_filter;
 	int				normalized = 0;
 	char			*test_filter;

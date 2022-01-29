@@ -35,7 +35,7 @@ int
 main(int argc, char *argv[])
 {
 	FILE *of;
-	sample_buffer	*wave;
+	sample_buf_t	*wave;
 	enum wavetype	wave_type = COS;
 	char name[48];
 	char plot_title[80];

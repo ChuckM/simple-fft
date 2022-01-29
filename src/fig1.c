@@ -24,7 +24,7 @@ int
 main(int argc, char *argv[])
 {
 	FILE *of;
-	sample_buffer	*wave;
+	sample_buf_t	*wave;
 	char name[48];
 	char plot_title[80];
 	int	make_it_real = 0;	/* apparently not implemented */

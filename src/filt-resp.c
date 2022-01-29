@@ -118,8 +118,8 @@ main(int argc, char *argv[])
 {
 	FILE *of;
 	FILE *inp;
-	sample_buffer	*filt;
-	sample_buffer	*dft;
+	sample_buf_t	*filt;
+	sample_buf_t	*dft;
 	int half_band = 0;
 	int	n_taps;
 	int mag = MAG_DECIBEL;

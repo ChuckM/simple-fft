@@ -93,16 +93,16 @@ struct __plot_scale __scales[PLOT_SCALE_UNDEFINED] =
 },{
 "Magnitude (Normalized dB)", "y_db_norm"		// PLOT_Y_DB_NORMALIZED:
 },{
-"Amplitude (Real)", "y_amplitude_real"
+"Amplitude", "y_amplitude_real"
 										// PLOT_Y_REAL_AMPLITUDE:
 },{
-"Amplitude (Real, Normalized)", "y_amplitude_real_norm"
+"Amplitude (Normalized)", "y_amplitude_real_norm"
 										// PLOT_Y_REAL_AMPLITUDE_NORMALIZED:
 },{
-"Amplitude (Analytic)", "y_amplitude_analytic"
+"Amplitude", "y_amplitude_analytic"
 										// PLOT_Y_AMPLITUDE:
 },{
-"Amplitude (Analytic, Normalized)", "y_amplitude_analytic_norm"
+"Amplitude (Normalized)", "y_amplitude_analytic_norm"
 										// PLOT_Y_AMPLITUDE_NORMALIZED:
 }};
 
@@ -131,14 +131,15 @@ __plot(FILE *f, plot_t *plot)
 
 	/* need some "standard" colors here for re-use / consistency */
 	fprintf(f, "set size ratio .75\n");
-	fprintf(f, "set xtics out font 'Arial,8' offset 0,.5\n");
+	fprintf(f, "set xtics nomirror out font 'Arial,8' offset 0,.5\n");
+	fprintf(f, "set ytics nomirror out font 'Arial,8' offset 0,.5\n");
 	fprintf(f, "set grid\n");
 	fprintf(f, "set title font 'Arial,12' offset 0,-1\n");
 	fprintf(f, "set title '%s'\n", plot->title);
 	fprintf(f, "set xlabel font 'Arial,10' offset 0,1\n");
 	fprintf(f, "set ylabel font 'Arial,10' offset 1, 0\n");
 	if (plot->k) {
-		fprintf(f, "set key opaque font 'Arial,8' box lw 2\n");
+		fprintf(f, "set key opaque font 'Arial,6' box lw 2\n");
 	} else {
 		fprintf(f, "set nokey\n");
 	}
@@ -197,7 +198,7 @@ __plot(FILE *f, plot_t *plot)
  *
  */
 static int
-__plot_fft_data(FILE *of, sample_buffer *fft, char *name)
+__plot_fft_data(FILE *of, sample_buf_t *fft, char *name)
 {
 	double fmax, nyquist, span;
 	double db_min, db_max;
@@ -377,9 +378,9 @@ __plot_fft_data(FILE *of, sample_buffer *fft, char *name)
  * reference these names to control things like their axes etc.
  */
 static int
-__plot_signal_data(FILE *of, sample_buffer *sig, char *name)
+__plot_signal_data(FILE *of, sample_buf_t *sig, char *name)
 {
-	int	end;
+	int	end, per;
 	double min_q, min_i;
 	double max_q, max_i;
 	double q_norm, i_norm;
@@ -392,8 +393,9 @@ __plot_signal_data(FILE *of, sample_buffer *sig, char *name)
 	 *
 	 * For now we're only going to plot frequency on a time scale 
 	 */
-	end = (int)(ceil((double) sig->r / sig->min_freq));
-	end_s = end / (double) sig->r;
+	per = (int)(ceil((double) sig->r / sig->min_freq));
+	end = per * 3;
+	end_s = (per * 2) / (double) sig->r;
 	end_ms = end_s * 1000.0;
 
 	min_q = min_i = max_q = max_i = 0;
@@ -497,11 +499,11 @@ __plot_signal_data(FILE *of, sample_buffer *sig, char *name)
 }
 
 int
-plot_data(FILE *f, sample_buffer *buf, char *name)
+plot_data(FILE *f, sample_buf_t *buf, char *name)
 {
 	switch (buf->type) {
 		default:
-			fprintf(stderr, "Unknown buffer type\n");
+			fprintf(stderr, "Unknown buffer type for %s\n", name);
 			return -1;
 		case SAMPLE_SIGNAL:
 		case SAMPLE_REAL_SIGNAL:

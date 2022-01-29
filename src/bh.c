@@ -32,8 +32,8 @@ int
 main(int argc, char *argv[]) {
 	double	bh;
 	int		q, bins;
-	sample_buffer	*buf;
-	sample_buffer	*dft;
+	sample_buf_t	*buf;
+	sample_buf_t	*dft;
 	FILE	*of;
 
 	bins = BINS;

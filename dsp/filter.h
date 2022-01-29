@@ -30,7 +30,7 @@ struct fir_filter_t {
 };
 
 /* Apply a filter to a signal */
-sample_buffer * fir_filter(sample_buffer *signal, struct fir_filter_t *fir);
+sample_buf_t * fir_filter(sample_buf_t *signal, struct fir_filter_t *fir);
 
 /* Apply a filter to an array of real values */
 double * filter_real(double signal[], int n, struct fir_filter_t *fir);

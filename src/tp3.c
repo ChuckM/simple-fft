@@ -55,10 +55,10 @@ const double mix[4][2] = {
 int
 main(int argc, char *argv[])
 {
-	sample_buffer 	*sig1;
-	sample_buffer 	*sig2;
-	sample_buffer	*fft1;
-	sample_buffer	*fft2;
+	sample_buf_t 	*sig1;
+	sample_buf_t 	*sig2;
+	sample_buf_t	*fft1;
+	sample_buf_t	*fft2;
 	struct fir_filter_t	*filt;
 	double	i_data[SAMPLE_RATE * 4];
 	double	*i_filtered;
@@ -66,10 +66,10 @@ main(int argc, char *argv[])
 	double	*q_filtered;
 	const char *options = "n";
 	int			normalized = 0;
-	sample_buffer 	*test;
-	sample_buffer	*test_fft;
-	sample_buffer	*sig_fft;
-	sample_buffer	*filtered;
+	sample_buf_t 	*test;
+	sample_buf_t	*test_fft;
+	sample_buf_t	*sig_fft;
+	sample_buf_t	*filtered;
 	FILE	*of;
 	char		opt;
 

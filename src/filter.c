@@ -247,10 +247,10 @@ load_filter(FILE *f)
  * And it zero pads sig by n samples to get the last bit of juice
  * out of the FIR filter.
  */
-sample_buffer *
-fir_filter(sample_buffer *signal, struct fir_filter_t *fir)
+sample_buf_t *
+fir_filter(sample_buf_t *signal, struct fir_filter_t *fir)
 {
-	sample_buffer *res;
+	sample_buf_t *res;
 
 	res = alloc_buf(signal->n, signal->r);
 	if (res == NULL) {

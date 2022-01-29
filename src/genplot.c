@@ -47,8 +47,8 @@ char *plot_file = PLOT_FILE;
 int
 main(int argc, char *argv[])
 {
-	sample_buffer	*buf;
-	sample_buffer	*dft;
+	sample_buf_t	*buf;
+	sample_buf_t	*dft;
 	char			*options = "t:hm:o:Ff:";
 	char			opt;
 	FILE			*of;

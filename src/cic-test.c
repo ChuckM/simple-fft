@@ -116,10 +116,10 @@ print_taplists()
 int
 main(int argc, char *argv[])
 {
-	sample_buffer	*impulse;
-	sample_buffer	*fir;
-	sample_buffer	*fir2;
-	sample_buffer	*fir_fft;
+	sample_buf_t	*impulse;
+	sample_buf_t	*fir;
+	sample_buf_t	*fir2;
+	sample_buf_t	*fir_fft;
 	char	title[80];
 
 	/* Stages (s), "M" factor (1 or 2), and decimation rate (r) */
@@ -189,7 +189,7 @@ main(int argc, char *argv[])
 	 */
 	ndx = 0;
 	for (int i = 0; i < D; i++) {
-		sample_buffer *impulse_response;
+		sample_buf_t *impulse_response;
 		int rsum, ntaps, *resp;
 		/* put the impulse 'i' pulses in */
 		impulse->data[i] = 1.0;

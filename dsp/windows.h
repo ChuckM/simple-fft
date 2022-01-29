@@ -24,11 +24,11 @@ typedef enum
 
 /* prototypes */
 double hann_window_function(int k, int N);
-void hann_window_buffer(sample_buffer *b, int bins);
+void hann_window_buffer(sample_buf_t *b, int bins);
 
 double bh_window_function(int k, int N);
-void bh_window_buffer(sample_buffer *b, int bins);
+void bh_window_buffer(sample_buf_t *b, int bins);
 
 double rect_window_function(int k, int N);
-void rect_window_buffer(sample_buffer *b, int bins);
+void rect_window_buffer(sample_buf_t *b, int bins);
 
