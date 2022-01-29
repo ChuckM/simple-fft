@@ -130,6 +130,7 @@ __plot(FILE *f, plot_t *plot)
 	}
 
 	/* need some "standard" colors here for re-use / consistency */
+	fprintf(f, "set size ratio .75\n");
 	fprintf(f, "set xtics out font 'Arial,8' offset 0,.5\n");
 	fprintf(f, "set grid\n");
 	fprintf(f, "set title font 'Arial,12' offset 0,-1\n");
@@ -230,8 +231,7 @@ __plot_fft_data(FILE *of, sample_buffer *fft, char *name)
 	fprintf(of, "%s_x_freq_real = 2\n", name);
 	fprintf(of, "%s_x_freq_real_min = 0\n", name);
 	fprintf(of, "%s_x_freq_real_max = %f\n", name, nyquist);
-	fprintf(of, "%s_x_freq_real_tics = 'set xtics %f'\n", name,
-									((double) nyquist / 10.0));
+	fprintf(of, "%s_x_freq_real_tics = 'set xtics autofreq'\n", name);
 
 	/*
 	 * Frequency (Analytic)
@@ -240,8 +240,8 @@ __plot_fft_data(FILE *of, sample_buffer *fft, char *name)
 	fprintf(of, "%s_x_freq = 2\n", name);
 	fprintf(of, "%s_x_freq_min = 0\n", name);
 	fprintf(of, "%s_x_freq_max = %f\n", name, fmax);
-	fprintf(of, "%s_x_freq_tics = 'set xtics %f'\n", name,
-									((double) fmax / 10.0));
+	fprintf(of, "%s_x_freq_tics = 'set xtics autofreq'\n", name);
+
 	/*
 	 * Frequency kHz (Real)
 	 */
@@ -249,8 +249,8 @@ __plot_fft_data(FILE *of, sample_buffer *fft, char *name)
 	fprintf(of, "%s_x_freq_khz_real = 3\n", name);
 	fprintf(of, "%s_x_freq_khz_real_min = 0\n", name);
 	fprintf(of, "%s_x_freq_khz_real_max = %f\n", name, nyquist / 1000.0);
-	fprintf(of, "%s_x_freq_khz_real_tics = 'set xtics %f'\n", name,
-									((double) nyquist / 10000.0));
+	fprintf(of, "%s_x_freq_khz_real_tics = 'set xtics autofreq'\n", name);
+
 
 	/*
 	 * Frequency kHz (Analytic)
@@ -259,8 +259,7 @@ __plot_fft_data(FILE *of, sample_buffer *fft, char *name)
 	fprintf(of, "%s_x_freq_khz = 3\n", name);
 	fprintf(of, "%s_x_freq_khz_min = 0\n", name);
 	fprintf(of, "%s_x_freq_khz_max = %f\n", name, fmax / 1000.0);
-	fprintf(of, "%s_x_freq_khz_tics = 'set xtics %f'\n", name,
-									((double) fmax / 10000.0));
+	fprintf(of, "%s_x_freq_khz_tics = 'set xtics autofreq'\n", name);
 
 	/*
 	 * Normalized X axis (Real) (0, 0.5 sample rate)
@@ -431,14 +430,14 @@ __plot_signal_data(FILE *of, sample_buffer *sig, char *name)
 	fprintf(of, "%s_x_time = 1\n", name);
 	fprintf(of, "%s_x_time_min = 0\n", name);
 	fprintf(of, "%s_x_time_max = %f\n", name, end_s);
-	fprintf(of, "%s_x_time_tics = 'set xtics %f'\n", name, end / 10.0);
+	fprintf(of, "%s_x_time_tics = 'set xtics autofreq'\n", name);
 	/*
 	 * X in milleseconds
  	 */
 	fprintf(of, "%s_x_time_ms = 2\n", name);
 	fprintf(of, "%s_x_time_ms_min = 0\n", name);
 	fprintf(of, "%s_x_time_ms_max = %f\n", name, end_ms);
-	fprintf(of, "%s_x_time_ms_tics = 'set xtics %f'\n", name, end_ms / 10.0);
+	fprintf(of, "%s_x_time_ms_tics = 'set xtics autofreq'\n", name);
 
 	/*
 	 * Y amplitude (Inphase/real)
