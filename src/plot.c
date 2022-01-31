@@ -157,7 +157,7 @@ __plot(FILE *f, plot_t *plot)
 		fprintf(f, "\t$%s_data using\\\n", n);
 		fprintf(f, "\t%s_%s:%s_%s with lines \\\n", n, 
 					plot->x->scale, n, p->y->scale);
-		fprintf(f, "\tlt rgb 0x%x lw 1.5 \\\n", p->color);
+		fprintf(f, "\tlt rgb 0x%x lw 2 \\\n", p->color);
 		fprintf(f,"\ttitle '%s'", p->title);
 		fprintf(f, ", \\\n");
 	}
@@ -395,6 +395,7 @@ __plot_signal_data(FILE *of, sample_buf_t *sig, char *name)
 	 */
 	per = (int)(ceil((double) sig->r / sig->min_freq));
 	end = per * 3;
+	end = (end < sig->n) ? end : sig->n;
 	end_s = (per * 2) / (double) sig->r;
 	end_ms = end_s * 1000.0;
 

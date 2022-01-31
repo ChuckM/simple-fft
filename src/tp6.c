@@ -41,7 +41,7 @@ int fft_bins = 1024;
 char *plot_file =  "plots/tp6.plot";
 
 /* spread of non-harmonic tones between DC and SAMPLE_RATE/2 */
-double tone_spread[5] = {1020.0, 1500.0, 8000.0, 9500.0, 9900.0};
+double tone_spread[5] = {1020.0, 1500.0, 7980.0, 9480.0, 9900.0};
 
 /* getopt(3) variables */
 extern char *optarg;
@@ -68,7 +68,7 @@ htf(sample_buf_t *b)
 		if (i < (b->n / 2)) {
 			b->data[i] *= 2;
 		} else if (i > (b->n)/2) {
-			b->data = 0;
+			b->data[i] = 0;
 		}
 	}
 	return;
@@ -107,11 +107,13 @@ cvt2analytic(sample_buf_t *sig, int bins)
 	 * that are 'bins' wide. These are held in fft_chain
 	 */
 	prev = NULL;
+	nfft = 0;
+	printf("Generate FFT ..");
 	for (int k = 0; (k + bins) < sig->n; k += bins) {
 		sample_buf_t *ftmp;
 
 		/* Grab bins worth of sample buffer */
-		printf("C2A: bin %d thru %d\n",  k, k+bins-1);
+		printf(".[%d]..", nfft++);
 		for (int m = 0; m < bins; m++) {
 			chunk->data[m] = sig->data[k + m];
 		}
@@ -125,20 +127,18 @@ cvt2analytic(sample_buf_t *sig, int bins)
 			prev->nxt = ftmp;
 			prev = ftmp;
 		}
-		nfft++;
 	}
-	printf("Done.\nFFT Chain has %d chunks\n\n", nfft);
+	printf("\nFFT Chain has %d chunks\n", nfft);
 
 	/*
 	 * Second, apply the Hilbert transform to all of the
 	 * FFT's in the chain.
 	 */
 	printf("Transforming ... ");
-	nfft = 1;
+	nfft = 0;
 	for(sample_buf_t *t = fft_chain; t; t = t->nxt) {
+		printf(".[%d]..", nfft++);
 		htf(t);
-		printf(".[%d].", nfft);
-		nfft++;
 	}
 	printf("\n");
 
@@ -146,19 +146,19 @@ cvt2analytic(sample_buf_t *sig, int bins)
 	 * Third, using the IFFT return each chunk of FFT back
 	 * to signal and then copy that chunk into the result buffer.
 	 */
-	printf("Now inverting back into signal\n");
+	printf("Inverting ..");
 	int k = 0;
-	nfft = 1;
+	nfft = 0;
 	for (sample_buf_t *t = fft_chain; t; t = t->nxt) {
 		sample_buf_t *q = compute_ifft(t);
 
-		printf(" [%d]\n", nfft);
+		printf(".[%d]..", nfft++);
 		for (int m = 0; m < q->n; m++) {
 			res->data[k + m] = q->data[m];
 		}
 		k += q->n;
-		nfft++;
 	}
+	printf("\n");
 	return res;
 }
 
@@ -167,6 +167,8 @@ main(int argc, char *argv[])
 {
 	FILE *pf;		/* plot file */
 	int multitone = 0;
+	int cvt_bins = 1024;
+	char title[80];
 	sample_buf_t *fft1, *fft2;
 	sample_buf_t *real_signal = alloc_buf(BUF_SIZE, SAMPLE_RATE);
 	sample_buf_t *converted;
@@ -196,7 +198,10 @@ main(int argc, char *argv[])
 
 #ifdef CVTANALYTIC
 	printf("Converting the real signal into an analytic signal .. \n");
-	converted = cvt2analytic(real_signal, 1024);
+	converted = cvt2analytic(real_signal, cvt_bins);
+	converted->type = SAMPLE_SIGNAL;
+	converted->min_freq = tone_spread[0];
+	converted->max_freq = tone_spread[4];
 
 	printf("Generating an FFT of the converted signal ...\n");
 	fft2 = compute_fft(converted, fft_bins, W_BH);
@@ -219,7 +224,8 @@ main(int argc, char *argv[])
 	plot_data(pf, converted, "sigc");
 
 #endif
-	multiplot_begin(pf, "Test Program #6", 2, 2);
+	snprintf(title, sizeof(title), "Hilbert Transform test: %d bins", cvt_bins);
+	multiplot_begin(pf, title, 2, 2);
 	plot(pf, "Original Signal (Real)", "sigr",
 								PLOT_X_TIME_MS, PLOT_Y_AMPLITUDE);
 	plot(pf, "Original Signal (Real) FFT", "fftr", 

@@ -35,23 +35,22 @@
 
 int
 main(int argc, char *argv[]) {
-	sample_buf_t *src;
 	sample_buf_t *fft;
 	sample_buf_t *fft2;
-	sample_buf_t *src2;
+	sample_buf_t *high_res;
+	sample_buf_t *waveform;
+	char title[80];
+	double	freq1, freq2;
 	FILE *of;
 
-	/* allocate 8K samples at an 8K rate */
-	src = alloc_buf(15000, 81920);
-	src2 = alloc_buf(15000, 81920);
+	high_res = alloc_buf(SAMPLE_RATE * 5, SAMPLE_RATE * 20);
+	waveform = alloc_buf(SAMPLE_RATE * 4, SAMPLE_RATE);
 
 	printf("Generating a test plot with a wave mix\n");
-
-	/* start with a 2.048 kHz wave */
-	add_cos_real(src, 512, 1.0, 0);
-	/* mix it with a 128 Hz wave */
-	mix_cos_real(src, 10, 1.0, .25 * M_PI );
-	fft = compute_fft(src, 2048, W_BH);
+	freq1 = 2500.0;
+	freq2 = 1000.0;
+	snprintf(title, sizeof(title), "Mixed signals (%5.1f Hz and %5.1f Hz)",
+		freq1, freq2);
 
 	printf("Results in plots/tp1.plot\n");
 	of = fopen("plots/tp1.plot", "w");
@@ -59,10 +58,39 @@ main(int argc, char *argv[]) {
 		fprintf(stderr, "Couldn't open plot.data\n");
 		exit(1);
 	}
-	plot_data(of, src, "wave");
-	plot(of, "Mixed signals (128 Hz and 2048 Hz)", "wave",
-			PLOT_X_TIME_MS, PLOT_Y_AMPLITUDE);
 
+	add_cos_real(waveform, freq1, 1.0, 0);
+	mix_cos_real(waveform, freq2, 1.0, .25 * M_PI );
+
+	/* This makes a copy that has smooth detail */
+	add_cos_real(high_res, freq1, 1.0, 0);
+	mix_cos_real(high_res, freq2, 1.0, .25 * M_PI );
+
+	fft = compute_fft(waveform, BINS, W_BH);
+	plot_data(of, high_res, "waver");
+	plot_data(of, fft, "fftr");
+
+	/* Now do the same thing but with analytic waveforms */
+	clear_samples(waveform);
+	clear_samples(high_res);
+	free_buf(fft);
+	add_cos(waveform, freq1, 1.0, 0);
+	mix_cos(waveform, freq2, 1.0, .25 * M_PI );
+
+	/* This makes a copy that has smooth detail */
+	add_cos(high_res, freq1, 1.0, 0);
+	mix_cos(high_res, freq2, 1.0, .25 * M_PI );
+
+	fft = compute_fft(waveform, BINS, W_BH);
+
+	plot_data(of, high_res, "wavea");
+	plot_data(of, fft, "ffta");
+	multiplot_begin(of, "A mixed waveform and its FFT", 2, 2);
+	plot(of, title, "waver", PLOT_X_TIME_MS, PLOT_Y_AMPLITUDE);
+	plot(of, "FFT of same", "fftr", PLOT_X_REAL_FREQUENCY, PLOT_Y_DB);
+	plot(of, title, "wavea", PLOT_X_TIME_MS, PLOT_Y_AMPLITUDE);
+	plot(of, "FFT of same", "ffta", PLOT_X_REAL_FREQUENCY, PLOT_Y_DB);
+	multiplot_end(of);
 	fclose(of);
 	exit(0);
 }
