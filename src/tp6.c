@@ -26,7 +26,7 @@
 #include <ctype.h>
 #include <dsp/fft.h>
 #include <dsp/plot.h>
-#define CVTANALYTIC
+
 /* base signal buffer size */
 #define BUF_SIZE	10000
 
@@ -118,6 +118,10 @@ cvt2analytic(sample_buf_t *sig, int bins)
 			chunk->data[m] = sig->data[k + m];
 		}
 		ftmp = compute_fft(chunk, bins, W_RECT);
+		if (ftmp == NULL) {
+			exit(1);
+		}
+
 		if (ftmp->data == NULL) {
 			fprintf(stderr, "compute_fft returned nulled out data ptr\n");
 		}
@@ -168,6 +172,8 @@ main(int argc, char *argv[])
 	FILE *pf;		/* plot file */
 	int multitone = 0;
 	int cvt_bins = 1024;
+	const char *optstring = "b:m";
+	char opt;
 	char title[80];
 	sample_buf_t *fft1, *fft2;
 	sample_buf_t *real_signal = alloc_buf(BUF_SIZE, SAMPLE_RATE);
@@ -177,7 +183,27 @@ main(int argc, char *argv[])
 	/*
 	 * parse options
 	 */
-
+	while ((opt = getopt(argc, argv, optstring)) != -1) {
+		switch (opt) {
+			case '?':
+			case ':':
+			default:
+				printf("Option was '%c'\n", opt);
+				fprintf(stderr, "usage: tp6 [-b <bins>] [-m]\n");
+				exit(1);
+			case 'm':
+				multitone++;
+				break;
+			case 'b':
+				cvt_bins = atoi(optarg);
+				break;
+		}
+	}
+	if (cvt_bins > 8192) {
+		fprintf(stderr, "Warning, conversion bins was %d, reset to 1024\n", 
+				cvt_bins);
+		cvt_bins = 1024;
+	}
 
 	/*
 	 * Step 1: Generate a test signal with multiple tones in
@@ -195,8 +221,10 @@ main(int argc, char *argv[])
 	}
 	printf("Generating baseline FFT for this data ...\n");
 	fft1 = compute_fft(real_signal, fft_bins, W_BH);
+	if (fft1 == NULL) {
+		exit(1);
+	}
 
-#ifdef CVTANALYTIC
 	printf("Converting the real signal into an analytic signal .. \n");
 	converted = cvt2analytic(real_signal, cvt_bins);
 	converted->type = SAMPLE_SIGNAL;
@@ -205,8 +233,9 @@ main(int argc, char *argv[])
 
 	printf("Generating an FFT of the converted signal ...\n");
 	fft2 = compute_fft(converted, fft_bins, W_BH);
-
-#endif
+	if (fft2 == NULL) {
+		exit(1);
+	}
 
 	printf("Plotting results ...\n");
 	pf = fopen(plot_file, "w");
@@ -219,23 +248,19 @@ main(int argc, char *argv[])
 	/* Plot the results */
 	plot_data(pf, fft1, "fftr");
 	plot_data(pf, real_signal, "sigr");
-#ifdef CVTANALYTIC
 	plot_data(pf, fft2, "fftc");
 	plot_data(pf, converted, "sigc");
 
-#endif
 	snprintf(title, sizeof(title), "Hilbert Transform test: %d bins", cvt_bins);
 	multiplot_begin(pf, title, 2, 2);
 	plot(pf, "Original Signal (Real)", "sigr",
 								PLOT_X_TIME_MS, PLOT_Y_AMPLITUDE);
 	plot(pf, "Original Signal (Real) FFT", "fftr", 
 					PLOT_X_NORMALIZED, PLOT_Y_DB_NORMALIZED);
-#ifdef CVTANALYTIC
 	plot(pf, "Converted Signal (Analytic)", "sigc",
 								PLOT_X_TIME_MS, PLOT_Y_AMPLITUDE);
 	plot(pf, "Converted Signal (Analytic) FFT", "fftc", 
 					PLOT_X_NORMALIZED, PLOT_Y_DB_NORMALIZED);
-#endif
 	multiplot_end(pf);
 	fclose(pf);
 }
