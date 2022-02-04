@@ -57,4 +57,7 @@ The primary goal of this code was to look at the effects of the Hilbert
 transform in creating an analytic signal from a real signal, and the number
 of bins used in the FFT to do the conversion. Spoiler alert: 512 bins was the
 minimum for good conversion. 256, 128, 64, 32, 16, 8, and 4 bin FFTs inject
-more and more distortion into the analytic signal. 
+more and more distortion into the analytic signal. This is what 512 bins
+looks like:
+
+<img src=exp6.png>
