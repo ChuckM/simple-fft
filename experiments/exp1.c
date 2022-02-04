@@ -60,11 +60,11 @@ main(int argc, char *argv[]) {
 	}
 
 	add_cos_real(waveform, freq1, 1.0, 0);
-	mix_cos_real(waveform, freq2, 1.0, .25 * M_PI );
+	mix_cos_real(waveform, freq2, 1.0, 180);
 
 	/* This makes a copy that has smooth detail */
 	add_cos_real(high_res, freq1, 1.0, 0);
-	mix_cos_real(high_res, freq2, 1.0, .25 * M_PI );
+	mix_cos_real(high_res, freq2, 1.0, 180);
 
 	fft = compute_fft(waveform, BINS, W_BH);
 	plot_data(of, high_res, "waver");
@@ -75,11 +75,11 @@ main(int argc, char *argv[]) {
 	clear_samples(high_res);
 	free_buf(fft);
 	add_cos(waveform, freq1, 1.0, 0);
-	mix_cos(waveform, freq2, 1.0, .25 * M_PI );
+	mix_cos(waveform, freq2, 1.0, 90);
 
 	/* This makes a copy that has smooth detail */
 	add_cos(high_res, freq1, 1.0, 0);
-	mix_cos(high_res, freq2, 1.0, .25 * M_PI );
+	mix_cos(high_res, freq2, 1.0, 90);
 
 	fft = compute_fft(waveform, BINS, W_BH);
 

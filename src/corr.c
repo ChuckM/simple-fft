@@ -3,7 +3,7 @@
  * Written April 2019 by Chuck McManis
  * Copyright (c) 2019, Charles McManis
  *
- * I hereby grant permission for anyone to use this software for any 
+ * I hereby grant permission for anyone to use this software for any
  * purpose that they choose, I do not warrant the software to be
  * functional or even correct. It was written as part of an educational
  * exercise and is not "product grade" as far as the author is concerned.
@@ -57,9 +57,8 @@ main(int argc, char *argv[])
 	printf("            Frequency #1: %f Hz\n", freq1);
 	printf("            Frequency #2: %f Hz\n", freq2);
 	printf("    ---------------------------------\n");
-	printf("             Correlation: %f\n", 
+	printf("             Correlation: %f\n",
 				2.0 * creal(correlation)/(double) a->n);
 	exit(0);
 }
-
 

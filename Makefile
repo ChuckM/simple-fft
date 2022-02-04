@@ -26,11 +26,13 @@ INC_DIR = ./dsp
 
 SRC_DIR = ./src
 
+EXP_SRC = ./experiments
+
 LIB_SRC_DIR = ./src/lib
 
-# tp2
-TEST_PROGRAMS = plot-test cic-test fft-test filt-test tp1\
-				 tp3 tp4 tp5 tp6
+EXPERIMENTS = exp1 exp2 exp3 exp4 exp5 exp6
+
+TEST_PROGRAMS = plot-test cic-test fft-test filt-test
 
 PROGRAMS = demo waves hann bh dft_test \
 	   corr corr-plot multi-corr-plot filt-resp \
@@ -51,10 +53,12 @@ OBJECTS = $(TOOL_SRC:%.c=$(OBJ_DIR)/%.o)
 
 LIB_OBJECTS = $(LIB_SRC:%.c=$(OBJ_DIR)/%.o)
 
+TOOL_OBJECTS = $(TOOL_SRC:%.c=$(OBJ_DIR)/%.o)
+
 
 INCLUDES = $(HEADERS:%.h=$(INC_DIR)/%.h)
 
-BINS = $(PROGRAMS:%=$(BIN_DIR)/%)
+BINS = $(PROGRAMS:%=$(BIN_DIR)/%) $(EXPERIMENTS:%=$(BIN_DIR)/%)
 
 all: dirs $(LIB_OBJECTS) 3khz-tone-pdm.test $(OBJECTS) $(LIB) $(BINS)
 
@@ -69,14 +73,20 @@ dirs:
 	mkdir -p $(OBJ_DIR)
 	mkdir -p $(LIB_DIR)
 
+print-%: ; echo $* = $($*)
+
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c $(INCLUDES)
 	cc -g -fPIC -I. -c $< -o $@
+
+#$(EXPERIMENTS:%=$(BIN_DIR)/%): $(EXPERIMENTS:%=$(EXP_SRC)/%.c)
+$(BIN_DIR)/%: $(EXP_SRC)/%.c
+	cc -g -I. -o $@ $< -L$(LIB_DIR) -lsdsp ${LDFLAGS}
 
 $(LIB_DIR)/%: $(LIB_OBJECTS)
 	ar -r $@ $(LIB_OBJECTS)
 	echo "LIB - $@"
 
-$(BIN_DIR)/%: $(SRC_DIR)/%.c $(OBJECTS) $(INCLUDES) $(LIB)
+$(BIN_DIR)/%: $(SRC_DIR)/%.c $(OBJECTS) $(INCLUDES) $(LIB) 
 	cc -g -I. -o $@ $< ${OBJECTS} -L$(LIB_DIR) -lsdsp ${LDFLAGS}
 
 $(OBJ_DIR)/remez.o: $(SRC_DIR)/remez.c dsp/remez.h
@@ -84,4 +94,10 @@ $(OBJ_DIR)/remez.o: $(SRC_DIR)/remez.c dsp/remez.h
 
 $(BIN_DIR)/filt-design: $(SRC_DIR)/filt-design.c $(OBJ_DIR)/remez.o $(INCLUDES)
 	cc -I. -o $@ $< ${OBJECTS} $(OBJ_DIR)/remez.o -L$(LIB_DIR) -lsdsp ${LDFLAGS}
+
+.PHONY: printvars
+printvars:
+	@$(foreach V,$(sort $(.VARIABLES)),\
+	$(if $(filter-out environ% default automatic, \
+	$(origin $V)), $(info $V=$($V) ($(value $V)))))
 

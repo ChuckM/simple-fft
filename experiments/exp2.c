@@ -39,9 +39,24 @@
 #define STARTING_FREQ	1000.0
 #define	FREQ_INC		0.5
 
+static double
+__i_index(int ndx, int rate, double f)
+{
+	double period = ((double) ndx * f) / (double) rate;
+	double t;
+	return (modf(period, &t));
+}
+static double
+__q_index(int ndx, int rate, double f)
+{
+	double period = (((double) ndx * f) / (double) rate) - 0.25;
+	double t;
+	if (period < 0) {
+		period += 1.0;
+	}
+	return (modf(period, &t));
+}
 /* add_test
- *
- * XXX: move the test functions to a test program, out of signal.c
  *
  * This implements the inphase and quadrature values using a function
  * which sets the quadrature value to the inphase value 25% earlier in
