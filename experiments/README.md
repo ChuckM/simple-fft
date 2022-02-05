@@ -81,6 +81,11 @@ correlation values so I wrote some code to look at those and then plot
 the results. Plotting correlation on one axis and frequency on the X
 axis.
 
+Spoiler alert! This is the sinc(x) function (and another way to generate a
+a plot for it.). `sinc(x)` is defined as `1/sin(x)` except at 0 it is '1'.
+Wolfram Math has [a whole page](https://mathworld.wolfram.com/SincFunction.html)
+on it. 
+
 <img src=corr1.png>
 
 ### exp-corr-multiplot
