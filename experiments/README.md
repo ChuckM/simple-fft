@@ -61,3 +61,35 @@ more and more distortion into the analytic signal. This is what 512 bins
 looks like:
 
 <img src=exp6.png>
+
+## Experiments in  Correlation
+
+### exp-corr
+
+When learning about the Fourier Transform I needed to learn about correlation,
+that amazing thing that happens when you multiply two sinusoids. I realized
+that if you multiplied two sinusoids that were different by even 1 Hz the
+resulting correlation was 0, but then mysteriously (to me) if they differed
+by fractional amounts of Hz the correlation was _not_ zero. What? This
+was the first bit of code I wrote to investigate that, and the next experiment
+is the second (because once you know, you want a plot right?)
+
+### exp-corr-plot
+
+So it was clear that different fractional frequencies gave different
+correlation values so I wrote some code to look at those and then plot
+the results. Plotting correlation on one axis and frequency on the X
+axis.
+
+<img src=corr1.png>
+
+### exp-corr-multiplot
+
+That then made me wonder about the ratio of the sample rate to the
+underlying waveform, how did that effect correlation, so in this third
+and so far final correlation experiment I vary the sample rate ratios as
+well as go from `frequency - span` Hz to `frequency + span` Hz on the X
+axis.
+
+<img src=corr2.png>
+
