@@ -1,5 +1,5 @@
 /*
- * TP6 - Test Program #6
+ * Experiment #6
  *
  * In this program I am exploring the Hilbert transformation and its
  * use to convert real signals to analytic signals (complex). The
@@ -38,7 +38,7 @@
 int fft_bins = 1024;
 
 /* default output file */
-char *plot_file =  "plots/tp6.plot";
+char *plot_file =  "plots/exp6.plot";
 
 /* spread of non-harmonic tones between DC and SAMPLE_RATE/2 */
 double tone_spread[5] = {1020.0, 1500.0, 7980.0, 9480.0, 9900.0};

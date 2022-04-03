@@ -1,4 +1,4 @@
-/* TP5 - Test Program #5
+/* Experiment #5
  *
  * This code is examining the ability to get the inverse FFT from the
  * FFT using the FFT operation.
@@ -259,7 +259,7 @@ main(int argc, char *argv[])
 	}
 	fft1 = compute_fft(sig1, BINS, W_BH);
 
-	of = fopen("plots/tp5-debug.plot", "w");
+	of = fopen("plots/exp5-debug.plot", "w");
 	plot_data(of, fft1, "fft1");
 	plot_data(of, sig1, "sig1");
 	multiplot_begin(of, "Debugging plot", 1, 2);
@@ -324,7 +324,7 @@ main(int argc, char *argv[])
 	/* FFT of the inverted FFT */
 	fft3 = compute_fft(sig2, BINS, W_RECT);
 	normalized = 0;
-	of = fopen("plots/tp5.plot", "w");
+	of = fopen("plots/exp5.plot", "w");
 	plot_data(of, fft1, "fft1");
 	plot_data(of, sig1, "sig1");
 	plot_data(of, fft3, "fft3");
