@@ -1,5 +1,5 @@
 /*
- * TP6 - Test Program #6
+ * Experiment #6
  *
  * In this program I am exploring the Hilbert transformation and its
  * use to convert real signals to analytic signals (complex). The
@@ -172,8 +172,14 @@ main(int argc, char *argv[])
 	FILE *pf;		/* plot file */
 	int multitone = 0;
 	int cvt_bins = 1024;
-	const char *optstring = "b:m";
+	const char *optstring = "p:b:mf:";
 	char opt;
+	double single_tone = tone_spread[0];
+	enum {
+		PLOT_ORIG_ONLY,
+		PLOT_BOTH,
+		PLOT_RESULT_ONLY
+	} plot_select = PLOT_BOTH;
 	char title[80];
 	sample_buf_t *fft1, *fft2;
 	sample_buf_t *real_signal = alloc_buf(BUF_SIZE, SAMPLE_RATE);
@@ -191,8 +197,27 @@ main(int argc, char *argv[])
 				printf("Option was '%c'\n", opt);
 				fprintf(stderr, "usage: tp6 [-b <bins>] [-m]\n");
 				exit(1);
+			case 'f':
+				single_tone = atof(optarg);
+				break;
 			case 'm':
 				multitone++;
+				break;
+			case 'p':
+				switch (tolower(*optarg)) {
+					case 'o':
+						plot_select = PLOT_ORIG_ONLY;
+						break;
+					case 'r':
+						plot_select = PLOT_RESULT_ONLY;
+						break;
+					case 'b':
+						plot_select = PLOT_BOTH;
+						break;
+					default:
+						fprintf(stderr, "Plot select is one of o, r, or b\n");
+						exit(1);
+				}
 				break;
 			case 'b':
 				cvt_bins = atoi(optarg);
@@ -217,7 +242,7 @@ main(int argc, char *argv[])
 		}
 	} else {
 		printf("Generating a single-tone real signal ...\n");
-		add_cos_real(real_signal, tone_spread[0], 1.0, 270);
+		add_cos_real(real_signal, single_tone, 1.0, 270);
 	}
 	printf("Generating baseline FFT for this data ...\n");
 	fft1 = compute_fft(real_signal, fft_bins, W_BH);
@@ -253,14 +278,26 @@ main(int argc, char *argv[])
 
 	snprintf(title, sizeof(title), "Hilbert Transform test: %d bins", cvt_bins);
 	multiplot_begin(pf, title, 2, 2);
-	plot(pf, "Original Signal (Real)", "sigr",
+	if ((plot_select == PLOT_BOTH) || (plot_select == PLOT_ORIG_ONLY)) {
+		if (multitone) {
+			snprintf(title, sizeof(title), 
+						"Original Signal [multi-tone] (Real)");
+		} else {
+			snprintf(title, sizeof(title), 
+						"Original Signal [%6.2f Hz] (Real)", single_tone);
+		}
+			
+		plot(pf, title, "sigr",
 								PLOT_X_TIME_MS, PLOT_Y_AMPLITUDE);
-	plot(pf, "Original Signal (Real) FFT", "fftr", 
+		plot(pf, "Original Signal (Real) FFT", "fftr", 
 					PLOT_X_NORMALIZED, PLOT_Y_DB_NORMALIZED);
-	plot(pf, "Converted Signal (Analytic)", "sigc",
+	}
+	if ((plot_select == PLOT_BOTH) || (plot_select == PLOT_RESULT_ONLY)) {
+		plot(pf, "Converted Signal (Analytic)", "sigc",
 								PLOT_X_TIME_MS, PLOT_Y_AMPLITUDE);
-	plot(pf, "Converted Signal (Analytic) FFT", "fftc", 
+		plot(pf, "Converted Signal (Analytic) FFT", "fftc", 
 					PLOT_X_NORMALIZED, PLOT_Y_DB_NORMALIZED);
+	}
 	multiplot_end(pf);
 	fclose(pf);
 }

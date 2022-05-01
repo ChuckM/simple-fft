@@ -412,3 +412,7 @@ cic-debug				  Y
 genplot					  Y
 fig1					  Y
 ```
+
+The signal generator shows up on port 5024 (telnet) for SCPI commands. 
+This is likely suboptimal but unfortunately what it is for now.
+

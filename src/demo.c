@@ -29,7 +29,7 @@
 extern int optind, opterr, optopt;
 extern char *optarg;
 
-#define SAMPLE_RATE 				10000	// 10 kHz 
+#define SAMPLE_RATE 				10240	// 10.24 kHz 
 #define BINS						1024	// 1024 bins
 #define USE_FFT						0
 #define USE_DFT						1
@@ -39,6 +39,28 @@ extern char *optarg;
 #define USE_DB_AMPLITUDE			5
 
 char *def_file = "demo.data";
+
+void
+usage(void)
+{
+	printf(
+	"This is a simple demonstrator for the toolbox.\n\n"
+    "usage: demo <options> freq0 ... freqn\n\n"
+	"Frequencies are in Hz with optional suffix of 'k', 'M' for kHz, or MHz\n\n"
+	"Options (all options are preceded by '-'):\n"
+	"                -h -- show only first half of the transform\n"
+	"      -m {db|norm} -- set magnitude scale to dB or normalized 0 - 1.0\n"
+	"  -f {sample|norm} -- set frequency scale to normalize (-Fs/2 to Fs/2)\n"
+	"                      or by sample frequency.\n"
+	"         -s <rate> -- Set the sample rate to <rate> Hz.\n"
+	"      -a {fft|dft} -- Algorithm to use, fft is faster but requires\n"
+	"                      the number of bins to be a power of 2\n"
+	"         -b <bins> -- Use <bins> bins for the transform.\n"
+	" -w {bh|hann|rect} -- Window function, choices are Blackman-Harris,\n"
+	"                      Hann, or rectangle.\n"
+	);
+	exit(0);
+}
 
 int
 main(int argc, char *argv[])
@@ -63,12 +85,14 @@ main(int argc, char *argv[])
 	printf("Simple DSP Toolbox demonstration program.\n");
 	snprintf(filename, 128, "./plots/%s", def_file);
 	
+	if (argc == 1) {
+		usage();
+	}
 	while ((opt = getopt(argc, argv, optstring)) != -1) {
 		switch (opt) {
 			case '?':
 			case ':':
-				fprintf(stderr, "usage: demo [-h] [-m {db|norm}] [-f {sample|norm} [-s rate] freq0 ... freqn\n");
-				exit(1);
+				usage();
 				break;
 			case 'o':
 				snprintf(filename, 128, "./plots/%s", optarg);
@@ -142,25 +166,9 @@ main(int argc, char *argv[])
 	}
 	if (optind == argc) {
 		fprintf(stderr, "Must specifiy at least one frequency to add to test signal\n");
-		exit(1);
+		usage();
 	} else if (*(argv[optind]) == '?') {
-		printf(
-			"This is a simple demonstrator for the toolbox.\n\n"
-		    "usage: demo <options> freq0 ... freqn\n\n"
-			"Frequencies are in Hz with optional suffix of 'k', 'M' for kHz, or MHz\n\n"
-			"Options (all options are preceded by '-'):\n"
-			"                -h -- show only first half of the transform\n"
-			"      -m {db|norm} -- set magnitude scale to dB or normalized 0 - 1.0\n"
-			"  -f {sample|norm} -- set frequency scale to normalize (-Fs/2 to Fs/2)\n"
-			"                      or by sample frequency.\n"
-			"         -s <rate> -- Set the sample rate to <rate> Hz.\n"
-			"      -a {fft|dft} -- Algorithm to use, fft is faster but requires\n"
-			"                      the number of bins to be a power of 2\n"
-			"         -b <bins> -- Use <bins> bins for the transform.\n"
-			" -w {bh|hann|rect} -- Window function, choices are Blackman-Harris,\n"
-			"                      Hann, or rectangle.\n"
-		);
-		exit(0);
+		usage();
 	}
 	n_freqs = argc - optind;
 	freqs = malloc(n_freqs * sizeof(double));

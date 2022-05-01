@@ -36,7 +36,7 @@ EXPERIMENTS = exp1 exp2 exp3 exp4 exp5 exp6 \
 TEST_PROGRAMS = plot-test cic-test fft-test filt-test
 
 PROGRAMS = demo waves hann bh dft_test \
-	   multi-corr-plot filt-resp \
+	   filt-resp \
 	   integrator filt-design sig-test cmaj7 \
 	   cic-verify cic-test-data impulse cic-debug \
 	   genplot fig1 $(TEST_PROGRAMS)
@@ -64,7 +64,7 @@ BINS = $(PROGRAMS:%=$(BIN_DIR)/%) $(EXPERIMENTS:%=$(BIN_DIR)/%)
 all: dirs $(LIB_OBJECTS) 3khz-tone-pdm.test $(OBJECTS) $(LIB) $(BINS)
 
 clean:
-	rm -f $(BINS) $(OBJECTS) $(OBJ_DIR)/* plots/*.data $(LIB)
+	rm -f $(BIN_DIR)/* $(OBJECTS) $(OBJ_DIR)/* plots/*.data $(LIB)
 
 3khz-tone-pdm.test: bin/cic-test-data
 	bin/cic-test-data
