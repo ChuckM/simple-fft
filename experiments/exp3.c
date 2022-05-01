@@ -1,5 +1,7 @@
 /*
- * test program #3 - removing images
+ * Experiment #3 
+ *
+ * Looking at removing images (note see exp6 for using the Hilbert Transform)
  *
  * Copyright (c) 2019, Chuck McManis, All Rights reserved
  * 
@@ -78,7 +80,7 @@ main(int argc, char *argv[])
 			case '?':
 			case ':':
 			default:
-				fprintf(stderr, "Usage: tp3 [-n]\n");
+				fprintf(stderr, "Usage: exp3 [-n]\n");
 				exit(1);
 			case 'n':
 				normalized++;
@@ -187,7 +189,7 @@ main(int argc, char *argv[])
 	fft1 = compute_fft(sig1, BINS, W_BH);
 	fft2 = compute_fft(sig2, BINS, W_BH);
 
-	of = fopen("plots/tp3.plot", "w");
+	of = fopen("plots/exp3.plot", "w");
 	fprintf(of, "$plot<<EOD\n");
 	fprintf(of, "freq \"signal 1\" \"signal 2\"\n");
 	for (int k = 0; k < BINS; k++) {

@@ -64,7 +64,7 @@ BINS = $(PROGRAMS:%=$(BIN_DIR)/%) $(EXPERIMENTS:%=$(BIN_DIR)/%)
 all: dirs $(LIB_OBJECTS) 3khz-tone-pdm.test $(OBJECTS) $(LIB) $(BINS)
 
 clean:
-	rm -f $(BIN_DIR)/* $(OBJECTS) $(OBJ_DIR)/* plots/*.data $(LIB)
+	rm -f $(BIN_DIR)/* $(OBJECTS) $(OBJ_DIR)/* plots/*.plot $(LIB)
 
 3khz-tone-pdm.test: bin/cic-test-data
 	bin/cic-test-data

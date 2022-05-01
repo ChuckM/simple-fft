@@ -1,5 +1,6 @@
 /*
- * Test program 4 - deduce the storage of double on disk
+ * Experiment #4
+ * Deduce the storage of double on disk empirically
  */
 
 #include <stdio.h>
