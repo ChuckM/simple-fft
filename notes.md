@@ -416,3 +416,11 @@ fig1					  Y
 The signal generator shows up on port 5024 (telnet) for SCPI commands. 
 This is likely suboptimal but unfortunately what it is for now.
 
+One could create a more OO version of there where a signal was an
+object composed of other signals and potentially modulations. So 
+signal = tone (simple signal)
+signal += tone (multi-toned signal)
+signal \*= tone (mixed/shifted signal)
+signal \*= modulation (modulated signal)
+
+

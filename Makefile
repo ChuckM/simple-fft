@@ -31,7 +31,8 @@ EXP_SRC = ./experiments
 LIB_SRC_DIR = ./src/lib
 
 EXPERIMENTS = exp1 exp2 exp3 exp4 exp5 exp6 \
-			  exp-corr exp-corr-plot exp-corr-multiplot
+			  exp-corr exp-corr-plot exp-corr-multiplot \
+				diff-test
 
 TEST_PROGRAMS = plot-test cic-test fft-test filt-test
 
@@ -42,11 +43,11 @@ PROGRAMS = demo waves hann bh dft_test \
 	   genplot fig1 $(TEST_PROGRAMS)
 
 HEADERS = cic.h dft.h fft.h filter.h plot.h \
-			remez.h sample.h signal.h windows.h
+			diff.h remez.h sample.h signal.h windows.h
 
 LDFLAGS = -lm 
 
-LIB_SRC = signal.c sample.c plot.c cic.c fft.c dft.c windows.c filter.c
+LIB_SRC = signal.c sample.c plot.c cic.c fft.c dft.c windows.c filter.c diff.c
 
 LIB = $(LIB_DIR)/libsdsp.a
 
@@ -79,8 +80,8 @@ print-%: ; echo $* = $($*)
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c $(INCLUDES)
 	cc -g -fPIC -I. -c $< -o $@
 
-#$(EXPERIMENTS:%=$(BIN_DIR)/%): $(EXPERIMENTS:%=$(EXP_SRC)/%.c)
-$(BIN_DIR)/%: $(EXP_SRC)/%.c
+#$(EXPERIMENTS:%=$(BIN_DIR)/%): $(EXPERIMENTS:%=$(EXP_SRC)/%.c) $(LIB)
+$(BIN_DIR)/%: $(EXP_SRC)/%.c $(LIB)
 	cc -g -I. -o $@ $< -L$(LIB_DIR) -lsdsp ${LDFLAGS}
 
 $(LIB_DIR)/%: $(LIB_OBJECTS)
