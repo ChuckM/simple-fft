@@ -40,7 +40,7 @@
  * buffer. 
  */
 sample_buf_t *
-compute_fft(sample_buf_t *iq, int bins, window_function window)
+compute_fft(sample_buf_t *iq, int bins, window_function window, double center)
 {
 	int i, j, k;
 	int bits;
@@ -56,6 +56,9 @@ compute_fft(sample_buf_t *iq, int bins, window_function window)
 #ifdef DEBUG_C_FFT
 	printf("Bits per index is %d\n", bits);
 #endif
+	if (center == 0) {
+		fprintf(stderr, "WARNING: Zero center frequency to compute FFT\n");
+	}
 	if (modf(t, &t) > 0) {
 		fprintf(stderr, "compute_fft: %d is not a power of 2\n", bins);
 		return NULL;
@@ -67,6 +70,7 @@ compute_fft(sample_buf_t *iq, int bins, window_function window)
 	 */
 	result = alloc_buf(bins, iq->r);
 	result->type = SAMPLE_FFT;
+	result->center_freq = center;
 	result->nxt = NULL;
 	fft_result = result->data;
 	switch (window) {
@@ -230,7 +234,7 @@ compute_ifft(sample_buf_t *fft)
 {
 	sample_buf_t	*res;
 
-	res = compute_fft(fft, fft->n, W_RECT);
+	res = compute_fft(fft, fft->n, W_RECT, 0);
 	if (res == NULL) {
 		return NULL;
 	}

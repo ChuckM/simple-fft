@@ -65,7 +65,7 @@ main(int argc, char *argv[])
 	buf->data[ndx] = 1.0;
 	buf->data[ndx+1] = -1.0;
 #endif
-	fft = compute_fft(buf, 8192, W_RECT);
+	fft = compute_fft(buf, 8192, W_RECT, 0);
 	of = fopen(PLOT, "w");
 	plot_data(of, fft, "impulse");
 	plot(of, "Impulse FFT Plot (Rectangular Window)", "impulse",

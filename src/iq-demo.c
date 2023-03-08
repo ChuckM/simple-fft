@@ -46,8 +46,8 @@ main(int argc, char *argv[]) {
 	for (int i = 0; i < SAMPLE_RATE * 4; i += 4) {
 		iq2->data[i/4] = creal(r->data[i]) + creal(r->data[i+2]) * I;
 	}
-	fft1 = compute_fft(iq, BINS, W_BH);
-	fft2 = compute_fft(iq2, BINS, W_BH);
+	fft1 = compute_fft(iq, BINS, W_BH, 0);
+	fft2 = compute_fft(iq2, BINS, W_BH, 0);
 	of = fopen("./plots/iq-demo.plot", "w");
 	if (of == NULL) {
 		fprintf(stderr, "Could not open output file\n");

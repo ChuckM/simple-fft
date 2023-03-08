@@ -117,7 +117,7 @@ cvt2analytic(sample_buf_t *sig, int bins)
 		for (int m = 0; m < bins; m++) {
 			chunk->data[m] = sig->data[k + m];
 		}
-		ftmp = compute_fft(chunk, bins, W_RECT);
+		ftmp = compute_fft(chunk, bins, W_RECT, 0);
 		if (ftmp == NULL) {
 			exit(1);
 		}
@@ -245,7 +245,7 @@ main(int argc, char *argv[])
 		add_cos_real(real_signal, single_tone, 1.0, 270);
 	}
 	printf("Generating baseline FFT for this data ...\n");
-	fft1 = compute_fft(real_signal, fft_bins, W_BH);
+	fft1 = compute_fft(real_signal, fft_bins, W_BH, 0);
 	if (fft1 == NULL) {
 		exit(1);
 	}
@@ -257,7 +257,7 @@ main(int argc, char *argv[])
 	converted->max_freq = tone_spread[4];
 
 	printf("Generating an FFT of the converted signal ...\n");
-	fft2 = compute_fft(converted, fft_bins, W_BH);
+	fft2 = compute_fft(converted, fft_bins, W_BH, 0);
 	if (fft2 == NULL) {
 		exit(1);
 	}

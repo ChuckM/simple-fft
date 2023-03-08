@@ -211,7 +211,7 @@ main(int argc, char *argv[])
 	}
 	switch (algo) {
 		case USE_FFT:
-			ft = compute_fft(sig, bins, wf);
+			ft = compute_fft(sig, bins, wf, 0);
 			break;
 		case USE_DFT:
 			ft = compute_dft(sig, bins, 0.0, (double) SAMPLE_RATE, wf);

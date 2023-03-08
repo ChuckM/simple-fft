@@ -58,6 +58,9 @@ main(int argc, char *argv[])
 	int				show_frac = 0;
 	double	taps[MAX_TAPS];
 
+	/* XXX Currently broken */
+	fprintf(stderr, "This needs to be ported. Aborting.\n");
+	exit(1);
 	while ((opt = getopt(argc, argv, options)) != -1) {
 		switch (opt) {
 			default:

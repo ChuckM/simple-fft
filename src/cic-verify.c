@@ -96,7 +96,7 @@ main(int argc, char *argv[])
 	/* we now have 8K samples */
 
 	/* Compute the FFT on them to see if our waveform pops out */
-	fft = compute_fft(sb, 8192, W_BH);
+	fft = compute_fft(sb, 8192, W_BH, 0);
 	of = fopen("plots/cic-validate.plot", "w");
 	plot_data(of, sb, "sig");
 	plot_data(of, fft, "fft"); /* check this */

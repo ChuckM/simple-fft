@@ -62,6 +62,16 @@ looks like:
 
 <img src=exp6.png>
 
+## Experiment 10
+
+Over the course of my looking into SDR I've sought to understand, at a
+first principles level, how one transitioned from sampling a "real" signal
+in the wild, and then converting it into a "complex" (or analytic) signal
+for processing.
+
+### Four sample waveforms
+
+
 ## Experiments in  Correlation
 
 ### exp-corr
@@ -85,6 +95,7 @@ Spoiler alert! This is the sinc(x) function (and another way to generate a
 a plot for it.). `sinc(x)` is defined as `1/sin(x)` except at 0 it is '1'.
 Wolfram Math has [a whole page](https://mathworld.wolfram.com/SincFunction.html)
 on it. 
+
 
 <img src=corr1.png>
 

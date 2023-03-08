@@ -186,8 +186,8 @@ main(int argc, char *argv[])
 	for (int k = 0; k < sig2->n; k++) {
 		sig2->data[k] = (sig1->data[k] * fs4[k%4]) - sig1->data[k];
 	}
-	fft1 = compute_fft(sig1, BINS, W_BH);
-	fft2 = compute_fft(sig2, BINS, W_BH);
+	fft1 = compute_fft(sig1, BINS, W_BH, 0);
+	fft2 = compute_fft(sig2, BINS, W_BH, 0);
 
 	of = fopen("plots/exp3.plot", "w");
 	fprintf(of, "$plot<<EOD\n");

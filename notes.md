@@ -423,4 +423,203 @@ signal += tone (multi-toned signal)
 signal \*= tone (mixed/shifted signal)
 signal \*= modulation (modulated signal)
 
+s1 = new signal(tone(COS, 2000.0));
+s1 = s1 + tone(COS, 3500);
+
+
+----------------------------------------------------------
+
+So why can't we convert real to analytic with 4x oversampling.
+
+A look at the math.
+
+1.              cos(x) * (cos(y) + sin(y)j)
+
+Equation #1 is what is happening, we are multiplying the signal with
+a complex sinusoid. Doing the math we get
+
+2.				cos(x) * cos(y) + cos(x) * sin(y) * j
+
+According to Wolfram (okay, okay, my trig identities are weak sauce!)
+this reduces to #3 here:
+
+3.	1/2(cos(x-y) + cos(x+y) - jsin(x-y) + jsin(x+y))
+
+And out of that mess, we want to extract "cos(x+y) + j(sin(x+y)" because 
+we know that that is replicated in the spectrum at DC. 
+
+Thus we need to subtract the cos(x-y) "real" part and the -jsin(x-y)
+imaginary part. which is the same as -cos(x-y) + sin(x-y). That is the
+complex conjugate of our source signal.
+
+A Fs * 4, cos(y) is [1, 0, -1, 0] and sin(y) is [0, 1, 0, -1] with a DC
+bias of 0.5 
+
+trig identity cos(-x) = cos(x) and sin(-x) = -sin(x)
+
+The other useful trig identities are
+    sin(x + y) = sin(x) * cos(y) + cos(x) * sin(y)
+    sin(x - y) = sin(x) * cos(y) - cos(x) * sin(y)
+    cos(x + y) = cos(x) * cos(y) - sin(x) * sin(y)
+    cos(x - y) = cos(x) * cos(y) + sin(x) * sin(y)
+
+without bias:
+  cos[y]  =  0.5,  0.0, -0.5,  0.0, 0.5
+  cos[-y] =  0.5,  0.0, -0.5,  0.0, 0.5
+  sin[y]  =  0.0,  0.5,  0.0, -0.5, 0.0
+  sin[-y] =  0.0, -0.5,  0.0,  0.5, 0.0
+           |<---- one period ---->|
+
+The convolution of our input signal with this is:
+
+    s[0] * 0.5, s[1] * 0.0, s[2] * -0.5, s[3] *  0.0 <- Cosine version
+    s[0] * 0.0, s[1] * 0.5, s[2] *  0.0, s[3] * -0.5 <- Sine version
+
+
+So substituting at sample zero:
+
+cos(s0 - x0) = cos(s0) * cos(x0) + sin(s0) * sin(x0)
+cos(s0 + x0) = cos(s0) * cos(x0) - sin(s0) * sin(x0)
+sin(s0 - x0) = sin(s0) * cos(x0) - cos(s0) * sin(x0)
+sin(s0 + x0) = sin(s0) * cos(x0) + cos(s0) * sin(x0)
+
+At sample 0 cos is .5, and sin is 0. So this reduces to
+
+cos(s0 - x0) = cos(s0) * 0.5 + sin(s0) * 0.0
+cos(s0 + x0) = cos(s0) * 0.5 - sin(s0) * 0.0
+sin(s0 - x0) = sin(s0) * 0.5 - cos(s0) * 0.0
+sin(s0 + x0) = sin(s0) * 0.5 + cos(s0) * 0.0
+
+Now doing sample #1, where cos(1) = 0.0, sin(1) = 0.5
+
+cos(s1 - x1) = cos(s0) * 0.0 + sin(s0) * 0.5
+cos(s1 + x1) = cos(s0) * 0.0 - sin(s0) * 0.5
+sin(s1 - x1) = sin(s0) * 0.0 - cos(s0) * 0.5
+sin(s1 + x1) = sin(s0) * 0.0 + cos(s0) * 0.5
+
+Now doing sample #2, where cos(2) = -0.5, sin(2) = 0.0
+
+cos(s2 - x2) = cos(s0) * -0.5 + sin(s0) * 0.0
+cos(s2 + x2) = cos(s0) * -0.5 - sin(s0) * 0.0
+sin(s2 - x2) = sin(s0) * -0.5 - cos(s0) * 0.0
+sin(s2 + x2) = sin(s0) * -0.5 + cos(s0) * 0.0
+
+Now doing sample #3, where cos(3) = 0.0, sin(2) = -0.5
+
+cos(s3 - x3) = cos(s0) * 0.0 + sin(s0) * -0.5
+cos(s3 + x3) = cos(s0) * 0.0 - sin(s0) * -0.5
+sin(s3 - x3) = sin(s0) * 0.0 - cos(s0) * -0.5
+sin(s3 + x3) = sin(s0) * 0.0 + cos(s0) * -0.5
+ 
+And a reminder, this is the equation:
+	1/2(cos(x-y) + cos(x+y) - jsin(x-y) + jsin(x+y))
+
+And out of that mess, we want to extract "cos(x+y) + j(sin(x+y)" because 
+we know that that is replicated in the spectrum at DC. 
+
+Further, we believe that (Sn, Sn+1) represent the real and imaginary part
+of a sample at Fs, then the sample we want has the "real" term non-zero, 
+and the +1 sample has the "imaginary" term non-zero.
+
+
+The cos(x + y) terms:
+
+  cos(s0 + x0) = cos(s0) *  0.5 - sin(s0) * 0.0
+  cos(s1 + x1) = cos(s1) *  0.0 - sin(s1) * 0.5
+  cos(s2 + x2) = cos(s2) * -0.5 - sin(s2) * 0.0
+  cos(s3 + x3) = cos(s3) *  0.0 - sin(s3) * -0.5
+
+The sin(x + y) terms:
+  sin(s0 + x0) = sin(s0) *  0.5 + cos(s0) * 0.0
+  sin(s1 + x1) = sin(s1) *  0.0 + cos(s1) * 0.5
+  sin(s2 + x2) = sin(s2) * -0.5 + cos(s2) * 0.0
+  sin(s3 + x3) = sin(s3) *  0.0 + cos(s3) * -0.5
+
+
+Again: And a reminder, this is the equation:
+	1/2(cos(x-y) + cos(x+y) - jsin(x-y) + jsin(x+y))
+
+But if we re-arrange this, it could be the sum of two complex waveforms:
+```
+	1/2(cos(x-y) - j sin(x-y))    <--- negative phase > N/2
++   1/2(cos(x+y) + j sin(x+y))    <--- positive phase < N/2
+```
+
+These are above and below the **effective** sample rate of Fs/4 but the
+**actual** sample rate is Fs, so the "image" is in the "real" part of the
+spectrum. And if we were to low pass filter the spectrum to remove everything
+above Fs/4 we could kill that image.
+
+---------------------
+March changes
+
+Moving DFT plotting into the plot.c file, updating the `plot_fft_data`
+function to work with either FFTs or DFTs. The difference being that
+DFTs have a minimum frequency and a maximum frequency that are both
+real, whereas the FFT has frequencies less than, and frequencies greater
+than the nyquist frequency (so negative and positive frequencies).
+
+Updated `sample_buf_t` to have a type `SAMPLE_DFT`, am updating plot.c
+to plot them.
+
+Currenting removing the "real" vs "analytic" column stuff to make it
+more clear. 
+
+Will need to update the dft.c code and the dft-test.c code appropriately.
+
+Question: Magnitude is SQRT(I^2 + Q^2), does `sample_min` always have the
+lowest magnitude?
+
+I'm scaling dB to the range -160 <--> 0. Thus the maximum dB excursion is
+-170. Given a dB scale of `db_min - db_max` current dB * scale should give
+a number between 0 and 1. And if we multiply that by 170 a number between 0
+and 170. But we have to handle positive and negative db values ...
+**Fixed**
+
+--------------------------------------
+DFT - doesn't really work does it :-).
+
+I believe there shouldn't be spectal leakage as each bin is computed
+distinctly? 
+
+So to convolve a complex signal with the sample data, we need to generate
+the complex signal with the same sample rate as the data sample rate to
+match up like for like. 
+
+We continue convolving until we have an complete number of periods of the
+complex signal (adding zeros into the data if necessary).
+
+Do we need to window the samples? (we should leave that in and do the
+experiment.)
+
+Psuedo code:
+```
+	rbw <- span / bins
+	samples_per_period(spp) <- 2 pi / radians per sample @ frequency
+	for each bin:
+		sum <- 0
+		for each sample:
+			sum <- sum + freq[ndx] * sample
+	done?
+```
+So, experiment time:
+
+Do you get "better" fidelity if you "upsample" the sample? Certainly you can
+get more "points of multiplication" in the mixing frequency. Consider the
+edge case of a 5 kHz wave that is sampled at 10 kHz. You would presumably get
+different results depending on the phase relationship between the sampler and
+the input waveform.
+
+What about a complex 10 kHz waveform mixed with a 2 sample 5 kHz wave?
+What does a 5 kHz complex waveform look like sampled at 10 kHz?
+
+
+Given samples per cycle, compute the number of samples to process to reach
+an integral number of samples.
+
+```
+8192 sample rate 2450 Hz tone has approx 3.343673 samples per cycle
+
+FFT real frequency is wrong. It is showing the real part and then showing
+the other half. See dft-test
 

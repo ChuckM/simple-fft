@@ -65,10 +65,10 @@ fft_test(char *title, plot_scale_t x, plot_scale_t y)
 		case PLOT_X_REAL_FREQUENCY_KHZ:
 		case PLOT_X_REAL_NORMALIZED:
 		case PLOT_X_REAL_SAMPLERATE:
-			fft = compute_fft(real_signal, fft_bins, W_BH);
+			fft = compute_fft(real_signal, fft_bins, W_BH, 0);
 			break;
 		default:	
-			fft = compute_fft(complex_signal, fft_bins, W_BH);
+			fft = compute_fft(complex_signal, fft_bins, W_BH, 0);
 			break;
 	}
 	plot_data(pf, fft, "fft");
@@ -104,7 +104,7 @@ multiplot_test(char *title, plot_scale_t x, plot_scale_t y)
 	title = (title == NULL) ? "Multiple Plot Test" : title;
 
 	printf("Generating a test multiplot\n");
-	fft = compute_fft(complex_signal, fft_bins, W_BH);
+	fft = compute_fft(complex_signal, fft_bins, W_BH, 0);
 	pf = fopen(plot_file, "w");
 	plot_data(pf, hires, "tone");
 	plot_data(pf, fft, "fft");

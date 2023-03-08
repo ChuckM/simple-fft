@@ -118,7 +118,7 @@ main(int argc, char *argv[]) {
 		add_test(src[ndx], freq + (ndx * FREQ_INC), 1.0);
 		bh_window_buffer(src[ndx], BINS);
 		bh_window_buffer(src[ndx], BINS);
-		fft[ndx] = compute_fft(src[ndx], BINS, W_RECT);
+		fft[ndx] = compute_fft(src[ndx], BINS, W_RECT, 0);
 	}
 	printf("Ran %d tests, with a starting frequency of %f and an increment of %f.\n",
 		EXP_LEN, freq, FREQ_INC);

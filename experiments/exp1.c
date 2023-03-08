@@ -66,7 +66,7 @@ main(int argc, char *argv[]) {
 	add_cos_real(high_res, freq1, 1.0, 0);
 	mix_cos_real(high_res, freq2, 1.0, 180);
 
-	fft = compute_fft(waveform, BINS, W_BH);
+	fft = compute_fft(waveform, BINS, W_BH, 0);
 	plot_data(of, high_res, "waver");
 	plot_data(of, fft, "fftr");
 
@@ -81,7 +81,7 @@ main(int argc, char *argv[]) {
 	add_cos(high_res, freq1, 1.0, 0);
 	mix_cos(high_res, freq2, 1.0, 90);
 
-	fft = compute_fft(waveform, BINS, W_BH);
+	fft = compute_fft(waveform, BINS, W_BH, 0);
 
 	plot_data(of, high_res, "wavea");
 	plot_data(of, fft, "ffta");

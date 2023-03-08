@@ -181,13 +181,13 @@ main(int argc, char *argv[])
 	for (int i = 0; i < filt->n_taps; i++) {
 		filter_coefficients->data[i] = filt->taps[i];
 	}
-	filt_resp = compute_fft(filter_coefficients, BINS, W_RECT);
+	filt_resp = compute_fft(filter_coefficients, BINS, W_RECT, 0);
 	sig = alloc_buf(SAMPLE_SIZE, SAMPLE_RATE);
 	add_cos(sig, SAMPLE_RATE / 8.0, 1.0, 0);
 	add_cos(sig, 3.0 * SAMPLE_RATE / 8.0, 1.0, 0);
 	filtered_sig = fir_filter(sig, filt);
-	fft_orig = compute_fft(sig, BINS, W_BH);
-	fft_filtered = compute_fft(filtered_sig, BINS, W_BH);
+	fft_orig = compute_fft(sig, BINS, W_BH, 0);
+	fft_filtered = compute_fft(filtered_sig, BINS, W_BH, 0);
 	for (int i = 0; i < fft_orig->n; i++) {
 		set_minmax(fft_orig, i);
 		set_minmax(fft_filtered, i);

@@ -32,7 +32,7 @@
 #include <dsp/fft.h>
 
 #define SAMPLE	"sample.filter"
-#define	TAPS	127
+#define	TAPS	32
 
 extern char *optarg;
 extern int optind, opterr, optopt;

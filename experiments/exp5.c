@@ -49,7 +49,7 @@ method_1(sample_buf_t *fft)
 	for (int k = 1; k < fft->n; k++) {
 		res->data[k] = fft->data[fft->n - k];
 	}
-	ifft = compute_fft(res, fft->n, W_RECT);
+	ifft = compute_fft(res, fft->n, W_RECT, 0);
 	if (ifft == NULL) {
 		free_buf(res);
 		return NULL;
@@ -66,7 +66,7 @@ method_2(sample_buf_t *fft)
 {
 	sample_buf_t	*res;
 
-	res = compute_fft(fft, fft->n, W_RECT);
+	res = compute_fft(fft, fft->n, W_RECT, 0);
 	if (res == NULL) {
 		return NULL;
 	}
@@ -97,7 +97,7 @@ method_3(sample_buf_t *fft)
 		tmp->data[k] = cimag(fft->data[k]) + creal(fft->data[k]) * I;
 	}
 	/* Does the window function change this? */
-	res = compute_fft(tmp, BINS, W_RECT);
+	res = compute_fft(tmp, BINS, W_RECT, 0);
 	if (res == NULL) {
 		free_buf(tmp);
 		return NULL;
@@ -123,7 +123,7 @@ method_4(sample_buf_t *fft)
 	for (int k = 0; k < fft->n; k++) {
 		tmp->data[k] = creal(fft->data[k]) - cimag(fft->data[k]) * I;
 	}
-	res = compute_fft(tmp, tmp->n, W_RECT);
+	res = compute_fft(tmp, tmp->n, W_RECT, 0);
 	if (res == NULL) {
 		free_buf(tmp);
 		return NULL;
@@ -257,7 +257,7 @@ main(int argc, char *argv[])
 				break;
 		}
 	}
-	fft1 = compute_fft(sig1, BINS, W_BH);
+	fft1 = compute_fft(sig1, BINS, W_BH, 0);
 
 	of = fopen("plots/exp5-debug.plot", "w");
 	plot_data(of, fft1, "fft1");
@@ -322,7 +322,7 @@ main(int argc, char *argv[])
 	sig2->min_freq = 500.0;
 
 	/* FFT of the inverted FFT */
-	fft3 = compute_fft(sig2, BINS, W_RECT);
+	fft3 = compute_fft(sig2, BINS, W_RECT, 0);
 	normalized = 0;
 	of = fopen("plots/exp5.plot", "w");
 	plot_data(of, fft1, "fft1");

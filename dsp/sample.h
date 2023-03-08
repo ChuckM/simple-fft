@@ -28,6 +28,7 @@
 typedef enum {
 	SAMPLE_UNKNOWN,
 	SAMPLE_FFT,
+	SAMPLE_DFT,
 	SAMPLE_REAL_SIGNAL,		/* signal only has inphase data */
 	SAMPLE_SIGNAL			/* signal has both inphase and quadrature data */
 } sample_buf_t_type;
@@ -44,6 +45,7 @@ typedef struct __sample_buffer {
 	double			sample_min,		/* min value in buffer */
 					sample_max;		/* max value in buffer */
 	double			max_freq;		/* Maximum frequency */
+	double			center_freq;	/* Center frequency (for FFTs) */
 	double			min_freq;		/* Minimum frequency */
 	int				n;				/* number of samples */
 	int				r;				/* sample rate in Hz */

@@ -64,22 +64,22 @@ main(int argc, char *argv[])
 #endif
 	add_cos(test, 3000.0, 1.0, 0); 	// 3 kHz
 
-	of = fopen("plots/fft_test.plot", "w");
+	of = fopen("plots/fft-test.plot", "w");
 	if (of == NULL) {
 		fprintf(stderr, "Unable to open ./plots/fft_test.data for writing.\n");
 		exit(1);
 	}
 
 	/* Now compute the FFT with different window functions */
-	fft = compute_fft(test, bins, W_BH);
+	fft = compute_fft(test, bins, W_BH, 0);
 	plot_data(of, fft, "bh");
 	free_buf(fft);
 
-	fft = compute_fft(test, bins, W_HANN);
+	fft = compute_fft(test, bins, W_HANN, 0);
 	plot_data(of, fft, "hann");
 	free_buf(fft);
 
-	fft = compute_fft(test, bins, W_RECT);
+	fft = compute_fft(test, bins, W_RECT, 0);
 	plot_data(of, fft, "rect");
 
 	isig = compute_ifft(fft);

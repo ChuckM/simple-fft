@@ -131,7 +131,7 @@ main(int argc, char *argv[])
 	add_zero_sin(sig, E4, 0.50);
 	add_zero_sin(sig, G4, 0.50);
 	add_zero_sin(sig, Bb4, 0.50);
-	fft = compute_fft(sig, BINS, W_BH);
+	fft = compute_fft(sig, BINS, W_BH, 0);
 	if (fft == NULL) {
 		fprintf(stderr, "FFT failed\n");
 		exit(1);

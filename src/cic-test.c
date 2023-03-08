@@ -303,7 +303,7 @@ main(int argc, char *argv[])
 		fprintf(stderr, "Error, can't open %s\n", PLOT_FILE);
 		exit(1);
 	}
-	fir_fft = compute_fft(fir, 8192, W_RECT);
+	fir_fft = compute_fft(fir, 8192, W_RECT, 0);
 	plot_data(of, fir_fft, "cic");
 	snprintf(title, sizeof(title), 
 		"Magnitude Response for CIC Filter (N=%d, M=%d, D=%d)", N, M, D);

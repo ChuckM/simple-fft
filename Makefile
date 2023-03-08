@@ -30,13 +30,13 @@ EXP_SRC = ./experiments
 
 LIB_SRC_DIR = ./src/lib
 
-EXPERIMENTS = exp1 exp2 exp3 exp4 exp5 exp6 \
+EXPERIMENTS = exp1 exp2 exp3 exp4 exp5 exp6 exp7 exp8 exp9 exp10 exp11\
 			  exp-corr exp-corr-plot exp-corr-multiplot \
-				diff-test
+			  experiment diff-test
 
 TEST_PROGRAMS = plot-test cic-test fft-test filt-test
 
-PROGRAMS = demo waves hann bh dft_test \
+PROGRAMS = demo waves hann bh dft-test \
 	   filt-resp \
 	   integrator filt-design sig-test cmaj7 \
 	   cic-verify cic-test-data impulse cic-debug \
