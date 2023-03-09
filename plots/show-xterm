@@ -3,5 +3,5 @@
 # need to start xterm with the -ti vt340 option or set it in your
 # options file.
 #
-set term sixelgd font arial 10 size 1000,750
+set term sixelgd font arial 10 size 1024, 768
 

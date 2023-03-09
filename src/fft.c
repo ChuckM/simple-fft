@@ -44,7 +44,7 @@ compute_fft(sample_buf_t *iq, int bins, window_function window, double center)
 {
 	int i, j, k;
 	int bits;
-	double t;
+	double t, half_span = (double) iq->r / 2.0;
 	double (*win_func)(int, int);
 	complex double alpha, uri, ur;
 	complex double *fft_result;
@@ -56,9 +56,6 @@ compute_fft(sample_buf_t *iq, int bins, window_function window, double center)
 #ifdef DEBUG_C_FFT
 	printf("Bits per index is %d\n", bits);
 #endif
-	if (center == 0) {
-		fprintf(stderr, "WARNING: Zero center frequency to compute FFT\n");
-	}
 	if (modf(t, &t) > 0) {
 		fprintf(stderr, "compute_fft: %d is not a power of 2\n", bins);
 		return NULL;
@@ -69,10 +66,17 @@ compute_fft(sample_buf_t *iq, int bins, window_function window, double center)
 	 * source data.
 	 */
 	result = alloc_buf(bins, iq->r);
-	result->type = SAMPLE_FFT;
 	result->center_freq = center;
+	result->min_freq = (center == 0) ? 0 : center - half_span;
+	result->max_freq = (center == 0) ? half_span * 2 : center + half_span;
+
+	/* If center is 0  we treat it like a direct sample */
+	result->type = (center == 0) ? SAMPLE_REAL_FFT : SAMPLE_FFT;
 	result->nxt = NULL;
 	fft_result = result->data;
+	if (center == 0) {
+		result->type = SAMPLE_REAL_FFT;
+	}
 	switch (window) {
 		case W_RECT:
 		default:

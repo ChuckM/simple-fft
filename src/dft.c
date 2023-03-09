@@ -20,6 +20,7 @@
 #include <math.h>
 #include <complex.h>
 #include <string.h>
+#include <dsp/sample.h>
 #include <dsp/signal.h>
 #include <dsp/windows.h>
 #include <dsp/dft.h>
@@ -43,14 +44,14 @@
  *  of the rotation angle to the fundamental frequency.
  */
 sample_buf_t *
-compute_dft(sample_buf_t *input, int bins, 
-						double fs, double fe, window_function win) {
+compute_dft(sample_buf_t *input, int bins, window_function w,
+						double center, double fs, double fe) {
 	sample_buf_t *res = alloc_buf(bins, input->r);
 	complex double root, rotation;
-	double	span = fe - fs;
+	double	span = input->r;
 	double	rbw = span / (double) bins;
 	double	(*win_func)(int, int);
-	switch (win) {
+	switch (w) {
 		default:
 		case W_RECT:
 			win_func = rect_window_function;
@@ -64,70 +65,33 @@ compute_dft(sample_buf_t *input, int bins,
 	}
 
 	res->type = SAMPLE_DFT;
-	res->min_freq = fs;
-	res->max_freq = fe;
-	for (int k = 0; k < bins; k++) {  // For each output element
-#ifdef F1
-		/* one way of looking at frequency, start + bin# * rbw + .5rbw */
-		double freq = fs + k * rbw + rbw/2.0; /* frequency of this bin */
-#else
-		/* another way of looking at frequency, bin# * rbw + .5rbw */
-		double freq = k * rbw + rbw/2.0;
-#endif
-		double spc = freq / (double) input->r; // samples per cycle
-		complex double sum = 0.0;
-		root = 1.0;
-		/* 
-		 * r 		is samples per second
-		 * f 		is frequencey in Cycles / Second
-		 * 2 * pi 	is Radians / Cycles
-		 * 2*pi*f   is Radians / Second
-		 * 1/r 		is Seconds / Sample
-		 * 2*pi*f
-		 * ------ = radians per sample. 
-		 *   r 
-		 *
-		 * Seconds   Samples    Samples
-		 * ------  * ------  = ----------
-		 *  Cycle	 Second      Cycle
-		 *
-		 *                  Cycles
-		 * Total Samples * -------- = Cycles
-		 *                  Sample
-		 *
-		 * if there are 3.333 samples per cycle and n is 8192
-		 * ceiling of that is 2458 cycles
-		 * 5 kHz frequency is 
-		 * 5000 * 2 * pi radians per second
-		 * 10000/5000 = 2 samples per second (one period)
-		 * 5000 * 2 * pi / 2 is radians per sample (in this case pi)
-		 * That checks. 
-		 */
-#if 0
-		int count = (int) ceil((double) input->r / spc) * spc;
-#else
-		int count = input->r;
-#endif
-		/* rotation in one sample */
-		rotation = cos(2.0 * M_PI * spc) - sin(2.0 * M_PI * spc) * I;
-		for (int t = 0; t < count; t++) {  // For each input element
-			sample_t sample = (t < input->n) ? input->data[t] : 0;
-#if 0
-			double wf = win_func(t, bins);
-			
-			/* apply the window function
-			 * it is unclear to me XXX if we need a window function
-			 * for the DFT
-			 * */
-			sample = wf * creal(sample) + wf * cimag(sample) * I;
-#endif
-
-			sum += sample * root;
-			root = root * rotation;
+	res->r = input->r;
+	/* these indicate the frequencies of interest */
+	res->center_freq = (center == 0) ? (span / 2.0) : center;
+	center = res->center_freq; // the one we computed
+	res->min_freq = (fs == 0) ? res->center_freq - span/2.0 : fs;
+	res->max_freq = (fe == 0) ? res->center_freq + span/2.0 : fe;
+	if ((fs < (center - span/2.0)) || (fe > (center + span/2.0))) {
+		fprintf(stderr, "DFT Frequencies of interest are outside of span.\n");
+		return NULL;
+	}
+	/* Baseline implementation following the paper 
+	 *
+	 * iterator k is the bin number, 
+	 * iterator t is the sample index.
+	 */
+	for (int k = 0; k < bins; k++) {	// for each bin
+		sample_t x = 0;
+		for (int t = 0; t < bins; t++) { // for each sample
+			double angle = 2 * M_PI * t * k / bins;
+			sample_t y = (t < input->n) ? input->data[t] : 0;
+			/* apply the window function based on the bin # */
+			y = y * win_func(t, bins);
+			x += y * (cos(angle) - sin(angle)*I);
 		}
-		res->data[k] = sum;
-		res->sample_min = min(sum, res->sample_min);
-		res->sample_max = max(sum, res->sample_max);
+		res->sample_min = min(x, res->sample_min);
+		res->sample_max = max(x, res->sample_max);
+		res->data[k] = x;
 	}
 	return res;
 }

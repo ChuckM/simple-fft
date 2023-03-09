@@ -617,9 +617,51 @@ What does a 5 kHz complex waveform look like sampled at 10 kHz?
 Given samples per cycle, compute the number of samples to process to reach
 an integral number of samples.
 
-```
 8192 sample rate 2450 Hz tone has approx 3.343673 samples per cycle
 
 FFT real frequency is wrong. It is showing the real part and then showing
 the other half. See dft-test
 
+Changes going in:
+
+If FFT center frequency is 0, computed as a "REAL" FFT (which means only
+half the bins will be part of plots)
+
+If DFT center frequency is *not* zero, then start and end frequency will
+be +/- center frequence +/- half the sample rate. "start / end" in the
+`compute_dft()` call are the "area of interest" and must lay between
+`fs_min` and `fs_max`.
+
+Updating plot.c
+
+plot.c now gets the DFT plot correctly. FFT which is forced to REAL
+because it has a 0 center frequency ? Maybe this is wrong. I'm thinking
+that 0 as a center frequency basically is a clue to not swap the left
+and right halves.
+
+The `db_max` numbers (and the `db_min` numbers are off for some reason)
+
+They didn't have the / `fft->n` correction. After correction there is still
+the question of padding above and below the max and min so that the peaks
+are not touching the top of the chart frame.
+
+Will experiment with adding 10% above and below so that chart fits in the
+80% in between. 
+
+Trying to keep in my head the difference between the frequencies represented
+by the full FFT data, versus the "frequencies of interest" for plotting.
+
+**Action Item** 
+Could add "opt1, opt2" as type double in the `plot_data()` function which
+would then go to the xrange values in the plot file. Something to consider
+I think.
+
+FFT data plots -0.5 -> 0, then 0->1.0. 
+DFT data plots 0.0 -> 1.0 as does "REAL" FFT data.
+
+So the tricky bit is getting the frequencies right for the FFT which
+is wrapped around a center frequency.
+
+If the frequency is wrapped
+	bins N/2 - N are min_freq -> center
+	bins 0 - N/2 are center -> max_freq

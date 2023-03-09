@@ -28,6 +28,7 @@
 typedef enum {
 	SAMPLE_UNKNOWN,
 	SAMPLE_FFT,
+	SAMPLE_REAL_FFT,		/* computed on real data vs complex */
 	SAMPLE_DFT,
 	SAMPLE_REAL_SIGNAL,		/* signal only has inphase data */
 	SAMPLE_SIGNAL			/* signal has both inphase and quadrature data */

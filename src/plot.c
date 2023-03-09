@@ -166,66 +166,6 @@ __plot(FILE *f, plot_t *plot)
 }
 
 /*
- * __plot_dft(...)
- *
- * Write out to a stdio FILE handle the gnuplot information for plotting
- * the DFT. This is analygous to the plot_fft() code except that the DFT
- * can have custom start and end frequencies.
- *
- * Much of this comes from the FFT version
- */
-int
-__plot_dft_data(FILE *of, sample_buf_t *dft, char *tag, double fs, double fe)
-{
-	/* insure MIN and MAX are accurate */
-	dft->sample_max = 0;
-	dft->sample_min = 0;
-	for (int k = 0; k < dft->n; k++) {
-		set_minmax(dft, k);
-	}
-	fprintf(of, "%s_min = %f\n", tag, dft->sample_min);
-	fprintf(of, "%s_max = %f\n", tag, dft->sample_max);
-	fprintf(of, "%s_freq = %f\n", tag, (double) dft->r);
-	fprintf(of, "%s_nyquist = %f\n", tag, (double) dft->r / 2.0);
- 	fprintf(of, "%s_xnorm_col = 1\n", tag);
-	fprintf(of, "%s_xfreq_col = 2\n", tag);
-	fprintf(of, "%s_ynorm_col = 3\n", tag);
-	fprintf(of, "%s_ydb_col = 4\n", tag);
-	fprintf(of, "%s_ymag_col = 5\n", tag);
-	fprintf(of,"$%s_dft << EOD\n", tag);
-	fprintf(of, "#\n# Columns are:\n");
-	fprintf(of, "# 1. Normalized frequency (-.5 - 1.0)\n");
-	fprintf(of, "# 2. Frequency by sample rate (- nyquist, 2* nyquist)\n");
-	fprintf(of, "# 3. Normalized magnitude ( 0 - 1.0 )\n");
-	fprintf(of, "# 4. Magnitude in decibels\n");
-	fprintf(of, "# 5. Absolute magnitude\n");
-	fprintf(of, "#\n");
-	for (int k = dft->n / 2; k < dft->n; k++) {
-		double xnorm, freq, ynorm, db, mag;
-		xnorm = -0.5 + (double) (k - (dft->n / 2))/ (double) dft->n;
-		freq = xnorm * (double) dft->r;
-		ynorm = (cmag(dft->data[k]) - dft->sample_min) / 
-						(dft->sample_max - dft->sample_min);
-		db = 20 * log10(cmag(dft->data[k]));
-		mag = cmag(dft->data[k]);
-		fprintf(of, "%f %f %f %f %f\n", xnorm, freq, ynorm, db, mag);
-	}
-
-	for (int k = 0; k < dft->n; k++) {
-		double xnorm, freq, ynorm, db, mag;
-		xnorm = (double) (k)/ (double) dft->n;
-		freq = xnorm * (double) dft->r;
-		ynorm = (cmag(dft->data[k]) - dft->sample_min) / 
-						(dft->sample_max - dft->sample_min);
-		db = 20 * log10(cmag(dft->data[k]));
-		mag = cmag(dft->data[k]);
-		fprintf(of, "%f %f %f %f %f\n", xnorm, freq, ynorm, db, mag);
-	}
-	fprintf(of,	"EOD\n");
-	return 0;
-}
-
-/*
  * Writes out the values of the FFT in a gnuplot compatible way, the output
  * file should already be open. The output is appended to that file.
  * Output takes the form:
@@ -265,37 +205,25 @@ __plot_dft_data(FILE *of, sample_buf_t *dft, char *tag, double fs, double fe)
 static int
 __plot_fft_data(FILE *of, sample_buf_t *fft, char *name)
 {
-	double fmax, fmin, fcent, nyquist, span, absmag;
+	double fmax, fmin, fcent, half_span, absmag;
 	double db_min, db_max, db_scale, mag_min, mag_max, mag_scale;
 	/* insure MIN and MAX are accurate */
 	fft->sample_max = 0;
 	fft->sample_min = 0;
-	db_min = 0;
-	db_max = 0;
-	if (fft->type == SAMPLE_FFT) {
-		span = (double) fft->r;
-		fcent = fft->center_freq;
-		fmax = fcent + span / 2.0;
-		fmin = fcent - span / 2.0;
-	} else if (fft->type == SAMPLE_DFT) {
-		fmax = fft->max_freq;
-		fmin = fft->min_freq;
-		span = fmax - fmin;
-		fcent = fmin + (span / 2.0);
-	} else {
-		/* note this function should not be called if type isn't one of
-		 * FFT or DFT, but better safe than tracking down a weird bug.
-		 */
-		fprintf(stderr, "Non-FFT sample(%d), passed to plot_fft_data!\n",
-				fft->type);
+	half_span = (double) fft->r / 2.0;
+	fcent = (fft->center_freq == 0) ? half_span : fft->center_freq;
+	fmin = fcent - half_span;
+	fmax = fcent + half_span;
+	if ((fmin < 0) || (fmax > fft->r)) {
+		fprintf(stderr, "Freqeuncies out of range for FFT '%s' data\n", name);
 		return -1;
 	}
 
 	mag_min = 0; mag_max = 0;
-	db_min = -350; db_max = -350;
+	db_min = 350; db_max = -350;
 	for (int k = 0; k < fft->n; k++) {
 		double db, mag; 
-		mag = cmag(fft->data[k]);
+		mag = cmag(fft->data[k]) / fft->n;
 		mag_min = (mag_min > mag) ? mag : mag_min;
 		mag_max = (mag_max < mag) ? mag : mag_max;
 		db = (mag != 0) ? 20 * log10(mag) : -350;
@@ -303,31 +231,44 @@ __plot_fft_data(FILE *of, sample_buf_t *fft, char *name)
 		db_max = (db_max < db) ? db : db_max;
 		set_minmax(fft, k);
 	}
+
+#define DB_NORM_MIN	-100
 	/*
-	 * Scale factors for normalizing magnitude [0.0, 1.0], db [-160dB, 0 dB]
+	 * Scale factors for normalizing magnitude [0.0, 1.0], db [-100dB, 0 dB]
 	 */
 	mag_scale = 1.0 / (mag_max - mag_min);
-	db_scale = -170.0 / (db_max - db_min);
+	/* 10 percent DB "pad" */
+	double db_pad = (db_max - db_min) * 0.10;
+	db_scale = DB_NORM_MIN / (db_max - db_min);
 
-	if (fft->type == SAMPLE_FFT) {
-		fprintf(of, "#\n# Start FFT data for %s :\n#\n", name);
-	} else {
-		fprintf(of, "#\n# Start DFT data for %s :\n#\n", name);
+	switch (fft->type) {
+		case SAMPLE_FFT:
+			fprintf(of, "#\n# Start FFT data for %s :\n#\n", name);
+			break;
+		case SAMPLE_REAL_FFT:
+			fprintf(of, "#\n# Start FFT data (DC -> Sample Rate) %s :\n#\n", name);
+			break;
+		case SAMPLE_DFT:
+			fprintf(of, "#\n# Start DFT data for %s :\n#\n", name);
+			break;
+		default:
+			fprintf(stderr, "Unrecognized FFT type for %s\n", name);
+			return 0;
 	}
 	fprintf(of, "#\n# X scale parameters\n#\n");
 	fprintf(of, "%s_min = %f\n", name, fft->sample_min);
 	fprintf(of, "%s_max = %f\n", name, fft->sample_max);
 	fprintf(of, "%s_min_freq = %f\n", name, fmin);
-	fprintf(of, "%s_center_freq = %f\n", name, fmin + (span / 2.0));
+	fprintf(of, "%s_center_freq = %f\n", name, fcent);
 	fprintf(of, "%s_max_freq = %f\n", name, fmax);
-	fprintf(of, "%s_span = %f\n", name, span);
+	fprintf(of, "%s_nyquist = %f\n", name, half_span);
 	fprintf(of, "%s_bins = %d\n", name, fft->n);
 	fprintf(of, "%s_rbw = %f\n", name, (fmax - fmin) / (double) fft->n);
 	fprintf(of, "%s_mag_min = %f\n", name, mag_min);
 	fprintf(of, "%s_mag_max = %f\n", name, mag_max);
 	fprintf(of, "%s_mag_scale = %f\n", name, mag_scale);
-	fprintf(of, "%s_db_min = %f\n", name, db_min);
-	fprintf(of, "%s_db_max = %f\n", name, db_max);
+	fprintf(of, "%s_db_min = %f\n", name, db_min - db_pad);
+	fprintf(of, "%s_db_max = %f\n", name, db_max + db_pad);
 	fprintf(of, "%s_db_scale = %f\n", name, db_scale);
 
 	/*
@@ -336,21 +277,24 @@ __plot_fft_data(FILE *of, sample_buf_t *fft, char *name)
 	fprintf(of, "#\n# Frequency X axis (freq_min, freq_max)\n#\n");
 	fprintf(of, "%s_x_freq = 2\n", name);
 	fprintf(of, "%s_x_freq_real = 2\n", name);
-	fprintf(of, "%s_x_freq_min = %f\n", name, fmin);
-	fprintf(of, "%s_x_freq_max = %f\n", name, fmax);
-	fprintf(of, "%s_x_freq_real_min = %f\n", name, fcent);
-	fprintf(of, "%s_x_freq_real_max = %f\n", name, fmax);
+	fprintf(of, "%s_x_freq_min = %f\n", name, fft->min_freq);
+	fprintf(of, "%s_x_freq_max = %f\n", name, fft->max_freq);
+	fprintf(of, "%s_x_freq_real_min = %f\n", name, fft->min_freq);
+	fprintf(of, "%s_x_freq_real_max = %f\n", name, fft->max_freq);
 	fprintf(of, "%s_x_freq_tics = 'set xtics autofreq'\n", name);
 	fprintf(of, "%s_x_freq_real_tics = 'set xtics autofreq'\n", name);
 
-/* XXX because of how scales get substituted in we have duplicated real_max */
+	/* XXX 
+	 * because of how scales get substituted in we have 
+	 * duplicated various x values
+	 */
 	fprintf(of, "#\n# Frequency (in kHz) X axis\n#\n");
 	fprintf(of, "%s_x_freq_khz = 3\n", name);
 	fprintf(of, "%s_x_freq_khz_real = 3\n", name);
-	fprintf(of, "%s_x_freq_khz_min = %f\n", name, fmin / 1000.0);
-	fprintf(of, "%s_x_freq_khz_max = %f\n", name, fmax / 1000.0);
-	fprintf(of, "%s_x_freq_khz_real_min = %f\n", name, fcent / 1000.0);
-	fprintf(of, "%s_x_freq_khz_real_max = %f\n", name, fmax / 1000.0);
+	fprintf(of, "%s_x_freq_khz_min = %f\n", name, fft->min_freq / 1000.0);
+	fprintf(of, "%s_x_freq_khz_max = %f\n", name, fft->max_freq / 1000.0);
+	fprintf(of, "%s_x_freq_khz_real_min = %f\n", name, fft->min_freq / 1000.0);
+	fprintf(of, "%s_x_freq_khz_real_max = %f\n", name, fft->max_freq / 1000.0);
 	fprintf(of, "%s_x_freq_khz_tics = 'set xtics autofreq'\n", name);
 	fprintf(of, "%s_x_freq_khz_real_tics = 'set xtics autofreq'\n", name);
 
@@ -407,6 +351,7 @@ __plot_fft_data(FILE *of, sample_buf_t *fft, char *name)
 
 	/* The Y axis choices */
 	/* note to self db_max / db_min vs normalized */
+	/* TODO: Do I need to add "margin" to make the charts look better ? */
 	fprintf(of, "%s_y_mag_norm = 4\n", name);
 	fprintf(of, "%s_y_mag_norm_min = 0\n", name);
 	fprintf(of, "%s_y_mag_norm_max = 1.0\n", name);
@@ -416,13 +361,12 @@ __plot_fft_data(FILE *of, sample_buf_t *fft, char *name)
 	fprintf(of, "%s_y_mag_max = %f\n", name, mag_max);
 
 	fprintf(of, "%s_y_db_norm = 6\n", name);
-	/* scale normalized DB min to -350? */
-	fprintf(of, "%s_y_db_norm_min = -170.0\n", name);
-	fprintf(of, "%s_y_db_norm_max = 10.0\n", name);
+	fprintf(of, "%s_y_db_norm_min = %d\n", name, DB_NORM_MIN - 10);
+	fprintf(of, "%s_y_db_norm_max = 10\n", name);
 
 	fprintf(of, "%s_y_db = 7\n", name);
-	fprintf(of, "%s_y_db_min = %f\n", name, db_min);
-	fprintf(of, "%s_y_db_max = %f\n", name, db_max);
+	fprintf(of, "%s_y_db_min = %f\n", name, db_min - db_pad);
+	fprintf(of, "%s_y_db_max = %f\n", name, db_max + db_pad);
 
 	fprintf(of,"$%s_data << EOD\n", name);
 	fprintf(of, "#\n# Columns are:\n");
@@ -435,53 +379,38 @@ __plot_fft_data(FILE *of, sample_buf_t *fft, char *name)
 	fprintf(of, "# 7. Magnitude in decibels\n");
 	fprintf(of, "#\n");
 
-	if (fft->type == SAMPLE_FFT) {
-		/* Write out the FFT values */
-		for (int k = fft->n / 2; k < fft->n; k++) {
-			double xnorm, freq, freq_k;
-			double mag, mag_norm, db, db_norm;
+	{
+		double xnorm, freq, freq_k;
+		double mag, mag_norm, db, db_norm;
 
-			xnorm = -0.5 + (double) (k - (fft->n / 2))/ (double) fft->n;
-			freq = xnorm * fmax;
-			freq_k = freq / 1000.0;
-			mag = cmag(fft->data[k]);
-			mag_norm  = (mag - mag_min) * mag_scale;
-			db = (mag != 0) ? 20 * log10(mag) : db_min;
-			db_norm = (db_max - db) * db_scale;
-			fprintf(of, "%f %f %f %f %f %f %f\n",
-					xnorm, freq, freq_k, mag_norm, mag, db_norm, db);
+		if (fft->type == SAMPLE_FFT) {
+			/* Write out the FFT values */
+			for (int k = fft->n / 2; k < fft->n; k++) {
+
+				xnorm = -0.5 + (double) (k - (fft->n / 2))/ (double) fft->n;
+				freq = xnorm * fmax;
+				freq_k = freq / 1000.0;
+				mag = cmag(fft->data[k]) / fft->n;
+				mag_norm  = (mag - mag_min) * mag_scale;
+				db = (mag != 0) ? 20 * log10(mag) : db_min;
+				db_norm = (db_max - db) * db_scale;
+				fprintf(of, "%f %f %f %f %f %f %f\n",
+						xnorm, freq, freq_k, mag_norm, mag, db_norm, db);
+			}
 		}
 
 		for (int k = 0; k < fft->n; k++) {
-			double xnorm, freq, freq_k;
-			double mag, mag_norm, db, db_norm;
 			xnorm = (double) (k)/ (double) fft->n;
 			freq = xnorm * fmax;
 			freq_k = freq / 1000.0;
-			mag = cmag(fft->data[k]);
+			mag = cmag(fft->data[k]) / fft->n;
 			mag_norm  = (mag - mag_min) * mag_scale;
 			db = (mag != 0) ? 20 * log10(mag) : -300;
 			db_norm = (db_max - db) * db_scale;
 			fprintf(of, "%f %f %f %f %f %f %f\n",
 					xnorm, freq, freq_k, mag_norm, mag, db_norm, db);
 		}
-	} else {
-		/* Write out the DFT values */
-		for (int k = 0; k < fft->n; k++) {
-			double xnorm, freq, freq_k;
-			double mag, mag_norm, db, db_norm;
-			xnorm = (double) (k) / (double) fft->n;
-			freq = xnorm * fmax;
-			freq_k = freq / 1000.0;
-			mag = cmag(fft->data[k]);
-			/* TODO: check this! */
-			mag_norm  = (mag - mag_min) * mag_scale;
-			db = (mag != 0) ? 20 * log10(mag) : db_min;
-			db_norm = (db_max - db) * db_scale;
-			fprintf(of, "%f %f %f %f %f %f %f\n",
-					xnorm, freq, freq_k, mag_norm, mag, db_norm, db);
-		}
-	}
+	} 
 	fprintf(of,	"EOD\n");
 	return 0;
 }
@@ -626,6 +555,7 @@ plot_data(FILE *f, sample_buf_t *buf, char *name)
 		case SAMPLE_REAL_SIGNAL:
 			return (__plot_signal_data(f, buf, name));
 		case SAMPLE_FFT:
+		case SAMPLE_REAL_FFT:
 		case SAMPLE_DFT:
 			return (__plot_fft_data(f, buf, name));
 	}

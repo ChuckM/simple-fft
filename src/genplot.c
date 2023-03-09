@@ -144,7 +144,7 @@ main(int argc, char *argv[])
 	for (int i = 0; i < tap_ndx; i++) {
 		buf->data[i] = taps[i];
 	}
-	dft = compute_dft(buf, 5000, 0, 5000, W_RECT);
+	dft = compute_dft(buf, 5000, W_RECT, 0, 0, 0);
 	of = fopen(plot_file, "w");
 	if (of == NULL) {
 		fprintf(stderr, "Could not open '%s' for writing.\n", plot_file);

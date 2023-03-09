@@ -54,7 +54,7 @@ main(int argc, char *argv[]) {
              __a[3] * cos((6.0 * M_PI * (double) i) / (double) bins);
 		buf->data[i] = bh;
     }
-	dft = compute_dft(buf, bins, 0, (double) bins, W_RECT);
+	dft = compute_dft(buf, bins, W_RECT, 0, 0, 0);
 	of = fopen("plot-bh.data", "w");
 	for (int i = 0; i < bins; i++) {
 		fprintf(of, "%d %f %f\n", i , creal(buf->data[i]),

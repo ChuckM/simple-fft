@@ -174,7 +174,7 @@ main(int argc, char *argv[])
 		filt->data[i] = test->taps[i];
 	}
 
-	dft = compute_dft(filt, bins, 0, (double) bins, W_RECT);
+	dft = compute_dft(filt, bins, W_RECT, 0, 0, 0);
 	of = fopen(PLOT_FILE, "w");
 	if (of == NULL) {
 		fprintf(stderr, "Could not open %s for writing.\n", PLOT_FILE);
