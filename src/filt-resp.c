@@ -30,6 +30,7 @@
 #include <dsp/dft.h>
 #include <dsp/windows.h>
 #include <dsp/filter.h>
+#include <dsp/plot.h>
 
 /* define a sample filter */
 double sample_taps[34] = {
@@ -83,9 +84,6 @@ struct fir_filter_t sample1 = {
 extern char *optarg;
 extern int optind, opterr, optopt;
 
-#define MAG_NORMALIZE	1
-#define MAG_DECIBEL		2
-
 /*
  *  Plot the frequency response of a filter
  *  usage: filt-resp [-h] [filter-file]
@@ -118,16 +116,18 @@ main(int argc, char *argv[])
 {
 	FILE *of;
 	FILE *inp;
+	char	title[80];
+	plot_scale_t	y_scale = PLOT_Y_DB;
+	plot_scale_t	x_scale = PLOT_X_SAMPLERATE;
 	sample_buf_t	*filt;
 	sample_buf_t	*dft;
-	int half_band = 0;
+	window_function	w;
 	int	n_taps;
-	int mag = MAG_DECIBEL;
 	int sample_rate = SAMPLE_RATE;
 	int bins = BINS;
 	struct fir_filter_t	*test;
 	char filter_name[256];
-	const char *optstring = "hm:b:";
+	const char *optstring = "ew:hm:b:";
 	double *taps;
 	char opt;
 
@@ -137,14 +137,28 @@ main(int argc, char *argv[])
 				fprintf(stderr, 
 						"Usage: filt-resp [-h] [-m db|norm] [filter]\n");
 				exit(1);
+			case 'w':
+				switch (*optarg) {
+					default:
+					case 'r':
+						w = W_RECT;
+						break;
+					case 'h':
+						w = W_HANN;
+						break;
+					case 'b':
+						w = W_BH;
+						break;
+				}
+				break;
 			case 'h':
-				half_band++;
+				x_scale = PLOT_X_REAL_SAMPLERATE;
 				break;
 			case 'm':
 				if (strncasecmp(optarg, "db", 2) == 0) {
-					mag = MAG_DECIBEL;
+					y_scale = PLOT_Y_DB;
 				} else if (strncasecmp(optarg, "norm", 4) == 0) {
-					mag = MAG_NORMALIZE;
+					y_scale = PLOT_Y_DB_NORMALIZED;
 				} else {
 					fprintf(stderr, 
 							"Magnitude must be either 'db' or 'norm'\n");
@@ -169,35 +183,21 @@ main(int argc, char *argv[])
 	} else {
 		test = &sample1;
 	}
+	/* This is the original */
 	filt = alloc_buf(test->n_taps, sample_rate);
 	for (int i = 0; i < test->n_taps; i++) {
 		filt->data[i] = test->taps[i];
 	}
 
-	dft = compute_dft(filt, bins, W_RECT, 0, 0, 0);
+	dft = compute_dft(filt, bins, w, 0, 0, 0);
 	of = fopen(PLOT_FILE, "w");
 	if (of == NULL) {
 		fprintf(stderr, "Could not open %s for writing.\n", PLOT_FILE);
 		exit(1);
 	}
 
-	plot_dft(of, dft, "resp", 0, (double) bins);
-	fprintf(of, "set title \"Filter Response: %s\"\n", test->name);
-	fprintf(of, "set grid\n");
-	fprintf(of, "set ylabel '%s'\n", (mag == MAG_NORMALIZE) ? 
-			"Magnitude (normalized)" : "Magnitude (dB)");
-	fprintf(of, "set xlabel '%s'\n", (half_band != 0) ? 
-		"Frequency (normalized to 0 to F_s/2)" : 
-		"Frequency (normalized to -F_s/2 to F_s/2)");
-	fprintf(of, "set nokey\n");
-	if (half_band) {
-		fprintf(of, "set xtics (\"0\" 0, \"F_s/8\" .125, \"F_s/4\" .25, \"3F_s/8\" .375, \"F_s/2\" .50)\n");
-	} else {
-		fprintf(of, "set xtics (\"-F_s/2\" -0.50, \"-F_s/4\" -0.25, \"0\" 0, \"F_s/4\" .25, \"F_s/2\" .5)\n");
-	}
-	fprintf(of, "plot [%f:.50] $%s_dft using"
-		" %s_xnorm_col:%s_y%s_col with lines\n", 
-		(half_band != 0) ? 0.0 : -0.5, "resp", "resp", "resp",
-		(mag == MAG_NORMALIZE) ? "mag" : "db");
+	plot_data(of, dft, "dft");
+	snprintf(title, sizeof(title), "Filter Response: %s", test->name);
+	plot(of, title, "dft", x_scale, y_scale);
 	fclose(of);
 }

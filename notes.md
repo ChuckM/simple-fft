@@ -665,3 +665,27 @@ is wrapped around a center frequency.
 If the frequency is wrapped
 	bins N/2 - N are min_freq -> center
 	bins 0 - N/2 are center -> max_freq
+
+Filter response works again with the new DFT code and calling the plot
+functions (rather than making its own plot). HOWEVER, it shows a -350 dB
+level at exactly N/2 (aka 0, aka DC) which is not currently explained.
+
+Also "pass band" is at -50 dB ? So there is clearly something still borked
+about filters, the shape is write but the math needs work.
+
+Y margin works great in plot function, could make it a macro in plot.h
+taking a total range, margin, and returning minimum or maximum
+
+```
+#define PLOT_Y_MARGIN	0.10
+#define PLOT_Y_MIN(range, minimum, margin)	(minimum - (range * margin))
+#define PLOT_Y_MAX(range, maximum, margin)	(maximum + (range * margin))
+```
+
+Will think about this for a bit.
+
+To do:
+
+Install PyFDA and virtual environment.
+More octave work.
+

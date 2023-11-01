@@ -238,7 +238,10 @@ __plot_fft_data(FILE *of, sample_buf_t *fft, char *name)
 	 */
 	mag_scale = 1.0 / (mag_max - mag_min);
 	/* 10 percent DB "pad" */
-	double db_pad = (db_max - db_min) * 0.10;
+/* 10% margin above and below dB points in the Y axis */
+#define DB_MARGIN	0.10
+
+	double db_pad = (db_max - db_min) * DB_MARGIN;
 	db_scale = DB_NORM_MIN / (db_max - db_min);
 
 	switch (fft->type) {
@@ -351,7 +354,6 @@ __plot_fft_data(FILE *of, sample_buf_t *fft, char *name)
 
 	/* The Y axis choices */
 	/* note to self db_max / db_min vs normalized */
-	/* TODO: Do I need to add "margin" to make the charts look better ? */
 	fprintf(of, "%s_y_mag_norm = 4\n", name);
 	fprintf(of, "%s_y_mag_norm_min = 0\n", name);
 	fprintf(of, "%s_y_mag_norm_max = 1.0\n", name);
