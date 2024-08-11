@@ -31,21 +31,27 @@ enum wavetype {
 	COS, COS_R, TRIANGLE, TRIANGLE_R,
 	SAWTOOTH, SAWTOOTH_R, SQUARE, SQUARE_R };
 
+#define BINS 512
+#define SAMPLE_RATE 8192
+#define TONE 512.0
+
 int
 main(int argc, char *argv[])
 {
 	FILE *of;
 	sample_buf_t	*wave;
+	sample_buf_t	*fft;
 	enum wavetype	wave_type = COS;
 	char name[48];
 	char plot_title[80];
 	plot_scale_t yaxis;
 	int	make_it_real = 0;
+	int add_fft = 0;
 	double phase = 0;
-	const char *optstring = "rw:p:";
+	const char *optstring = "frw:p:";
 	char opt;
 
-	wave = alloc_buf(800, 8000);
+	wave = alloc_buf(8000, SAMPLE_RATE);
 	if (! wave) {
 		fprintf(stderr, "Unable to allocate wave buffer\n");
 		exit(1);
@@ -56,6 +62,9 @@ main(int argc, char *argv[])
 			case '?':
 				fprintf(stderr, "Usage: waves [-w sin|cos|tri|saw|sqr]\n");
 				exit(1);
+			case 'f':
+				add_fft++;
+				break;
 			case 'r':
 				make_it_real = 1;
 				break;
@@ -86,11 +95,11 @@ main(int argc, char *argv[])
 			if (make_it_real) {
 				snprintf(plot_title, sizeof(plot_title)-1, 
 						"Real Cosine Waveform");
-				add_cos_real(wave, 10.0, 1.0, phase);
+				add_cos_real(wave, TONE, 1.0, phase);
 			} else {
 				snprintf(plot_title, sizeof(plot_title)-1, 
 						"Complex Cosine Waveform");
-				add_cos(wave, 10.0, 1.0, phase);
+				add_cos(wave, TONE, 1.0, phase);
 			}
 			snprintf(name, 48, "plots/wave_cosine.data");
 			break;
@@ -98,11 +107,11 @@ main(int argc, char *argv[])
 			if (make_it_real) {
 				snprintf(plot_title, sizeof(plot_title)-1, 
 						"Real Sawtooth (Ramp) Waveform");
-				add_sawtooth_real(wave, 10.0, 1.0, phase);
+				add_sawtooth_real(wave, TONE, 1.0, phase);
 			} else {
 				snprintf(plot_title, sizeof(plot_title)-1, 
 						"Complex Sawtooth (Ramp) Waveform");
-				add_sawtooth(wave, 10.0, 1.0, phase);
+				add_sawtooth(wave, TONE, 1.0, phase);
 			}
 			snprintf(name, 48, "plots/wave_sawtooth.data");
 			break;
@@ -110,11 +119,11 @@ main(int argc, char *argv[])
 			if (make_it_real) {
 				snprintf(plot_title, sizeof(plot_title)-1, 
 						"Real Triangle Waveform");
-				add_triangle_real(wave, 10.0, 1.0, phase);
+				add_triangle_real(wave, TONE, 1.0, phase);
 			} else {
 				snprintf(plot_title, sizeof(plot_title)-1, 
 						"Complex Triangle Waveform");
-				add_triangle(wave, 10.0, 1.0, phase);
+				add_triangle(wave, TONE, 1.0, phase);
 			}
 			snprintf(name, 48, "plots/wave_triangle.data");
 			break;
@@ -122,16 +131,18 @@ main(int argc, char *argv[])
 			if (make_it_real) {
 				snprintf(plot_title, sizeof(plot_title)-1, 
 						"Real Square Waveform");
-				add_square_real(wave, 10.0, 1.0, phase);
+				add_square_real(wave, TONE, 1.0, phase);
 			} else {
 				snprintf(plot_title, sizeof(plot_title)-1, 
 						"Complex Square Waveform");
-				add_square(wave, 10.0, 1.0, phase);
+				add_square(wave, TONE, 1.0, phase);
 			}
 			snprintf(name, 48, "plots/wave_square.data");
 			break;
 	}
-
+	fft = compute_fft(wave, BINS, W_RECT, 0);
+	printf("FFT type value set to %d\n", fft->type);
+	fft->type = SAMPLE_REAL_FFT;
 	/* And now put the data into a gnuplot compatible file */
 	of = fopen(name, "w");
 	if (of == NULL) {
@@ -139,7 +150,16 @@ main(int argc, char *argv[])
 		exit(1);
 	}
 	plot_data(of, wave, "wave");
+	plot_data(of, fft, "fft");
 	yaxis = (make_it_real) ? PLOT_Y_REAL_AMPLITUDE : PLOT_Y_AMPLITUDE;
+	if (add_fft) {
+		multiplot_begin(of, "Waveform and FFT", 2, 1);
+	}
 	plot(of, plot_title, "wave", PLOT_X_TIME_MS, yaxis);
+	if (add_fft) {
+		int xaxis = (make_it_real) ? PLOT_X_REAL_FREQUENCY_KHZ : PLOT_X_FREQUENCY_KHZ;
+		plot(of, "FFT of Waveform", "fft", xaxis, PLOT_Y_DB_NORMALIZED);
+		multiplot_end(of);
+	}
 	fclose(of);
 }

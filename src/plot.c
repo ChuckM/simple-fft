@@ -283,7 +283,7 @@ __plot_fft_data(FILE *of, sample_buf_t *fft, char *name)
 	fprintf(of, "%s_x_freq_min = %f\n", name, fft->min_freq);
 	fprintf(of, "%s_x_freq_max = %f\n", name, fft->max_freq);
 	fprintf(of, "%s_x_freq_real_min = %f\n", name, fft->min_freq);
-	fprintf(of, "%s_x_freq_real_max = %f\n", name, fft->max_freq);
+	fprintf(of, "%s_x_freq_real_max = %f\n", name, fft->max_freq / 2.0);
 	fprintf(of, "%s_x_freq_tics = 'set xtics autofreq'\n", name);
 	fprintf(of, "%s_x_freq_real_tics = 'set xtics autofreq'\n", name);
 
@@ -297,7 +297,7 @@ __plot_fft_data(FILE *of, sample_buf_t *fft, char *name)
 	fprintf(of, "%s_x_freq_khz_min = %f\n", name, fft->min_freq / 1000.0);
 	fprintf(of, "%s_x_freq_khz_max = %f\n", name, fft->max_freq / 1000.0);
 	fprintf(of, "%s_x_freq_khz_real_min = %f\n", name, fft->min_freq / 1000.0);
-	fprintf(of, "%s_x_freq_khz_real_max = %f\n", name, fft->max_freq / 1000.0);
+	fprintf(of, "%s_x_freq_khz_real_max = %f\n", name, fft->max_freq / 2000.0);
 	fprintf(of, "%s_x_freq_khz_tics = 'set xtics autofreq'\n", name);
 	fprintf(of, "%s_x_freq_khz_real_tics = 'set xtics autofreq'\n", name);
 
