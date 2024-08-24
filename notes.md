@@ -689,3 +689,32 @@ To do:
 Install PyFDA and virtual environment.
 More octave work.
 
+Okay, I have installed PyVISA and with the pure python back end I can talk
+to my Keysight arbitrary waveform device. Now to see if I can generate
+a waveform and play it back with the ARB! 
+
+From the manual the format is:
+```
+File Format:1.10
+Checksum:0
+Channel Count:1
+Sample Rate:<sample-rate>
+High Level:<in volts>
+Low Level:<also in volts, can be negative>
+Marker Point:<number> (This is sample # where sync goes low)
+Data Type:"short" (can also accept "float" between -1.0 and 1.0)
+Data Points:<number>
+Data:
+<num>[0]
+<num>[1]
+...
+<num>[number-1]
+```
+
+Will design an experiment to create an arbitrary waveform file.
+
+Well, we now know that you can't actually put a .arb file on a USB stick
+and then read it into the instrument (seems like an oversight on keysight's
+part). So now to experiment with how to send it through programming and then
+maybe to copy it from memory into the instrument.
+

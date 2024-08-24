@@ -30,7 +30,7 @@ EXP_SRC = ./experiments
 
 LIB_SRC_DIR = ./src/lib
 
-EXPERIMENTS = exp1 exp2 exp3 exp4 exp5 exp6 exp7 exp8 exp9 exp10 exp11\
+EXPERIMENTS = exp1 exp2 exp3 exp4 exp5 exp6 exp7 exp8 exp9 exp10 exp11 exp12\
 			  exp-corr exp-corr-plot exp-corr-multiplot \
 			  experiment diff-test
 
