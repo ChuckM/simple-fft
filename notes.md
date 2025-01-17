@@ -718,3 +718,8 @@ and then read it into the instrument (seems like an oversight on keysight's
 part). So now to experiment with how to send it through programming and then
 maybe to copy it from memory into the instrument.
 
+------------------------------------
+
+For python3.11 pip installing scipy, numpy, PyQT5 let me play around
+with scipy.signal functions.
+
