@@ -52,5 +52,5 @@ int multiplot_end(FILE *f);
 int plot_data(FILE *file, sample_buf_t *s, char *name);
 int plot(FILE *f, char *t, char *name, plot_scale_t x, plot_scale_t y);
 int plot_ranged(FILE *f, char *t, char *name, plot_scale_t x, plot_scale_t y,
-			double min_x, double max_x, double min_y, double max_y);
+			double min_x, double max_x);
 

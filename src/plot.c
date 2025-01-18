@@ -39,6 +39,8 @@ typedef struct {
 	char *ylabel;			/* Label for Y axis */
 	int	k;		    /* key option (inside, outside, off) */
 	size_t		nlines;		/* number of plot lines */
+	char	min_x[40];
+	char	max_x[40];
     struct plot_line_t {
     	char		*title;		/* title of this line */
     	struct __plot_scale *y;	/* Y scale/index for this line */
@@ -56,6 +58,8 @@ static plot_t __plot_params = {
 		NULL,			/* Y scale label */
 		PLOT_KEY_NONE,	/* Key default */
 		2,				/* space for two lines, initially empty */
+		"",
+		"",
 		{{
 			NULL, NULL, 0
 		},{
@@ -145,8 +149,14 @@ __plot(FILE *f, plot_t *plot)
 	}
 	fprintf(f, "set xlabel '%s'\n", plot->x->label);
 	fprintf(f, "set ylabel '%s'\n", plot->ylabel);
+/*
+ *  This was how it was working ...
 	fprintf(f, "set xrange [%s_%s_min:%s_%s_max]\n", 
 				n, plot->x->scale, n, plot->x->scale);
+*   string composition name_<scale>_min:<name>_<scale>_max
+*
+*/
+	fprintf(f, "set xrange [%s:%s]\n", plot->min_x, plot->max_x);
 	fprintf(f, "set yrange [%s_%s_min:%s_%s_max]\n",
 				n, plot->lines[0].y->scale, n, plot->lines[0].y->scale);
 	fprintf(f, "eval %s_%s_tics\n", n, plot->x->scale);
@@ -570,8 +580,12 @@ plot_data(FILE *f, sample_buf_t *buf, char *name)
 #define PLOT_TYPE_SIGNAL		4
 #define PLOT_TYPE_REAL_SIGNAL	5
 
+int
+plot(FILE *f, char *title, char *name, plot_scale_t x, plot_scale_t y) {
+	return plot_ranged(f, title, name, x, y, 0, 0);
+}
 /*
- * plot(...)
+ * plot_ranged(...)
  *
  * Okay, now at this point the data for this plot should already be
  * in the plot file and so this function populates a plot structure
@@ -586,7 +600,8 @@ plot_data(FILE *f, sample_buf_t *buf, char *name)
  * but will see if I can figure that out a bit later.
  */
 int
-plot(FILE *f, char *title, char *name, plot_scale_t x, plot_scale_t y)
+plot_ranged(FILE *f, char *title, char *name, plot_scale_t x, plot_scale_t y,
+				double x_min, double x_max)
 {
 	int plot_type = PLOT_TYPE_UNKNOWN;
 
@@ -630,6 +645,20 @@ plot(FILE *f, char *title, char *name, plot_scale_t x, plot_scale_t y)
 		return -1;
 	}
 	__plot_params.x = &__scales[x];
+	if (x_min == 0) {
+		snprintf(__plot_params.min_x, sizeof(__plot_params.min_x),
+			"%s_%s_min", name, __scales[x].scale);
+	} else {
+		snprintf(__plot_params.min_x, sizeof(__plot_params.min_x),
+			"%f", x_min);
+	}
+	if (x_max == 0) {
+		snprintf(__plot_params.max_x, sizeof(__plot_params.max_x),
+			"%s_%s_max", name, __scales[x].scale);
+	} else {
+		snprintf(__plot_params.max_x, sizeof(__plot_params.max_x),
+			"%f", x_max);
+	}
 
 	if ((y < PLOT_Y_MAGNITUDE) || (y >= PLOT_SCALE_UNDEFINED)) {
 		fprintf(stderr, "Unknown Y scale in plot call\n");
