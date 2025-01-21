@@ -31,7 +31,8 @@ typedef enum {
 	SAMPLE_REAL_FFT,		/* computed on real data vs complex */
 	SAMPLE_DFT,
 	SAMPLE_REAL_SIGNAL,		/* signal only has inphase data */
-	SAMPLE_SIGNAL			/* signal has both inphase and quadrature data */
+	SAMPLE_SIGNAL,			/* signal has both inphase and quadrature data */
+	SAMPLE_CUSTOM			/* Data buffer has custom data in it */
 } sample_buf_t_type;
 
 /* this is the sample type for the sample buffer */

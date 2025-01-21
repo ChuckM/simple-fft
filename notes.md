@@ -723,3 +723,40 @@ maybe to copy it from memory into the instrument.
 For python3.11 pip installing scipy, numpy, PyQT5 let me play around
 with scipy.signal functions.
 
+-------------------------------------------------------------------
+
+Added an x-range for the plot functions which lets me show the spectrum
+of interested on "big" FFT plots (more detail where I'm interested in)
+Now to figure out how to do that for waveforms.
+
+
+Some rounding experiments, with rounding :
+Harmonic Osciallor fixed point math experiment.
+Data buffers are 65536 samples long
+Inverting rate computation:
+        Rate in radians: 0.246464
+        My constants acos 0.246438 (0.000027), asin 0.246476 (-0.000012)
+        cos = 0.969781, sin = 0.243977
+        my cos = 0.969788(0.000007), my_sin = 0.243988(0.000011)
+        acos in radians: 0.969788, delta -0.000007
+        asin in radian: 0.243988, delta -0.000011
+Computed constants for tone of 3765.700 Hz:
+        Number of samples: 25 (  25.493),
+        Oscillator constant:  31778 + 7995j,
+        Sample Error: 0.493268
+
+Without rounding:
+Harmonic Osciallor fixed point math experiment.
+Data buffers are 65536 samples long
+Inverting rate computation:
+        Rate in radians: 0.246464
+        My constants acos 0.246563 (-0.000098), asin 0.246445 (0.000020)
+        cos = 0.969781, sin = 0.243977
+        my cos = 0.969757(-0.000024), my_sin = 0.243958(-0.000019)
+        acos in radians: 0.969757, delta 0.000024
+        asin in radian: 0.243958, delta 0.000019
+Computed constants for tone of 3765.700 Hz:
+        Number of samples: 25 (  25.493),
+        Oscillator constant:  31777 + 7994j,
+        Sample Error: 0.493268
+

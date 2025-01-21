@@ -32,7 +32,7 @@ LIB_SRC_DIR = ./src/lib
 
 EXPERIMENTS = exp1 exp2 exp3 exp4 exp5 exp6 exp7 exp8 exp9 exp10 exp11 exp12\
 			  exp-corr exp-corr-plot exp-corr-multiplot \
-			  experiment diff-test exp-fixed
+			  experiment diff-test exp-fixed pll-test
 
 TEST_PROGRAMS = plot-test cic-test fft-test filt-test
 

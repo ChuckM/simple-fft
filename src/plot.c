@@ -556,6 +556,120 @@ __plot_signal_data(FILE *of, sample_buf_t *sig, char *name)
 	return 0;
 }
 
+/*
+ * __plot_custom_data(...)
+ *
+ * This function adds data from a 'custom' type sample buffer to
+ * the plot file and names it 'name'. Later plot commands can
+ * reference these names to control things like their axes etc.
+ */
+static int
+__plot_custom_data(FILE *of, sample_buf_t *sig, char *name)
+{
+	int	end, per;
+	double min_q, min_i;
+	double max_q, max_i;
+	double q_norm, i_norm;
+	double end_s, end_ms;
+	
+	min_q = min_i = max_q = max_i = 0;
+	/* compute the min/max for the inphase and quadrature components */
+	for (int k = 0; k < sig->n; k++) {
+		double q, i;
+		i = creal(sig->data[k]);
+		q = cimag(sig->data[k]);
+		min_q = (q <= min_q) ? q : min_q;
+		min_i = (i <= min_i) ? i : min_i;
+		max_q = (q >= max_q) ? q : max_q;
+		max_i = (i >= max_i) ? i : max_i;
+	}
+	/* maximum between peak to peak */
+	i_norm = max_i - min_i;
+	q_norm = max_q - min_q;
+
+
+	printf("CUSTOM Data for %s: R = %d, I [%f -- %f, %f], Q [%f -- %f, %f] \n",
+		name, sig->r, min_i, max_i, i_norm, min_q, max_q, q_norm);
+
+	fprintf(of, "#\n# Start custom data for %s :\n#\n", name);
+	fprintf(of, "%s_i_min = %f\n", name, min_i * 1.1);
+	fprintf(of, "%s_i_max = %f\n", name, max_i * 1.1);
+	fprintf(of, "%s_q_min = %f\n", name, min_q * 1.1);
+	fprintf(of, "%s_q_max = %f\n", name, max_q * 1.1);
+	/*
+	 * X in Seconds
+	 */
+	fprintf(of, "%s_x_time = 1\n", name);
+	fprintf(of, "%s_x_time_min = 0\n", name);
+	fprintf(of, "%s_x_time_max = %f\n", name, 
+							(double) sig->n / (double) sig->r);
+	fprintf(of, "%s_x_time_tics = 'set xtics autofreq'\n", name);
+	/*
+	 * X in milleseconds
+ 	 */
+	fprintf(of, "%s_x_time_ms = 2\n", name);
+	fprintf(of, "%s_x_time_ms_min = 0\n", name);
+	fprintf(of, "%s_x_time_ms_max = %f\n", name, 
+					((double) sig->n * 1000.0)/ (double) sig->r);
+	fprintf(of, "%s_x_time_ms_tics = 'set xtics autofreq'\n", name);
+
+	/*
+	 * Y amplitude (Inphase/real)
+	 */
+	fprintf(of, "%s_y_amplitude_real = 3\n", name);
+	fprintf(of, "%s_y_amplitude_real_min = %f\n", name, min_i * 1.1);
+	fprintf(of, "%s_y_amplitude_real_max = %f\n", name, max_i * 1.1);
+
+	/*
+	 * Y amplitude (Quadrature/analytic)
+	 */
+	fprintf(of, "%s_y_amplitude_analytic = 4\n", name);
+	fprintf(of, "%s_y_amplitude_analytic_min = %f\n", name, 
+						((min_i < min_q) ? min_i : min_q) * 1.1);
+	fprintf(of, "%s_y_amplitude_analytic_max = %f\n", name, 
+						((max_i > max_q) ? max_i : max_q) * 1.1);
+
+	/*
+	 * Y amplitude normalized (Real)
+	 */
+	fprintf(of, "%s_y_amplitude_real_norm = 5\n", name);
+	fprintf(of, "%s_y_amplitude_real_norm_min = -0.55\n", name);
+	fprintf(of, "%s_y_amplitude_real_norm_max = 0.55\n", name);
+
+	/*
+	 * Y amplitude normalized (Analytic)
+	 */
+	fprintf(of, "%s_y_amplitude_analytic_norm = 6\n", name);
+	fprintf(of, "%s_y_amplitude_analytic_norm_min = -0.55\n", name);
+	fprintf(of, "%s_y_amplitude_analytic_norm_max = 0.55\n", name);
+
+	fprintf(of, "$%s_data << EOD\n", name);
+	fprintf(of, "#\n# Columns are:\n");
+	fprintf(of, "# 1. Time Delta (seconds)\n");
+	fprintf(of, "# 2. Time Delta (milleseconds)\n");
+	fprintf(of, "# 3. Inphase (real) value\n");
+	fprintf(of, "# 4. Quadrature (imaginary) value\n");
+	fprintf(of, "# 5. Inphase (real) value normalized (-0.5 - 0.5)\n");
+	fprintf(of, "# 6. Quadrature (imaginary) value normalized (-0.5 - 0.5)\n");
+	fprintf(of, "# 1        2        3        4         5         6\n");
+
+	for (int k = 0; k < sig->n; k++) {
+		double	dt;
+		double	sig_i, sig_q;
+		
+		sig_i = creal(sig->data[k]);
+		sig_q = cimag(sig->data[k]);
+		dt = (double) (k) / (double) sig->r;
+		/* prints real part, imaginary part, and magnitude */
+		fprintf(of, "%f %f %f %f %f %f\n", 
+						dt, dt * 1000.0, sig_i, sig_q, 
+						(i_norm != 0) ? ((sig_i - min_i) / i_norm) - 0.5 : 0, 
+				(q_norm > 0.00000001) ? ((sig_q - min_q) / q_norm) - 0.5 : 0);
+	}
+	fprintf(of, "EOD\n");
+	return 0;
+}
+
 int
 plot_data(FILE *f, sample_buf_t *buf, char *name)
 {
@@ -570,6 +684,8 @@ plot_data(FILE *f, sample_buf_t *buf, char *name)
 		case SAMPLE_REAL_FFT:
 		case SAMPLE_DFT:
 			return (__plot_fft_data(f, buf, name));
+		case SAMPLE_CUSTOM:
+			return (__plot_custom_data(f, buf, name));
 	}
 }
 
