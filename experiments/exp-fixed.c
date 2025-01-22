@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <math.h>
+#include <getopt.h>
 #include <dsp/fft.h>
 #include <dsp/plot.h>
 #include <dsp/signal.h>
@@ -20,7 +21,8 @@
 #define SAMPLE_RATE 	96000
 #define BINS 			16384
 #define TONE			3765.7	// Tone frequency in Hz
-#define MAX_AMPLITUDE	2047	// signed 12 bit DAC
+#define MAX_AMPLITUDE	2046	// signed 12 bit DAC
+
 /* Drift correction experiements 
 * 		For every 'n' cycles, if we need to we can correct
 * 		by adding an additional sample. 
@@ -32,31 +34,41 @@
 *   	  at its start point A + 0j
 * 		3)'DO_NOTHING' which means, ignore this quirk and carry
 * 		  on as if you hadn't noticed it.
+* 		5) 'RESET_ZERO_ON_MAX' which means if either component gets
+* 		  to max amplitude or above, reset the other value to zero
+* 		  and the current one to amplitude.
 */
-#define CORRECT_ERROR
+
 /* only define one please */
 // #define HOLD_PREVIOUS
 // #define RESET_START
-// #define DO_NOTHING
-#define RESET_AMPLITUDE
+#define DO_NOTHING
+// #define RESET_ZERO_ON_MAX
+#define DYNAMIC_BIAS
+
+/* Experiment ROUNDING
+ *   In this experiment we compute the cos/sin with an extra bit
+ *   of precision and then round up or down depending on the state
+ *   of the extra bit. 
+ *
+ * Experiment LIMITED_RANGE
+ *   In this experiment we limit the range of sin/cos to +/- 32767
+ *   rather than 32768 because -32768 isn't representable in 16 bits.
+ *   Thus when we had a rate change of exactly pi/4 the sin component
+ *   would be +1.0 and get interpreted as -32768. (not effective has
+ *   been deleted from the experiment)
+ *
+ */
+
+#define EXP_ROUNDING
+
+/* Set this to a description of the experiment being run */
+char *exp_title = "EXP ROUNDING / DYNAMIC BIAS";
 
 struct cnum {
 	int16_t	r_p;
 	int16_t	i_p;
 };
-
-/*
- * Doing the upsample jump
- *
- * To get a 'cleaner' FFT I'm thinking about upsampling the signal
- * 4x (192 KHz) and low pass filtering it, adding back some gain, and then
- * taking a really wide FFT (64K bins) and then plotting just the spectrum
- * of interest (DC to 24 KHz). With 3Hz bins that is the first 8K bins.
- * (starting with 49.152 KHz would give us exactly 3 Hz bins at the end)
- *
- * So to upsample we add zeros. To filter we apply a FIR across
- * all of the upsampled data. Assuming 
- */
 
 /*
  * Do a complex multiply
@@ -100,43 +112,6 @@ cnum_mul(struct cnum *a, struct cnum *b, struct cnum *r) {
 	r->i_p = (s2 >> 15) & 0xffff;	// scale to signed 16 bit result
 }
 
-double num_len(struct cnum *n) {
-	double x, y;
-	x = (double) n->r_p / (double) (1 << 14);
-	y = (double) n->i_p / (double) (1 << 14);
-	return sqrt(x*x + y*y);
-}
-
-/*
- * Investigate the error introduced into the amplitude with this
- * rate setting.
- */
-void
-rate_error(double f, int sample_rate, struct cnum *r) {
-	struct cnum test;
-	int samples;
-	double s1, c1;
-	double x1, y1;
-	double basis;
-	double prev;
-
-	basis = sqrt(2.0) / 2.0;
-	/* A psuedo fixed point number 1.0 with 14 bits of precision */
-	test.r_p = 1 * (1 << 14);
-	test.i_p = 0;
-	printf("Error Rate:\n");
-	printf("sample\tsine\t\tcosine\t\tlen\t\tdelta\n");
-	prev = 1.0;
-	for (int i = 0; i < 52; i++) {
-		s1 = (double)(test.r_p) / (double) (1<<14);
-		c1 = (double)(test.i_p) / (double) (1<<14);
-		double len = num_len(&test);
-		printf("%d\t%f\t%f\t%f\t%f\n", i, s1, c1, len, prev - len);
-		prev = len;
-		cnum_mul(&test, r, &test);
-	}
-}
-
 /* angular rate
  *
  * Given a frequency f in cycles per second and a sample rate s in samples
@@ -150,31 +125,7 @@ rate_error(double f, int sample_rate, struct cnum *r) {
  *     real->cos(2*pi/n)
  *     imaginary ->sin(2*pi/n)
  */
-
-	/* Experiement ROUNDING
-	 *   In this experiment we compute the cos/sin with an extra bit
-	 *   of precision and then round up or down depending on the state
-	 *   of the extra bit. 
-	 *
-	 * Experiment LIMITED_RANGE
-	 *   In this experiment we limit the range of sin/cos to +/- 32767
-	 *   rather than 32768 because -32768 isn't representable in 16 bits.
-	 *   Thus when we had a rate change of exactly pi/4 the sin component
-	 *   would be +1.0 and get interpreted as -32768.
-	 *
-  	 * Note these two experiments are not compatible only enable 1.
-  	 * If LIMITED RANGE is used then the constant isn't an
-  	 * even power of 2
-  	 */
-// #define EXP_ROUNDING
-#define LIMITED_RANGE
-
-#ifdef LIMITED_RANGE
-#define MAX_TRANS 32767.0
-#else
-#define MAX_TRANS 32768.0
-#endif
-void
+double
 rate(double f, int sample_rate, struct cnum *r) {
 	double t;
 	double mine_cos, mine_sin;
@@ -192,40 +143,18 @@ rate(double f, int sample_rate, struct cnum *r) {
 	r->r_p = (c1 >> 1) & 0xffff;
 	r->i_p = (c2 >> 1) & 0xffff;
 #else
-	r->r_p = (int) (MAX_TRANS * cos(t)) & 0xffff;
-	r->i_p = (int) (MAX_TRANS * sin(t)) & 0xffff;
+	r->r_p = (int) (32768 * cos(t)) & 0xffff;
+	r->i_p = (int) (32768 * sin(t)) & 0xffff;
 #endif
-#if 0
-	for (int k = 1; k < 16; k++) {
-		double s = ((double) k * (M_PI / 2)) / t;
-		double m, rem;
-		m = modf(s, &rem);
-		printf("s = %f, m = %f, rem = %f\n", s, m, rem);
-		if (m < .01) {
-			sample_target = (int) rem;
-			sample_quadrant = k;
-			break;
-		}
-	}
-	printf("Rebalance constant is %d samples, quadrant %d\n",
-			sample_target, sample_quadrant);
+#ifdef DYNAMIC_BIAS
+	/*
+	 * Start with an initial +1 bias which will cause the amplitude
+	 * to grow, then we'll correct.
+	 */
+	r->r_p++;
+	r->i_p++;
 #endif
-	mine_cos = (double) r->r_p / MAX_TRANS;
-	mine_sin = (double) r->i_p / MAX_TRANS;
-	my_t_cos = acos(mine_cos);
-	my_t_sin = asin(mine_sin);
-	act_cos = cos(t);
-	act_sin = sin(t);
-	printf("Inverting rate computation:\n");	
-	printf("\tRate in radians: %f\n", t);
-	printf("\tMy constants acos %f (%f), asin %f (%f)\n",
-				my_t_cos, t - my_t_cos, my_t_sin, t-my_t_sin);
-	printf("\tcos = %f, sin = %f\n", act_cos, act_sin);
-	printf("\tmy cos = %f(%f), my_sin = %f(%f)\n", 
-				mine_cos, mine_cos-act_cos, mine_sin, mine_sin - act_sin);
-	printf("\tacos in radians: %f, delta %f\n", mine_cos, cos(t) - mine_cos);
-	printf("\tasin in radian: %f, delta %f\n", mine_sin, sin(t) - mine_sin);
-	rate_error(f, sample_rate, r);
+	return t;
 }
 
 /*
@@ -288,17 +217,56 @@ int main(int argc, char *argv[]) {
 	struct cnum f;
 	struct cnum tone_rate; 
 	struct cnum cur_osc;
+	double tone = TONE;
+	int sample_rate = SAMPLE_RATE;
 	double act_samples, sample_error, error;
 	int tone_samples;
+#ifdef DYNAMIC_BIAS
+	int reset_start;
+	int reset_count;
+	int bias;
+	int bias_level = 1;
+#endif
 	int cur_sample;
 	FILE *pf;
+	const char *options = "t:s:";
+	char opt;
 	char title[80];
-	char *exp = "";
 	sample_buf_t *data1, *data2, *data3;
 	sample_buf_t *fft1, *fft2, *fft3;
 	
 
+	while ((opt = getopt(argc, argv, options)) != -1) {
+		switch (opt) {
+			case '?':
+			case ':':
+				fprintf(stderr, "Usage %s [-s <sample rate>] [-t <tone>]\n",
+					argv[0]);
+				exit(1);
+			case 't':
+				tone = atof(optarg);
+				if (tone < 1.0) {
+					fprintf(stderr, "Tone frequency required > 1\n");
+					exit(1);
+				}
+				break;
+			case 's':
+				sample_rate = atoi(optarg);
+				if (sample_rate == 0) {
+					fprintf(stderr, "Sample rate required > 0\n");
+					exit(1);
+				}
+				break;
+		}
+	}
+	if ((tone * 2.0) > (double) sample_rate) {
+		fprintf(stderr, "Tone %f is more than the nyquist frequency\n",
+			tone);
+		exit(1);
+	}
 	printf("Harmonic Osciallor fixed point math experiment.\n");
+	printf("Test tone %f Hz, Sample rate %d samples per second.\n",
+			tone, sample_rate);
 	/* Allocate sample buffers */
 	data1 = alloc_buf(BINS, SAMPLE_RATE);
 	if (data1 == NULL) {
@@ -315,14 +283,17 @@ int main(int argc, char *argv[]) {
 	printf("Data buffers are %d samples long\n", data1->n);
 
 	/* fill data 2 with 'known good data' */
-	add_cos(data2, TONE, MAX_AMPLITUDE, 0);
+	add_cos(data2, tone, MAX_AMPLITUDE, 0);
 
-	rate(TONE, SAMPLE_RATE, &tone_rate);
+	rate(tone, sample_rate, &tone_rate);
 
 	/* stuff about how many complete cycles we are going to go through */
 
 	/* Number of samples per complete wave */
-	act_samples = (double) SAMPLE_RATE / TONE;
+	act_samples = (double) sample_rate / tone;
+#ifdef DYNAMIC_BIAS
+	reset_start = 4 * (int) act_samples;
+#endif
 
 	/* Nearest integer number of samples */
 	tone_samples = (int) (act_samples);
@@ -331,10 +302,11 @@ int main(int argc, char *argv[]) {
 	sample_error = act_samples - tone_samples;
 
 
-	printf("Computed constants for tone of %8.3f Hz:\n", TONE);
+	printf("Computed constants for tone of %8.3f Hz:\n", tone);
 	printf("\tNumber of samples: %d (%8.3f),\n", tone_samples, act_samples);
 	printf("\tOscillator constant:  %d + %dj,\n", tone_rate.r_p, tone_rate.i_p);
 	printf("\tSample Error: %8.6f\n", sample_error);
+
 	cur_osc.r_p = MAX_AMPLITUDE;	// Full "on" tone
 	cur_osc.i_p = 0;
 	cur_sample = 0;
@@ -348,8 +320,37 @@ int main(int argc, char *argv[]) {
 
 		/* This is what we 'expect' to end up with. */
 		cnum_mul(&cur_osc, &tone_rate, &next_sample);
+#ifdef DYNAMIC_BIAS
+		if ((reset_count == 0) && 
+			((next_sample.r_p > MAX_AMPLITUDE) || 
+			 (next_sample.i_p > MAX_AMPLITUDE))) {
+			tone_rate.r_p -= 2;
+			tone_rate.i_p -= 2;
+			bias_level -= 2;
+			bias--;
+			printf(":B-(%d):", bias_level);
+			printf("R");
+			reset_count = reset_start;
+		}
+		if (reset_count > 0) {
+			reset_count--;
+			if (reset_count == 0) {
+				bias++;
+				bias_level++;
+				printf(":B+(%d):", bias_level);
+				tone_rate.r_p += 1;
+				tone_rate.i_p += 1;
+			}
+		}
+#endif
 
-#ifdef CORRECT_ERROR
+#ifdef CORRECTION_EXPERIMENTS
+		/*
+		 * These were a series of correction experiments to eliminate
+		 * spurs in the resulting spectrum.
+		 *
+		 * They have been replaced with the dynamic bias correction
+		 */
 		/* For every 'n' cycles, if we need to we can correct
 		 * by adding an additional sample. 
 		 *
@@ -361,16 +362,6 @@ int main(int argc, char *argv[]) {
 		 * 3) 'DO_NOTHING' which means, ignore this quirk and carry
 		 *    on as if you hadn't noticed it.
 		 */
-#ifdef RESET_AMPLITUDE
-		if ((i % 51) == 0) {
-#if 0 
-			printf("%d, %d => %d, 0\n", next_sample.r_p, next_sample.i_p,
-					MAX_AMPLITUDE);
-#endif
-			next_sample.r_p = MAX_AMPLITUDE;
-			next_sample.i_p = 0;
-		}
-#endif
 		if (cur_sample == 0) {
 			/* we're at the end of the cycle, so we check for error */
 			error += sample_error;
@@ -396,25 +387,25 @@ int main(int argc, char *argv[]) {
 		}
 		cur_sample = (cur_sample + 1) % tone_samples;
 
-		/* This code is exploring 'excursions' of the amplitude */
-		if ((next_sample.r_p > MAX_AMPLITUDE) || 
-			(next_sample.r_p < -MAX_AMPLITUDE) ||
-			(next_sample.i_p > MAX_AMPLITUDE) ||
-			(next_sample.i_p < -MAX_AMPLITUDE) ) {
-			printf("*");
-#define CEIL_FLOOR
-#ifdef CEIL_FLOOR
-			next_sample.r_p = (next_sample.r_p > MAX_AMPLITUDE) ?
-									MAX_AMPLITUDE : next_sample.r_p;
-			next_sample.r_p = (next_sample.r_p < -MAX_AMPLITUDE) ?
-									-MAX_AMPLITUDE : next_sample.r_p;
-			next_sample.i_p = (next_sample.i_p > MAX_AMPLITUDE) ?
-									MAX_AMPLITUDE : next_sample.i_p;
-			next_sample.i_p = (next_sample.i_p < -MAX_AMPLITUDE) ?
-									-MAX_AMPLITUDE : next_sample.i_p;
-#endif
-#endif
+		/* This experiment code is exploring 'excursions' of the amplitude */
+
+#ifdef RESET_ZERO_ON_MAX
+		if ((next_sample.r_p >= MAX_AMPLITUDE) ||
+			(next_sample.r_p <= -MAX_AMPLITUDE)) {
+			next_sample.r_p = (next_sample.r_p < 0) ? -MAX_AMPLITUDE :
+													   MAX_AMPLITUDE;
+			next_sample.i_p = 0;
+			printf("r");
 		}
+		if ((next_sample.i_p >= MAX_AMPLITUDE) ||
+			(next_sample.i_p <= -MAX_AMPLITUDE)) {
+			next_sample.i_p = (next_sample.i_p < 0) ? -MAX_AMPLITUDE :
+													   MAX_AMPLITUDE;
+			next_sample.r_p = 0;
+			printf("i");
+		}
+#endif
+#endif
 
 		/* keep the current oscillator register current */
 		cur_osc.r_p = next_sample.r_p;
@@ -434,16 +425,8 @@ int main(int argc, char *argv[]) {
 		printf("DC Component: %d + %dj\n", dc_i, dc_q);
 	}
 
-	plot_drift(data3, SAMPLE_RATE, TONE);
+	plot_drift(data3, sample_rate, tone);
 
-#if 0
-	printf("Two 'cycles' of the tone:\n");
-	printf("\tReference\tGenerated\n-------------\t------------\n");
-	for (int i = 0; i < 2*tone_samples; i++) {
-		printf("[%d]:\t%f\t%f\n", i, 
-			creal(data3->data[i]), cimag(data3->data[i]));
-	}
-#endif
 /* DEBUGGING */
 	fft1 = compute_fft(data1, BINS, W_BH, 0);
 	fft2 = compute_fft(data2, BINS, W_BH, 0);
@@ -451,24 +434,12 @@ int main(int argc, char *argv[]) {
 	printf("Plotting results ... \n");
 	pf = fopen(PLOT_FILE, "w");
 	data1->r = SAMPLE_RATE;
-	data1->max_freq = TONE;
-	data1->min_freq = TONE;
+	data1->max_freq = tone;
+	data1->min_freq = tone;
 	data1->type = SAMPLE_SIGNAL;
 	{
-#ifdef RESET_START
-		exp = "RESET START";
-#endif
-#ifdef HOLD_PREVIOUS
-		exp = "HOLD PREVIOUS";
-#endif
-#ifdef DO_NOTHING
-		exp = "DO NOTHING";
-#endif
-#ifdef RESET_AMPLITUDE
-		exp = "RESET AMPLITUDE";
-#endif
 		snprintf(title, 80, 
-			"Harmonic Oscillator Experiment (%f Hz) Exp: %s", TONE, exp);
+			"Harmonic Oscillator Experiment (%f Hz) Exp: %s", tone, exp_title);
 		multiplot_begin(pf, title, 2, 2);
 	}
 	plot_data(pf, data1, "data");

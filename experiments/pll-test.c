@@ -16,9 +16,7 @@
 #define SAMPLE_RATE 	96000
 #define BINS 			16384
 #define TONE			3765.7	// Tone frequency in Hz
-#define MAX_AMPLITUDE	2047	// signed 12 bit DAC
-
-double tone = TONE;
+#define MAX_AMPLITUDE	(1 << 14)	// signed 12 bit DAC
 
 /*
  * This is our simple complex number with a real part (r_p) and
@@ -54,6 +52,12 @@ struct cnum {
  * C is read-only as far as this function is concerned.
  */
 
+/* we start with an initial positive bias */
+int actual_bias = 1;
+int bias_level = 1;
+#define RESET_COUNT	100
+int reset_start = RESET_COUNT;
+int reset_count;
 void
 cnum_mul(struct cnum *a, struct cnum *b, struct cnum *r) {
 	int32_t t1, t2, t3, t4;
@@ -66,6 +70,36 @@ cnum_mul(struct cnum *a, struct cnum *b, struct cnum *r) {
 	s2 = t3 + t4;			// imaginary part.
 	r->r_p = (s1 >> 15) & 0xffff;	// scale to signed 16 bit result
 	r->i_p = (s2 >> 15) & 0xffff;	// scale to signed 16 bit result
+
+	/* Rounding idea from Bob, if we go past MAX_AMPLITUDE, bias 
+	 * the sin and cos down by 1 bit (.000031), if we go below
+	 * MAX_AMPLITUDE, bias the sin and cos up by 1 bit
+	 */
+	if ((reset_count == 0) && (r->r_p > MAX_AMPLITUDE)) {
+		b->r_p -= 2;
+		b->i_p -= 2;
+		actual_bias -= 2;
+		bias_level--;
+		printf("R");
+		reset_count = reset_start;
+	} 
+	if ((reset_count == 0) && (r->i_p > MAX_AMPLITUDE)) {
+		b->r_p -= 2;
+		b->i_p -= 2;
+		bias_level--;
+		actual_bias -= 2;
+		printf("R");
+		reset_count = reset_start;
+	} 
+	if (reset_count) {
+		reset_count--;
+		if (reset_count == 0) {
+			bias_level++;
+			actual_bias++;
+			b->r_p++;
+			b->i_p++;
+		}
+	}
 }
 
 /*
@@ -138,15 +172,9 @@ rate(double f, int sample_rate, struct cnum *r) {
 	my_t_sin = asin(mine_sin);
 	act_cos = cos(t);
 	act_sin = sin(t);
-	printf("Inverting rate computation:\n");	
-	printf("\tRate in radians: %f\n", t);
-	printf("\tMy constants acos %f (%f), asin %f (%f)\n",
-				my_t_cos, t - my_t_cos, my_t_sin, t-my_t_sin);
-	printf("\tcos = %f, sin = %f\n", act_cos, act_sin);
-	printf("\tmy cos = %f(%f), my_sin = %f(%f)\n", 
-				mine_cos, mine_cos-act_cos, mine_sin, mine_sin - act_sin);
-	printf("\tacos in radians: %f, delta %f\n", mine_cos, cos(t) - mine_cos);
-	printf("\tasin in radian: %f, delta %f\n", mine_sin, sin(t) - mine_sin);
+	/* Add in an initial 1 bit bias */
+	r->r_p++;
+	r->i_p++;
 	return t;
 }
 
@@ -161,15 +189,17 @@ int main(int argc, char *argv[]) {
 	double frac;
 	double prev;
 	int tone_samples;
+	int iterations = 10000;
 	char opt;
-	const char *options="s:t:";
+	const char *options="s:t:i:";
 	
 
 	while ((opt = getopt(argc, argv, options)) != -1) {
 		switch (opt) {
 			case '?':
 			case ':':
-				fprintf(stderr, "Usage: %s [-s <sample_rate>] [-t <tone>]\n",
+				fprintf(stderr, 
+"Usage: %s [-s <sample_rate>] [-t <tone>] [-i iterations]\n",
 							argv[0]);
 				exit(1);
 			case 't':
@@ -186,6 +216,13 @@ int main(int argc, char *argv[]) {
 					exit(1);
 				}
 				break;
+			case 'i':
+				iterations = atoi(optarg);
+				if (iterations <= 0) {
+					fprintf(stderr, "Iterations must be a postive value.\n");
+					exit(1);
+				}
+				break;
 		}
 	}
 	if (tone > ((double) sample_rate / 2.0)) {
@@ -195,23 +232,26 @@ int main(int argc, char *argv[]) {
 
 	printf("Harmonic Oscillator Error Feedback Experiment.\n");
 	printf("Tone frequency : %f, Sample Rate %d\n", tone, sample_rate);
+	printf("Running for %d iterations\n", iterations);
 	/* compute the radians/sample value */
 	rps = rate(tone, sample_rate, &tone_rate);
 
 	/* stuff about how many complete cycles we are going to go through */
 
 	/* Number of samples per complete wave */
-	act_samples = (double) SAMPLE_RATE / TONE;
+	act_samples = (double) sample_rate / tone;
 
 	/* At least 3 complete cycles of tone */
 	// (void) modf(4.0 * act_samples, &frac);
 	// tone_samples = (int) (4.0 * frac);
+	reset_start = 4 * (int) act_samples;
 	tone_samples = 4 * (int) act_samples;
 
-	printf("Computed constants for tone of %8.3f Hz:\n", TONE);
+	printf("Computed constants for tone of %8.3f Hz:\n", tone);
 	printf("\tNumber of samples per cycle: %8.3f\n", act_samples);
 	printf("\tOscillator constant:  %d + %dj,\n", tone_rate.r_p, tone_rate.i_p);
 	printf("\tRadians per sample: %f\n", rps);
+	printf("\tReset bias after %d samples\n", reset_start);
 
 	/*
  	 * This loop runs through an integral number of cycles. Starting with the
@@ -231,19 +271,23 @@ int main(int argc, char *argv[]) {
  	 */
 
 	/* A psuedo fixed point number 1.0 with 14 bits of precision */
-	osc.r_p = 1 * (1 << 14);
+	osc.r_p = MAX_AMPLITUDE;
 	osc.i_p = 0;
 	/* This is our chart, we can import it into gnuplot to graph it */
 	printf("Error Rate:\n");
-	printf("Sample\tReal\t\tImag\t\tLen\t\tDelta\tError\n");
+	printf("Sample\tReal\t\tImag\t\tLen\t\tDelta\tBias\n");
 	prev = 1.0;
-	for (int i = 0; i < tone_samples; i++) {
+	int old_bias = bias_level;
+	for (int i = 0; i < iterations; i++) {
 		/* s1 and c1 are converted from fixed point back to doubles */
 		s1 = (double)(osc.r_p) / (double) (1<<14);
 		c1 = (double)(osc.i_p) / (double) (1<<14);
 		double len = num_len(&osc);
-		printf("%d\t%f\t%f\t%f\t%f\t%4.2f\n", i, s1, c1, len, prev - len,
-				(100.0 * len) - 100.0);
+		if (old_bias != bias_level) {
+			printf("%d\t%f\t%f\t%f\t%f\t%3d(%3d)\n", i, s1, c1, len, prev - len,
+					bias_level, actual_bias);
+			old_bias = bias_level;
+		}
 		prev = len;
 		cnum_mul(&osc, &tone_rate, &osc);
 	}

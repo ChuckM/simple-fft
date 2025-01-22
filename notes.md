@@ -760,3 +760,11 @@ Computed constants for tone of 3765.700 Hz:
         Oscillator constant:  31777 + 7994j,
         Sample Error: 0.493268
 
+---------------------------------------------------------------------
+
+Per Bob's conversation, one could watch the amplitude of the two
+components and if it exceeds the set amplitude correct for that.
+
+One thing would be if the amplitude is >= max then zero the other component
+and trim to max.
+
