@@ -305,12 +305,12 @@ int main(int argc, char *argv[]) {
 				PLOT_Y_AMPLITUDE_NORMALIZED);
 	snprintf(title, sizeof(title), "FFT Result (%d bins)", BINS);
 	plot_ranged(pf, title, "fft", PLOT_X_FREQUENCY, 
-				PLOT_Y_DB_NORMALIZED, 0, 10000);
+				PLOT_Y_DB_NORMALIZED, tone-5000, tone+5000);
 	plot(pf, "Reference Data", "ref_data", PLOT_X_TIME_MS, 
 				PLOT_Y_AMPLITUDE_NORMALIZED);
 	snprintf(title, sizeof(title), "FFT (Reference) Result (%d bins)", BINS);
 	plot_ranged(pf, title, "ref_fft", PLOT_X_FREQUENCY, 
-				PLOT_Y_DB_NORMALIZED, 0, 10000);
+				PLOT_Y_DB_NORMALIZED, tone-5000, tone+5000);
 	multiplot_end(pf);
 	fclose(pf);
 	printf("Done.\n");

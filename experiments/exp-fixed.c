@@ -2,6 +2,12 @@
  * Fixed point math experiment
  *
  * Can I build a simple harmonic oscillator with 16 bit fixed point math.
+ *
+ * *DEPRECATED*
+ *
+ * This was the harness I built to explore the subtleties of building a
+ * harmonic oscillator. I learned a lot and the result was incorporated
+ * in the osc.c module in the dsp source directory.
  */
 
 #include <stdio.h>
@@ -138,10 +144,16 @@ rate(double f, int sample_rate, struct cnum *r) {
 #ifdef EXP_ROUNDING
 	int c1 = 65536 * cos(t);
 	int c2 = 65536 * sin(t);
+#if 0
 	c1 = (c1 & 0x1) ? c1 + 2 : c1;
 	c2 = (c2 & 0x1) ? c2 + 2 : c2;
 	r->r_p = (c1 >> 1) & 0xffff;
 	r->i_p = (c2 >> 1) & 0xffff;
+#else
+	r->r_p = ((c1 >> 1) + (c1 & 0x1)) & 0xffff;
+	r->i_p = ((c2 >> 1) + (c1 & 0x1)) & 0xffff;
+	
+#endif
 #else
 	r->r_p = (int) (32768 * cos(t)) & 0xffff;
 	r->i_p = (int) (32768 * sin(t)) & 0xffff;

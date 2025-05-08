@@ -825,7 +825,7 @@ plot_ranged(FILE *f, char *title, char *name, plot_scale_t x, plot_scale_t y,
 int
 multiplot_begin(FILE *f, char *title, int rows, int cols)
 {
-	fprintf(f, "set multiplot title '%s' font 'Arial,14'\\\n", title);
+	fprintf(f, "set multiplot title \"%s\" font 'Arial,14'\\\n", title);
 	fprintf(f, "\t layout %d, %d\n", rows, cols);
 	return 0;
 }

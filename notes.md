@@ -768,3 +768,33 @@ components and if it exceeds the set amplitude correct for that.
 One thing would be if the amplitude is >= max then zero the other component
 and trim to max.
 
+Per Phillip you don't need the square root if you work in squares and while
+that would be very large numbers you may only be interested in the lower so
+how to detect that.
+
+Using python you can get the magnitude of the squared numbers. Roots of unity
+for circles.
+
+Philip Rakity suggested something that I was circling around trying to find
+a fast way to do sqrt() on an FPGA, since the length is sqrt(a^2 + b^2) if
+you square both sides that means len^2 = a^2 + b^2. We know the amplitude
+(len) and we keep it at 16 bits because of the DAC's limit, so the amplitude
+squared will fit in 32 bits. And the neither A nor B will ever exceed
+amplitude (if we're tuned correctly :-)) so their squares will also fit in
+32 bits and a 32 bit compare is "easy". 
+
+That said, for the Lattice 4K part that will consume the other 4 multipliers
+on the chip to compute a^2 + b^2.
+
+Meanwhile Bob's spreadsheet has evolved and uses the average of the amplitude
+which for a sinusoid is a constant, and keeps a running average over n samples
+which also seems to work well. The down side is that for each oscillator you
+need n spaces of memory to hold your running average. We'll look at the
+implementation cost of that but my intuition is that it will be expensive in
+terms of FPGA resources. 
+
+-----------------------------------
+
+Tested my updated verilog simulator code and it generates waveforms, with good
+FFTs but they look a bit wonky. 
+
