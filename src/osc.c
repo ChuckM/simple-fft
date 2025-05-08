@@ -1,0 +1,129 @@
+/*
+ * Harmonic Oscillator implementations
+ */
+
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
+#include <math.h>
+#include <dsp/osc.h>
+
+/*
+ * This is the current effective amplitude of the oscillator squared.
+ * We can compare this against the amplitude squared to see if it
+ * is currently higher or lower than our desired amplitude.
+ */
+int32_t
+osc_amp_squared(osc_t *n) {
+	return ((n->i_p * n->i_p) + (n->q_p * n->q_p));
+}
+
+/*
+ * Behaviorial implementation of the verilog implementing an oscillator.
+ * Rotation
+ *  | cos  sin |
+ *  | -sin cos |
+ *  rx = x*cos - y*sin
+ *  ry = x*sin + y*cos
+ */
+void
+osc(int16_t c, int16_t s, point_t *cur, point_t *res, int b_ena, int b) {
+	int32_t bc, bs;
+	int32_t rx, ry;
+
+	if (b_ena) {
+		bc = c + ((b == 1) ? 1 : -1);
+		bs = s + ((b == 1) ? 1 : -1);
+	} else {
+		bc = c;
+		bs = s;
+	}
+	rx = (int32_t)(cur->x) * bc - (int32_t)(cur->y) * bs;
+	ry = (int32_t)(cur->x) * bs + (int32_t)(cur->y) * bc;
+	res->x = (int16_t)(rx / 16384);
+	res->y = (int16_t)(ry / 16384);
+}
+
+/* 
+ * Compute the oscillators rate in radians/sample. This returns the
+ * full precision radians/sample value and sets the passed in oscillator
+ * structure to a 16 bit fixed point representation of the sine and cosine
+ * of that rate.
+ *
+ * Given the 16 bit resolution, the code cannot represent 1.0, (which would
+ * be 32768 and thus -1.0.) A known limitation, however as the that coincides
+ * with being exactly on the nyquist frequency we can avoid that.
+ * 
+ * The frequency in radians/second is 2*pi*f, the rate in radians per sample
+ * is (frequency in radians/second) / (samples / second)
+ */
+
+double
+osc_rate(double f, int sample_rate, osc_t *osc) {
+	double t;
+
+	/* this is our radians per sample value */
+	t = (2.0 * M_PI * f) / (double) sample_rate;
+	int c1 = floor(32768.5 * sin(t));
+	int c2 = floor(32768.5 * cos(t));
+	osc->i_p = c1 & 0xffff;
+	osc->q_p = c2 & 0xffff;
+	return t;
+}
+
+/*
+ * Do a complex multiply
+ *
+ *               _______
+ *      ________/_  t2  \
+ *     /   t1  /  \      \
+ *    /       /    \      \
+ *   a.a + I a.b * b.a + I b.b
+ *    \       \_____/      /
+ *     \         t3       /
+ *      \________________/ 
+ *             t4
+ *
+ * This requires four multiplies (t1 through t4) and two adds. So with
+ * DSP blocks can be done in 2 'multiplier' clocks using multipliers
+ * where the output of one multiplier becomes the addend to the second
+ * multiplier.
+ *
+ * We promote to 32 bits (sign extend), do the multiplies and then
+ * convert back to 16 bits.
+ *
+ * This executes the function R = C * R; (read/modify/write on R)
+ * C is read-only as far as this function is concerned.
+ *
+ * NB: This isn't a general purpose multiply, it makes assumptions about
+ * the parameters.
+ */
+
+void
+osc_step(osc_t *cur, osc_t *rate, osc_t *next) {
+	int32_t s1, s2;
+	
+	/*   |------- t1 -------|   |------- t2 -------| */
+	s1 = rate->i_p * cur->i_p + rate->q_p * cur->q_p;
+	/*   |------- t3 -------|   |------- t4 -------| */
+	s2 = rate->q_p * cur->i_p - rate->i_p * cur->q_p;
+	next->q_p = (s1 >> 15) & 0xffff;
+	next->i_p = (s2 >> 15) & 0xffff;
+#ifdef DEBUG_STEP
+	printf(
+		"s1 = %d(%f), next->i_p = %d(%f), s2 = %d(%f), next->q_p = %d(%f)\n",
+		s1, s1/(double)(1<<14), next->i_p, next->i_p/(double)(1<<14),
+		s2, s2/(double)(1<<14), next->q_p, next->q_p/(double)(1<<14));
+#endif
+}
+
+/*
+ * This is a version of osc_step that tracks the overall amplitude
+ * and corrects the oscillator if it goes out of bounds
+ */
+void
+osc_stable_step(osc_t *cur, osc_t *rate, osc_t *next, int a_squared) {
+	
+}
+
