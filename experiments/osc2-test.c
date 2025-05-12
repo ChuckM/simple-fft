@@ -89,11 +89,13 @@ int main(int argc, char *argv[]) {
 	int sample_rate = SAMPLE_RATE;
 	double angle, act_samples, sample_error, error;
 	int tone_samples;
+	int zero_crossings = 0;
 	int enable_bias = 0;
 	int bias = 0;
 	int verbose = 0;
+	int max_error_squared, min_error_squared;
 	FILE *pf;
-	const char *options = "b:e:t:s:v";
+	const char *options = "t:s:v";
 	char opt;
 	char title[340];
 	sample_buf_t *data1, *data2, *data3, *error_sig;
@@ -134,7 +136,12 @@ int main(int argc, char *argv[]) {
 	printf("Harmonic Osciallor fixed point math experiment.\n");
 	printf("Test tone %f Hz, Sample rate %d samples per second.\n",
 			tone, sample_rate);
-	/* Allocate sample buffers */
+	/* Allocate sample buffers
+     * Data 1 - Generated Data
+     * Data 2 - Full Resolution tone data 
+     * Data 3 - ??
+     * Error_Sig - squared error tracking 
+     */ 
 	data1 = alloc_buf(SAMPLE_RATE, SAMPLE_RATE);
 	if (data1 == NULL) {
 		fprintf(stderr, "Failure to allocate data 1\n");
@@ -147,10 +154,6 @@ int main(int argc, char *argv[]) {
 	if (data3 == NULL) {
 		fprintf(stderr, "Failure to allocate data 2\n");
 	}
-	/*
-	 * This is a way of tracking the error in both the inphase
-	 * and quadrature phase part to look at it.
-	 */
 	error_sig = alloc_buf(SAMPLE_RATE, SAMPLE_RATE);
 	printf("Data buffers are %d samples long\n", data1->n);
 
@@ -169,31 +172,48 @@ int main(int argc, char *argv[]) {
 	act_samples = (double) sample_rate / tone;
 
 	/* Nearest integer number of samples */
-	tone_samples = (int) (act_samples);
+	tone_samples = (int) floor(act_samples);
 
 	/* The difference between actual and the integral number */
 	sample_error = act_samples - tone_samples;
 
 
 	printf("Computed constants for tone of %8.3f Hz:\n", tone);
+	printf("\tRadians per sample: %f\n", rps);
 	printf("\tNumber of samples: %d (%8.3f),\n", tone_samples, act_samples);
 	printf("\tOscillator constant:  %d + %dj,\n", rps_c, rps_s);
 	printf("\tSample Error: %8.6f\n", sample_error);
+	double r2 = acos((rps_c)/16384.0);
+	double efreq_l = (r2 * sample_rate) / (M_PI * 2.0); 
+	printf("\tEffective Frequency: %f (%f)\n", efreq_l, r2);
+	r2 = acos((rps_c - 1)/16384.0);
+	double efreq_h = (r2 * sample_rate) / (M_PI * 2.0); 
+	printf("\tNext Higer Frequency: %f (%f)\n", efreq_h, r2);
+	double delta_f = efreq_h - efreq_l;
+	double wanted = tone - efreq_l;
+	double ratio = wanted / delta_f;
+	printf("\tCorrection factor %f, to add %f Hz\n", ratio, delta_f);
 
 	cur.x = AMPLITUDE;	// Full "on" tone
 	cur.y = 0;
+
 	data1->data[0] = cur.x + I * cur.y;
 	/* Data 3 is composed of the reference inphase + generated inphase */
-	data3->data[0] = creal(data2->data[0]) + I * creal(data2->data[0]);
+	data3->data[0] = creal(data1->data[0]) + I * creal(data2->data[0]);
+
 	error = 0;
 	error_sig->data[0] = 0;
 	max_amp = min_amp = 1.0;
+	max_error_squared = min_error_squared = 0;
 	angle = 0;
-	printf("Generating:\n[");
+	if (verbose) {
+		printf("Generating:\n[");
+	}
 	int adjustments = 0;
 
 #define AMPLITUDE_SQUARED	(AMPLITUDE * AMPLITUDE)
 
+	/* Run the oscillator across the length of the data buffer */
 	for (int i = 1; i < data1->n; i++) {
 		int32_t sample_squared, square_error;
 		double amp;
@@ -201,50 +221,57 @@ int main(int argc, char *argv[]) {
 		sample_squared = cur.x * cur.x + cur.y * cur.y;
 		square_error = AMPLITUDE_SQUARED - sample_squared;
 		amp = sqrt(cur.x * cur.x + cur.y * cur.y) / (double) AMPLITUDE;
-#if ERR_AMPLITUDE
-		error_sig->data[i] = amp - 1.0;
-#endif
 		min_amp = (amp < min_amp) ? amp : min_amp;
 		max_amp = (amp > max_amp) ? amp : max_amp;
+		min_error_squared = 
+ 		  (square_error < min_error_squared) ? min_error_squared : square_error;
+		max_error_squared =
+ 		  (square_error > max_error_squared) ? max_error_squared : square_error;
 
-		/*
-		 * this is where we figure out how much variance we 
-		 * tolerate before biasing the rate.
+		/* Error_sig holds error_squared in real part and bias in
+	 	 * imaginary part.
 		 */
-#if ERR_BIAS
-		error_sig->data[i] = 0;
-#endif
 		if (square_error > AMPLITUDE) {
 			enable_bias = 1;
-			bias = 0; // bias is +1
+			error_sig->data[i] =  (float) square_error - I*8192;
+			bias = 1; // bias is +1
 		} else if (square_error < -AMPLITUDE) {
 			enable_bias = 1;
-			bias = 1; // bias is -1
+			error_sig->data[i] = (float) square_error + I*8192;
+			bias = 0; // bias is -1
 		} else {
 			enable_bias = 0; // no bias
+			error_sig->data[i] = (float) square_error;
 			bias = 0; 
 		}
 		if (enable_bias) {
-#if ERR_BIAS
-			error_sig->data[i] = bias ? -1 : 1;
-#endif
 			if (verbose) {
 				printf(bias ? "-" : "+");
 			}
+			/* note the adjustment */
 			adjustments++;
 		} 
 
 		osc(rps_c, rps_s, &cur, &nxt, enable_bias, bias);
 		data1->data[i] = nxt.x + I * nxt.y;
+		/*
+		 * Detect zero crossings when x goes from positive to negative
+		 * or negative to positive. (could double count on 0 though)
+		 */
+		if ((cur.x != 0) && (cur.x * nxt.x <= 0)) {
+			zero_crossings++;
+		}
 		cur.x = nxt.x;
 		cur.y = nxt.y;
 
 		/* This tracks the reference waveform and our generated ones */
-		data3->data[i] = creal(data2->data[i]) + I * (creal(data1->data[i]));
+		data3->data[i] = creal(data1->data[i]) + I * (creal(data2->data[i]));
 	}
 	printf("]\nDone Generating\n");
 	printf("Total %d adjustments in %d samples, samples/adjustment = %f\n",
 		adjustments, data1->n, (double)(data1->n) / (double) adjustments);
+	printf("     Zero crossings: %d\n", zero_crossings);
+	printf("Effective Frequency: %f\n", (double) zero_crossings / 2.0);
 	/* Checking for a DC component */
 	{
 		int dc_i = 0, dc_q = 0;
@@ -256,33 +283,29 @@ int main(int argc, char *argv[]) {
 	}
 	printf("Minimum amplitude: %6.5f (%9.6f%%)\n", min_amp, 100 * (1 - min_amp));
 	printf("Maximum amplitude: %6.5f (%9.6f%%)\n", max_amp, 100 * (1 - max_amp));
+	printf("Minimum Square Error: %d\n", min_error_squared);
+	printf("Maximum Square Error: %d\n", max_error_squared);
 
 	plot_drift(data3, sample_rate, tone);
 
 	fft1 = compute_fft(data1, BINS, W_BH, 0);
 	fft2 = compute_fft(data2, BINS, W_BH, 0);
-#if ERR_BIAS | ERR_AMPLITUDE
-	error_sig->type = SAMPLE_REAL_SIGNAL;
+	error_sig->type = SAMPLE_SIGNAL;
 	error_sig->min_freq = 100;
 	error_sig->max_freq = 100;
 	fft3 = compute_fft(error_sig, BINS, W_BH, 0);
-#if ERR_BIAS
 	printf("Plotting Error Bias FFT\n");
 	snprintf(title, sizeof(title), "Error Bias FFT");
-#endif
-#if ERR_AMPLITUDE
 	printf("Plotting Error Amplitude FFT\n");
 	snprintf(title, sizeof(title), "Error Amplitude FFT");
-#endif
 	pf = fopen("plots/error-bias.plot", "w");
 	multiplot_begin(pf, title, 1, 2);
 	plot_data(pf, error_sig, "err");
 	plot_data(pf, fft3, "fft");
-	plot(pf, "Variation on Amplitude", "err", PLOT_X_TIME_MS, PLOT_Y_REAL_AMPLITUDE);
+	plot(pf, "Variation on Amplitude", "err", PLOT_X_TIME_MS, PLOT_Y_AMPLITUDE);
 	plot_ranged(pf, title, "fft", PLOT_X_FREQUENCY, PLOT_Y_DB_NORMALIZED, 3500, 4000);
 	multiplot_end(pf);
 	fclose(pf);
-#endif
 
 	printf("Plotting results ... \n");
 	pf = fopen(PLOT_FILE, "w");
@@ -305,12 +328,12 @@ int main(int argc, char *argv[]) {
 				PLOT_Y_AMPLITUDE_NORMALIZED);
 	snprintf(title, sizeof(title), "FFT Result (%d bins)", BINS);
 	plot_ranged(pf, title, "fft", PLOT_X_FREQUENCY, 
-				PLOT_Y_DB_NORMALIZED, tone-5000, tone+5000);
+				PLOT_Y_DB_NORMALIZED, tone-1000, tone+1000);
 	plot(pf, "Reference Data", "ref_data", PLOT_X_TIME_MS, 
 				PLOT_Y_AMPLITUDE_NORMALIZED);
 	snprintf(title, sizeof(title), "FFT (Reference) Result (%d bins)", BINS);
 	plot_ranged(pf, title, "ref_fft", PLOT_X_FREQUENCY, 
-				PLOT_Y_DB_NORMALIZED, tone-5000, tone+5000);
+				PLOT_Y_DB_NORMALIZED, tone-1000, tone+1000);
 	multiplot_end(pf);
 	fclose(pf);
 	printf("Done.\n");
