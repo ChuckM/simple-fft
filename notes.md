@@ -798,3 +798,61 @@ terms of FPGA resources.
 Tested my updated verilog simulator code and it generates waveforms, with good
 FFTs but they look a bit wonky. 
 
+Gnuplot trick for vertical lines
+
+plot [t=-1000:1000] 20,t \<linestyle\>
+
+
+
+Stolen Stack Exchange gnuplot answer on points: 
+
+I don't think the above answer is very helpful because, as I am writing
+this, the first google result method is extremely unsatisfactory.
+
+It uses gnuplot's ability to read stdout to generate data, so that
+
+`plot "< echo '1 2'"`
+
+will put a single data point at the point x=1, y=2.
+
+This has several shortcomings that make it just about unusable.
+
+First, there isn't a good way to pass variables into this method, because
+it already makes use of both types of quotes. The use of macros to pass
+variables in sprintf statements is therefore disabled, because a third
+type of quoting would be necessary.
+
+Second, it requires the plot command to be run in order to call the point
+into existence. This means that if there is more than one point I want
+to plot, I have to append plot statements to the main plot statement. If
+I want to do this in any kind of scripted way, instead of just as an
+explicit list, I'm back to having to run a macro, which as I've already
+pointed out, doesn't work for this technique.
+
+Gnuplot does have two techniques that are much more suitable to producing
+a single point.
+
+First, if you just need a marker at a point, you can use the gnuplot
+object type to plot a circle at the point, e.g.
+
+`set object circle at <x>,<y> size <r>`
+
+where \<x\> and \<y\> are the coordinates of the point and <r> is the size
+of the circle to be drawn. The circle can be colored, filled, made
+transparent, etc., like any gnuplot object.
+
+Second, if you really need a marker with a particular point style, you
+can use gnuplot's label command. By setting the label text to be empty
+and assigning a point type, a point will be drawn at the coordinate
+specified, e.g.,
+
+`set label <i> "" at <x>,<y> point pointtype <n>`
+
+sets a point with tag index \<i\> at the point x=\<x\>, y=\<y\> with the
+pointtype \<n\> (in default wxt terminal, n=1 is red crosses, n=2 is green
+saltires, n=3 is blue asterisks, etc...)
+
+In this way, multiple points to be plotted can be set, and a separate
+plot command for another function can be issued without having to clutter
+the plot statement with all the single points to be plotted.
+
