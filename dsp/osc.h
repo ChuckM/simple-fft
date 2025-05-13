@@ -15,6 +15,25 @@ typedef struct {
 	int16_t	y;	// Quadrature part
 } point_t;
 
+/*
+ * Harmonic Oscillator structure. These are the parameters that
+ * define a harmonic oscillator that uses 16 bit DSP multipliers
+ * to realize itself.
+ */
+typedef struct {
+	struct trans {
+		uint16_t	c;	// 16 bit fixed point cosine value
+		uint16_t	s;	// 16 bit fixed point sine value
+	} rps[2];			// rps[0] lower freq, rps[1] higher freq
+	uint32_t	ratio;	// To get to the target frequency.
+} h_osc;
+
+/*
+ * Return a malloc'd structure holding the parameters needed to
+ * realize frequency 'f' in a 16 bit fixed point harmonic oscillator.
+ */
+h_osc *ho_params(double f, int sample_rate);
+
 /* return the sum of the squares of the I and Q parts */
 int32_t osc_amp_squared(osc_t *n);
 

@@ -143,7 +143,7 @@ __plot(FILE *f, plot_t *plot)
 	fprintf(f, "set xlabel font 'Arial,10' offset 0,1\n");
 	fprintf(f, "set ylabel font 'Arial,10' offset 1, 0\n");
 	if (plot->k) {
-		fprintf(f, "set key opaque font 'Arial,6' box lw 2\n");
+		fprintf(f, "set key opaque font 'Arial,6' box lw 2 width 1.5 height 0.5\n");
 	} else {
 		fprintf(f, "set nokey\n");
 	}

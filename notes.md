@@ -856,3 +856,53 @@ In this way, multiple points to be plotted can be set, and a separate
 plot command for another function can be issued without having to clutter
 the plot statement with all the single points to be plotted.
 
+---------------------------------------------
+
+Golden Ratio experiments and actual frequency generation.
+
+Noticed that I was getting inconsistent frequency generation so I changed
+up the method.
+
+Calculate the full precision Radian Per Second - convert to 16 bit fixed point.
+Use **that** to compute sine and cosine. Add 1 to it and use that to compute
+the next higher sine and cosine (higher frequency).
+
+For 4701 Hz, that was 
+
+```
+rps 5041   Excel: 4700.98 Hz
+cos 15615  Actual: 4700.34 Hz
+sin 4961
+
+rps 5042   Excel: 4701.91 Hz
+cos 15614  Actual: 4701.84 Hz
+sin 4962
+
+Using the actual values subtracting F(low) from F(want) is 0.66
+                        subtracting A(low) from A(high) is 1.5
+                        using those ratio needed is .44 (.66/1.5)
+
+When I force the ratio to be 0.44 the measured rate is 4700.99 or
+very nearly target.
+```
+
+So one of my questions is why do my reverse calculations get it wrong? 
+All of the inverted calculations are both different and not the same as
+the measured value.
+
+Q: If I average the three inverted values, the average is closer to the real number.
+A: No it was not.
+
+So took the manual measurements of zero crossings, forced a ratio that "should"
+work and it does indeed work to a certain level. (using .44). Proves that the
+technique works, that the GRLDS is doing its thing, and that my code for
+computing the numbers is broken. 
+
+Action item: Explore the choice of sine/cosine for a given frequency to
+to minimize "error"
+
+Action item: The code of using rps + 1 for the next higher frequency works well.
+
+Action item: Build an experiment that runs the oscillator for a long time and
+tracks the convergence to the desired frequency.
+

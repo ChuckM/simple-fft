@@ -1,4 +1,4 @@
-/* 
+/*
  * Fixed point oscillator experiment version 2
  *
  * This code uses the fixed point harmonic oscillator code in the osc.c
@@ -22,9 +22,23 @@
 #define BINS 			65536
 #define TONE			3765.7	// Tone frequency in Hz
 #define AMPLITUDE		16384
+#define BIAS_THRESHOLD	24576
 
 /* Set this to a description of the experiment being run */
 char *exp_title = "Verilog equivalent";
+
+/*
+ * Magical Golden Ratio Gizmo
+ */
+static const uint32_t gr = 2654435770;
+static uint32_t acc;
+
+int
+choose(uint32_t ratio) {
+	acc += gr;
+	return (ratio >= acc);
+}
+	
 
 /*
  * This function plots five "windows" of five cycles each of the reference
@@ -71,9 +85,9 @@ plot_drift(sample_buf_t *data, double sample_rate, double tone) {
 	for (int k = 0; k < 5; k++) {
 		double p_start = win_start_millis[k];
 		double p_end = p_start + 5.0 * cycle_ms;
-		snprintf(title, sizeof(title), 
+		snprintf(title, sizeof(title),
 					"Reference vs Generated Window %d", k+1);
-		plot_ranged(pf, title, "ref", PLOT_X_TIME_MS, 
+		plot_ranged(pf, title, "ref", PLOT_X_TIME_MS,
 				PLOT_Y_AMPLITUDE, p_start, p_end);
 	}
 	multiplot_end(pf);
@@ -81,21 +95,28 @@ plot_drift(sample_buf_t *data, double sample_rate, double tone) {
 }
 
 int main(int argc, char *argv[]) {
-	int16_t	rps_c, rps_s;
+	struct FIXEDPOINT_RPS {
+		int16_t	c, s;
+	} rps[2];					// Fixed point sine/cosine
 	point_t cur, nxt;
 	double tone = TONE;
-	double rps;			// radians per sample 
+	double precise_rps;			// radians per sample
+	uint16_t fp_rps;
 	double max_amp, min_amp;
 	int sample_rate = SAMPLE_RATE;
-	double angle, act_samples, sample_error, error;
-	int tone_samples;
+	int use_grlds = 0, sel;
+	double angle, error;
 	int zero_crossings = 0;
+	int zc_sample = 0;
+	double measured_freq;
 	int enable_bias = 0;
+	int extra_bias = 0;
+	int bias_threshold = BIAS_THRESHOLD;
 	int bias = 0;
 	int verbose = 0;
 	int max_error_squared, min_error_squared;
 	FILE *pf;
-	const char *options = "t:s:v";
+	const char *options = "t:s:vgbB:";
 	char opt;
 	char title[340];
 	sample_buf_t *data1, *data2, *data3, *error_sig;
@@ -109,6 +130,15 @@ int main(int argc, char *argv[]) {
 				fprintf(stderr, "Usage %s [-s <sample rate>] [-t <tone>]\n",
 					argv[0]);
 				exit(1);
+			case 'g':
+				use_grlds++;
+				break;
+			case 'b':
+				extra_bias++;
+				break;
+			case 'B':
+				bias_threshold = atoi(optarg);
+				break;
 			case 't':
 				tone = atof(optarg);
 				if (tone < 1.0) {
@@ -138,10 +168,10 @@ int main(int argc, char *argv[]) {
 			tone, sample_rate);
 	/* Allocate sample buffers
      * Data 1 - Generated Data
-     * Data 2 - Full Resolution tone data 
+     * Data 2 - Full Resolution tone data
      * Data 3 - ??
-     * Error_Sig - squared error tracking 
-     */ 
+     * Error_Sig - squared error tracking
+     */
 	data1 = alloc_buf(SAMPLE_RATE, SAMPLE_RATE);
 	if (data1 == NULL) {
 		fprintf(stderr, "Failure to allocate data 1\n");
@@ -158,44 +188,42 @@ int main(int argc, char *argv[]) {
 	printf("Data buffers are %d samples long\n", data1->n);
 
 	/* fill data 2 with 'known good data' */
-	add_cos(data2, tone, AMPLITUDE, 0);
+	add_cos(data2, tone, AMPLITUDE, 270);
 
 	/* This is radians per sample */
-	rps = (2.0 * M_PI * tone) / (double) sample_rate;
+	precise_rps = (2.0 * M_PI * tone) / (double) sample_rate;
+
+	fp_rps = floor(precise_rps * 16384.5);
 	/* fixed point cosine and sine of radians per sample */
-	rps_c = floor((16384.5*cos(rps)));
-	rps_s = floor((16384.5*sin(rps)));
+	rps[0].c = floor((16384.5*cos(fp_rps/16384.0)));
+	rps[0].s = floor((16384.5*sin(fp_rps/16384.0)));
 
-	/* stuff about how many complete cycles we are going to go through */
+	/* Now calculate how close that is to the frequency we want */
 
-	/* Number of samples per complete wave */
-	act_samples = (double) sample_rate / tone;
-
-	/* Nearest integer number of samples */
-	tone_samples = (int) floor(act_samples);
-
-	/* The difference between actual and the integral number */
-	sample_error = act_samples - tone_samples;
+	double efreq_l = ((fp_rps/16384.0) * sample_rate) / (M_PI * 2.0);
+	printf("\tEffective Frequency (low): %f\n", efreq_l);
+	double efreq_h = ((fp_rps+1)/16384.0 * sample_rate) / (M_PI * 2.0);
+	printf("\tNext Higer Frequency: %f\n", efreq_h);
+	rps[1].c = floor((16384.5 * cos(((fp_rps+1)/16384.0))));
+	rps[1].s = floor((16384.5 * sin(((fp_rps+1)/16384.0))));
 
 
-	printf("Computed constants for tone of %8.3f Hz:\n", tone);
-	printf("\tRadians per sample: %f\n", rps);
-	printf("\tNumber of samples: %d (%8.3f),\n", tone_samples, act_samples);
-	printf("\tOscillator constant:  %d + %dj,\n", rps_c, rps_s);
-	printf("\tSample Error: %8.6f\n", sample_error);
-	double r2 = acos((rps_c)/16384.0);
-	double efreq_l = (r2 * sample_rate) / (M_PI * 2.0); 
-	printf("\tEffective Frequency: %f (%f)\n", efreq_l, r2);
-	r2 = acos((rps_c - 1)/16384.0);
-	double efreq_h = (r2 * sample_rate) / (M_PI * 2.0); 
-	printf("\tNext Higer Frequency: %f (%f)\n", efreq_h, r2);
 	double delta_f = efreq_h - efreq_l;
 	double wanted = tone - efreq_l;
-	double ratio = wanted / delta_f;
-	printf("\tCorrection factor %f, to add %f Hz\n", ratio, delta_f);
+	//uint32_t ratio = (uint32_t)floor((wanted / delta_f) * 4294967296);
+	uint32_t ratio = (uint32_t)floor(0.466 * 4294967296); // debug force this
 
-	cur.x = AMPLITUDE;	// Full "on" tone
-	cur.y = 0;
+	printf("\tCorrection factor %f, to add %f Hz\n", ratio/4294967296.0, delta_f);
+
+	printf("Computed constants for tone of %8.3f Hz:\n", tone);
+	printf("\tRadians per sample: %8.6f\n", precise_rps);
+	printf("\tOscillator constant 0 (%7.2f Hz):  %d + %dj,\n",
+												efreq_l, rps[0].c, rps[0].s);
+	printf("\tOscillator constant 1 (%7.2f Hz):  %d + %dj,\n",
+												efreq_h, rps[1].c, rps[1].s);
+
+	cur.x = 0;
+	cur.y = -AMPLITUDE;
 
 	data1->data[0] = cur.x + I * cur.y;
 	/* Data 3 is composed of the reference inphase + generated inphase */
@@ -223,26 +251,40 @@ int main(int argc, char *argv[]) {
 		amp = sqrt(cur.x * cur.x + cur.y * cur.y) / (double) AMPLITUDE;
 		min_amp = (amp < min_amp) ? amp : min_amp;
 		max_amp = (amp > max_amp) ? amp : max_amp;
-		min_error_squared = 
+		min_error_squared =
  		  (square_error < min_error_squared) ? min_error_squared : square_error;
 		max_error_squared =
  		  (square_error > max_error_squared) ? max_error_squared : square_error;
 
-		/* Error_sig holds error_squared in real part and bias in
+		/*
+		 * Three things are combined here, bias tracking and bias engaging
+		 * Error_sig holds error_squared in real part and bias in
 	 	 * imaginary part.
 		 */
 		if (square_error > AMPLITUDE) {
 			enable_bias = 1;
-			error_sig->data[i] =  (float) square_error - I*8192;
-			bias = 1; // bias is +1
+			bias = 1;
+#if 0
+			XXX this should be updated to use the threshold stuff
+			if ( ... harder correction ...) {
+				bias += extra_bias;
+			}
+#endif
+			error_sig->data[i] =  (float) square_error + I*(bias * 4096);
 		} else if (square_error < -AMPLITUDE) {
 			enable_bias = 1;
-			error_sig->data[i] = (float) square_error + I*8192;
-			bias = 0; // bias is -1
+			bias = -1;
+#if 0
+			XXX this should be updated
+			if ( ... harder correction ...) {
+				bias -= extra_bias;
+			}
+#endif
+			error_sig->data[i] = (float) square_error + I*(bias*4096);
 		} else {
 			enable_bias = 0; // no bias
 			error_sig->data[i] = (float) square_error;
-			bias = 0; 
+			bias = 0;
 		}
 		if (enable_bias) {
 			if (verbose) {
@@ -250,9 +292,15 @@ int main(int argc, char *argv[]) {
 			}
 			/* note the adjustment */
 			adjustments++;
-		} 
+		}
 
-		osc(rps_c, rps_s, &cur, &nxt, enable_bias, bias);
+		if (use_grlds) {
+			sel = choose(ratio);
+			//sel = 1; // debug with -g always use the higher one
+		} else {
+			sel = 0;
+		}
+		osc(rps[sel].c, rps[sel].s, &cur, &nxt, enable_bias, bias);
 		data1->data[i] = nxt.x + I * nxt.y;
 		/*
 		 * Detect zero crossings when x goes from positive to negative
@@ -260,6 +308,7 @@ int main(int argc, char *argv[]) {
 		 */
 		if ((cur.x != 0) && (cur.x * nxt.x <= 0)) {
 			zero_crossings++;
+			zc_sample = i;
 		}
 		cur.x = nxt.x;
 		cur.y = nxt.y;
@@ -270,8 +319,10 @@ int main(int argc, char *argv[]) {
 	printf("]\nDone Generating\n");
 	printf("Total %d adjustments in %d samples, samples/adjustment = %f\n",
 		adjustments, data1->n, (double)(data1->n) / (double) adjustments);
+	double period_len = (double) zc_sample / (double) sample_rate;
+	measured_freq = (double) zero_crossings / (2.0 * period_len);
 	printf("     Zero crossings: %d\n", zero_crossings);
-	printf("Effective Frequency: %f\n", (double) zero_crossings / 2.0);
+	printf("Effective Frequency: %f\n", measured_freq);
 	/* Checking for a DC component */
 	{
 		int dc_i = 0, dc_q = 0;
@@ -314,25 +365,26 @@ int main(int argc, char *argv[]) {
 	data1->min_freq = tone;
 	data1->type = SAMPLE_SIGNAL;
 	{
-		snprintf(title, sizeof(title), 
-		"Harmonic Oscillator Experiment\\n"
-		"(Tone: %6.2f Hz) (Amp (min/max): (%6.5f/%6.5f))\\n",
-			 tone, min_amp, max_amp); 
+		snprintf(title, sizeof(title),
+		"Harmonic Oscillator Experiment (GRLDS: %s)\\n"
+		"(Tone: %6.2f (target %6.2f) Hz) (Amp (min/max): (%6.5f/%6.5f))\\n",
+			 use_grlds ? "On" : "Off",
+			 measured_freq, tone, min_amp, max_amp);
 		multiplot_begin(pf, title, 2, 2);
 	}
 	plot_data(pf, data1, "data");
 	plot_data(pf, fft1, "fft");
 	plot_data(pf, data2, "ref_data");
 	plot_data(pf, fft2, "ref_fft");
-	plot(pf, "Generated Data", "data", PLOT_X_TIME_MS, 
+	plot(pf, "Generated Data", "data", PLOT_X_TIME_MS,
 				PLOT_Y_AMPLITUDE_NORMALIZED);
 	snprintf(title, sizeof(title), "FFT Result (%d bins)", BINS);
-	plot_ranged(pf, title, "fft", PLOT_X_FREQUENCY, 
+	plot_ranged(pf, title, "fft", PLOT_X_FREQUENCY,
 				PLOT_Y_DB_NORMALIZED, tone-1000, tone+1000);
-	plot(pf, "Reference Data", "ref_data", PLOT_X_TIME_MS, 
+	plot(pf, "Reference Data", "ref_data", PLOT_X_TIME_MS,
 				PLOT_Y_AMPLITUDE_NORMALIZED);
 	snprintf(title, sizeof(title), "FFT (Reference) Result (%d bins)", BINS);
-	plot_ranged(pf, title, "ref_fft", PLOT_X_FREQUENCY, 
+	plot_ranged(pf, title, "ref_fft", PLOT_X_FREQUENCY,
 				PLOT_Y_DB_NORMALIZED, tone-1000, tone+1000);
 	multiplot_end(pf);
 	fclose(pf);

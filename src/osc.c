@@ -20,12 +20,47 @@ osc_amp_squared(osc_t *n) {
 }
 
 /*
+ * Harmonic Oscillator structure. These are the parameters that
+ * define a harmonic oscillator that uses 16 bit DSP multipliers
+ * to realize itself.
+typedef struct {
+	struct trans {
+		uint16_t	c;	// 16 bit fixed point cosine value
+		uint16_t	s;	// 16 bit fixed point sine value
+	} rps[2];			// rps[0] lower freq, rps[1] higher freq
+	uint32_t	ratio;	// To get to the target frequency.
+} h_osc;
+*/
+
+/*
+ * Return a malloc'd structure holding the parameters needed to
+ * realize frequency 'f' in a 16 bit fixed point harmonic oscillator.
+ */
+h_osc *
+ho_params(double f, int sample_rate) {
+	double lower_freq;
+	double upper_freq;
+	double rps = (2.0 * M_PI * f) / (double) sample_rate;
+	static h_osc params;
+
+	uint16_t rps1 = floor(16384.5*rps);
+	lower_freq = (rps1 * sample_rate/ 16384.0) / (2.0 * M_PI);
+	upper_freq = ((rps1+1) * sample_rate / 16384.0) / (2.0 * M_PI);
+	return &params;
+}
+
+/*
  * Behaviorial implementation of the verilog implementing an oscillator.
  * Rotation
  *  | cos  sin |
  *  | -sin cos |
  *  rx = x*cos - y*sin
  *  ry = x*sin + y*cos
+ *  c is fixed point cosine, s is fixed point sine
+ *  cur is the current point
+ *  res is the next point
+ *  b_ena is the "bias enable" signal.
+ *  b is the bias amount. 
  */
 void
 osc(int16_t c, int16_t s, point_t *cur, point_t *res, int b_ena, int b) {
@@ -33,8 +68,8 @@ osc(int16_t c, int16_t s, point_t *cur, point_t *res, int b_ena, int b) {
 	int32_t rx, ry;
 
 	if (b_ena) {
-		bc = c + ((b == 1) ? 1 : -1);
-		bs = s + ((b == 1) ? 1 : -1);
+		bc = c + b;
+		bs = s + b;
 	} else {
 		bc = c;
 		bs = s;
