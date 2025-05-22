@@ -906,3 +906,6 @@ Action item: The code of using rps + 1 for the next higher frequency works well.
 Action item: Build an experiment that runs the oscillator for a long time and
 tracks the convergence to the desired frequency.
 
+-------------------------------------------
+Fix the frequency computation so that we get a better answer.
+

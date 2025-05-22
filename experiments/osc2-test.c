@@ -22,7 +22,7 @@
 #define BINS 			65536
 #define TONE			3765.7	// Tone frequency in Hz
 #define AMPLITUDE		16384
-#define BIAS_THRESHOLD	24576
+#define BIAS_THRESHOLD	16381
 
 /* Set this to a description of the experiment being run */
 char *exp_title = "Verilog equivalent";
@@ -261,25 +261,13 @@ int main(int argc, char *argv[]) {
 		 * Error_sig holds error_squared in real part and bias in
 	 	 * imaginary part.
 		 */
-		if (square_error > AMPLITUDE) {
+		if (square_error > bias_threshold) {
 			enable_bias = 1;
 			bias = 1;
-#if 0
-			XXX this should be updated to use the threshold stuff
-			if ( ... harder correction ...) {
-				bias += extra_bias;
-			}
-#endif
 			error_sig->data[i] =  (float) square_error + I*(bias * 4096);
-		} else if (square_error < -AMPLITUDE) {
+		} else if (square_error < -bias_threshold) {
 			enable_bias = 1;
 			bias = -1;
-#if 0
-			XXX this should be updated
-			if ( ... harder correction ...) {
-				bias -= extra_bias;
-			}
-#endif
 			error_sig->data[i] = (float) square_error + I*(bias*4096);
 		} else {
 			enable_bias = 0; // no bias
