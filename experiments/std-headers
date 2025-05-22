@@ -1,0 +1,12 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <complex.h>
+#include <math.h>
+#include <strings.h>
+#include <getopt.h>
+#include <ctype.h>
+#include <dsp/fft.h>
+#include <dsp/plot.h>
+#include <dsp/sample.h>
+
+
