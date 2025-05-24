@@ -45,11 +45,15 @@ int32_t osc_amp_squared(osc_t *n);
  */
 void osc_step(osc_t *osc_cur, osc_t *rate, osc_t *osc_next);
 
+#define OSC32_BITSHIFT (int) (1 << 24)
+#define OSC16_BITSHIFT (int) (1 << 15)
+
 /*
  * Behaviorial implementation of the verilog implementing a harmonic
  * oscillator.
  */
 void osc(int16_t c, int16_t s, point_t *cur, point_t *res, int b_ena, int b);
+void osc32(int32_t c, int32_t s, point_t *cur, point_t *res, int b_ena, int b);
 
 /*
  * Computes the radians/sample rate for a given tone at the

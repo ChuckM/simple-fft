@@ -32,7 +32,8 @@ LIB_SRC_DIR = ./src/lib
 
 EXPERIMENTS = exp1 exp2 exp3 exp4 exp5 exp6 exp7 exp8 exp9 exp10 exp11 exp12\
 			  exp-corr exp-corr-plot exp-corr-multiplot \
-			  experiment diff-test exp-fixed pll-test osc-test osc2-test gr
+			  experiment diff-test exp-fixed pll-test osc-test osc2-test gr \
+			  smallest_radian osc3-test osc32-test osc16-test
 
 TEST_PROGRAMS = plot-test cic-test fft-test filt-test
 
@@ -43,7 +44,7 @@ PROGRAMS = demo waves hann bh dft-test \
 	   genplot fig1 $(TEST_PROGRAMS)
 
 HEADERS = cic.h dft.h fft.h filter.h plot.h \
-			diff.h remez.h sample.h signal.h windows.h
+			diff.h remez.h sample.h signal.h windows.h osc.h
 
 LDFLAGS = -lm 
 

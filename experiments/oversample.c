@@ -36,5 +36,6 @@ main(int argc, char *argv[])
 	for (int i = 0; i < 3; i++) {
 		add_cos_real(s4x, tones[i], 1.0);
 	}
+	/* incomplete --- apply fix here --- */
 
 }

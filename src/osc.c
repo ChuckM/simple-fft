@@ -9,6 +9,7 @@
 #include <math.h>
 #include <dsp/osc.h>
 
+
 /*
  * This is the current effective amplitude of the oscillator squared.
  * We can compare this against the amplitude squared to see if it
@@ -76,8 +77,39 @@ osc(int16_t c, int16_t s, point_t *cur, point_t *res, int b_ena, int b) {
 	}
 	rx = (int32_t)(cur->x) * bc - (int32_t)(cur->y) * bs;
 	ry = (int32_t)(cur->x) * bs + (int32_t)(cur->y) * bc;
-	res->x = (int16_t)(rx / 16384);
-	res->y = (int16_t)(ry / 16384);
+	res->x = (int16_t)(rx / OSC16_BITSHIFT);
+	res->y = (int16_t)(ry / OSC16_BITSHIFT);
+}
+
+/*
+ * Behaviorial implementation of the verilog implementing an oscillator.
+ * Rotation
+ *  | cos  sin |
+ *  | -sin cos |
+ *  rx = x*cos - y*sin
+ *  ry = x*sin + y*cos
+ *  c is fixed point cosine, s is fixed point sine
+ *  cur is the current point
+ *  res is the next point
+ *  b_ena is the "bias enable" signal.
+ *  b is the bias amount. 
+ */
+void
+osc32(int32_t c, int32_t s, point_t *cur, point_t *res, int b_ena, int b) {
+	int32_t bc, bs;
+	int64_t rx, ry;
+
+	if (b_ena) {
+		bc = c + b;
+		bs = s + b;
+	} else {
+		bc = c;
+		bs = s;
+	}
+	rx = (int64_t)(cur->x) * bc - (int64_t)(cur->y) * bs;
+	ry = (int64_t)(cur->x) * bs + (int64_t)(cur->y) * bc;
+	res->x = (int16_t)(rx / OSC32_BITSHIFT);
+	res->y = (int16_t)(ry / OSC32_BITSHIFT);
 }
 
 /* 
