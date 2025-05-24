@@ -33,7 +33,7 @@ LIB_SRC_DIR = ./src/lib
 EXPERIMENTS = exp1 exp2 exp3 exp4 exp5 exp6 exp7 exp8 exp9 exp10 exp11 exp12\
 			  exp-corr exp-corr-plot exp-corr-multiplot \
 			  experiment diff-test exp-fixed pll-test osc-test osc2-test gr \
-			  smallest_radian osc3-test osc32-test osc16-test
+			  smallest_radian osc3-test osc32-test osc16-test perfect_osc
 
 TEST_PROGRAMS = plot-test cic-test fft-test filt-test
 
@@ -97,6 +97,10 @@ $(OBJ_DIR)/remez.o: $(SRC_DIR)/remez.c dsp/remez.h
 
 $(BIN_DIR)/filt-design: $(SRC_DIR)/filt-design.c $(OBJ_DIR)/remez.o $(INCLUDES)
 	cc -I. -o $@ $< ${OBJECTS} $(OBJ_DIR)/remez.o -L$(LIB_DIR) -lsdsp ${LDFLAGS}
+
+dsp/ho_coords.h: bin/perfect_osc
+	bin/perfect_osc
+	cp /tmp/ho_coords.h dsp/
 
 .PHONY: printvars
 printvars:
