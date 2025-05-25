@@ -33,7 +33,8 @@ LIB_SRC_DIR = ./src/lib
 EXPERIMENTS = exp1 exp2 exp3 exp4 exp5 exp6 exp7 exp8 exp9 exp10 exp11 exp12\
 			  exp-corr exp-corr-plot exp-corr-multiplot \
 			  experiment diff-test exp-fixed pll-test osc-test osc2-test gr \
-			  smallest_radian osc3-test osc32-test osc16-test perfect_osc
+			  smallest_radian osc3-test osc32-test osc16-test perfect_osc \
+				tone-space
 
 TEST_PROGRAMS = plot-test cic-test fft-test filt-test
 
@@ -66,7 +67,7 @@ BINS = $(PROGRAMS:%=$(BIN_DIR)/%) $(EXPERIMENTS:%=$(BIN_DIR)/%)
 all: dirs $(LIB_OBJECTS) 3khz-tone-pdm.test $(OBJECTS) $(LIB) $(BINS)
 
 clean:
-	rm -f $(BIN_DIR)/* $(OBJECTS) $(OBJ_DIR)/* plots/*.plot $(LIB)
+	rm -f $(BIN_DIR)/* $(OBJECTS) $(OBJ_DIR)/* plots/*.plot $(LIB) dsp/ho_coords.h
 
 3khz-tone-pdm.test: bin/cic-test-data
 	bin/cic-test-data
@@ -101,6 +102,8 @@ $(BIN_DIR)/filt-design: $(SRC_DIR)/filt-design.c $(OBJ_DIR)/remez.o $(INCLUDES)
 dsp/ho_coords.h: bin/perfect_osc
 	bin/perfect_osc
 	cp /tmp/ho_coords.h dsp/
+
+bin/osc16-test bin/osc13-test: dsp/ho_coords.h
 
 .PHONY: printvars
 printvars:
