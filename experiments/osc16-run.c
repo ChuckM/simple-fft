@@ -1,5 +1,5 @@
 /*
- * Fixed point oscillator experiment version 3
+ * Fixed point oscillator experiment version 2
  *
  * This code uses the fixed point harmonic oscillator code in the osc.c
  * module to generate a tone. It provides a way of experimenting with
@@ -15,19 +15,18 @@
 #include <dsp/fft.h>
 #include <dsp/plot.h>
 #include <dsp/signal.h>
+#include <dsp/ho_refs.h>
 #include <dsp/osc.h>
 
-#define PLOT_FILE "plots/osc3-test.plot"
+#define PLOT_FILE "plots/osc2-test.plot"
 #define SAMPLE_RATE 	96000
 #define BINS 			65536
 #define TONE			3765.7	// Tone frequency in Hz
 #define AMPLITUDE		16384
 #define BIAS_THRESHOLD	16381
 
-#define BITSHIFT	pow(2,31)
-
 /* Set this to a description of the experiment being run */
-char *exp_title = "32 Bit Constants";
+char *exp_title = "Verilog equivalent";
 
 /*
  * Magical Golden Ratio Gizmo
@@ -90,7 +89,7 @@ plot_drift(sample_buf_t *data, double sample_rate, double tone) {
 		snprintf(title, sizeof(title),
 					"Reference vs Generated Window %d", k+1);
 		plot_ranged(pf, title, "ref", PLOT_X_TIME_MS,
-				PLOT_Y_AMPLITUDE, p_start, p_end);
+				PLOT_Y_AMPLITUDE, p_start, p_end, .1);
 	}
 	multiplot_end(pf);
 	fclose(pf);
@@ -98,12 +97,12 @@ plot_drift(sample_buf_t *data, double sample_rate, double tone) {
 
 int main(int argc, char *argv[]) {
 	struct FIXEDPOINT_RPS {
-		int32_t	c, s;
+		int16_t	c, s;
 	} rps[2];					// Fixed point sine/cosine
 	point_t cur, nxt;
 	double tone = TONE;
 	double precise_rps;			// radians per sample
-	int32_t fp_rps;
+	uint16_t fp_rps;
 	double max_amp, min_amp;
 	int sample_rate = SAMPLE_RATE;
 	int use_grlds = 0, sel;
@@ -165,7 +164,7 @@ int main(int argc, char *argv[]) {
 			tone);
 		exit(1);
 	}
-	printf("Harmonic Osciallor 32 bit fixed point math experiment.\n");
+	printf("Harmonic Osciallor fixed point math experiment.\n");
 	printf("Test tone %f Hz, Sample rate %d samples per second.\n",
 			tone, sample_rate);
 	/* Allocate sample buffers
@@ -195,36 +194,33 @@ int main(int argc, char *argv[]) {
 	/* This is radians per sample */
 	precise_rps = (2.0 * M_PI * tone) / (double) sample_rate;
 
-	fp_rps = floor(precise_rps * BITSHIFT);
-	printf("Precise Radians %12.10f, 32 bit fixed point %12.10f\n",
-		precise_rps, fp_rps/BITSHIFT);
+	fp_rps = floor(precise_rps * 16384.5);
 	/* fixed point cosine and sine of radians per sample */
-	rps[0].c = floor((BITSHIFT*cos(fp_rps/BITSHIFT)));
-	rps[0].s = floor((BITSHIFT*sin(fp_rps/BITSHIFT)));
+	rps[0].c = floor((16384.5*cos(fp_rps/16384.0)));
+	rps[0].s = floor((16384.5*sin(fp_rps/16384.0)));
 
 	/* Now calculate how close that is to the frequency we want */
 
-	double efreq_l = ((fp_rps/BITSHIFT) * sample_rate) / (M_PI * 2.0);
+	double efreq_l = ((fp_rps/16384.0) * sample_rate) / (M_PI * 2.0);
 	printf("\tEffective Frequency (low): %f\n", efreq_l);
-	double efreq_h = ((fp_rps+1)/BITSHIFT * sample_rate) / (M_PI * 2.0);
+	double efreq_h = ((fp_rps+1)/16384.0 * sample_rate) / (M_PI * 2.0);
 	printf("\tNext Higer Frequency: %f\n", efreq_h);
-	rps[1].c = floor((BITSHIFT * cos(((fp_rps+1)/BITSHIFT))));
-	rps[1].s = floor((BITSHIFT * sin(((fp_rps+1)/BITSHIFT))));
+	rps[1].c = floor((16384.5 * cos(((fp_rps+1)/16384.0))));
+	rps[1].s = floor((16384.5 * sin(((fp_rps+1)/16384.0))));
 
 
 	double delta_f = efreq_h - efreq_l;
 	double wanted = tone - efreq_l;
 	//uint32_t ratio = (uint32_t)floor((wanted / delta_f) * 4294967296);
-/** XXX **/
-	uint32_t ratio = (uint32_t)floor(0.466 * pow(2,32)); // debug force this
+	uint32_t ratio = (uint32_t)floor(0.466 * 4294967296); // debug force this
 
-	printf("\tCorrection factor %f, to add %f Hz\n", ratio/pow(2,32), delta_f);
+	printf("\tCorrection factor %f, to add %f Hz\n", ratio/4294967296.0, delta_f);
 
 	printf("Computed constants for tone of %8.3f Hz:\n", tone);
-	printf("\tRadians per sample: %12.10f\n", precise_rps);
-	printf("\tOscillator constant 0 (%10.4f Hz):  %d + %dj,\n",
+	printf("\tRadians per sample: %8.6f\n", precise_rps);
+	printf("\tOscillator constant 0 (%7.2f Hz):  %d + %dj,\n",
 												efreq_l, rps[0].c, rps[0].s);
-	printf("\tOscillator constant 1 (%10.4f Hz):  %d + %dj,\n",
+	printf("\tOscillator constant 1 (%7.2f Hz):  %d + %dj,\n",
 												efreq_h, rps[1].c, rps[1].s);
 
 	cur.x = 0;
@@ -246,7 +242,6 @@ int main(int argc, char *argv[]) {
 
 #define AMPLITUDE_SQUARED	(AMPLITUDE * AMPLITUDE)
 
-	int max_err_sq, min_err_sq;
 	/* Run the oscillator across the length of the data buffer */
 	for (int i = 1; i < data1->n; i++) {
 		int32_t sample_squared, square_error;
@@ -258,9 +253,9 @@ int main(int argc, char *argv[]) {
 		min_amp = (amp < min_amp) ? amp : min_amp;
 		max_amp = (amp > max_amp) ? amp : max_amp;
 		min_error_squared =
- 		  (square_error < -min_error_squared) ? min_error_squared : square_error;
+ 		  (square_error < min_error_squared) ? min_error_squared : square_error;
 		max_error_squared =
- 		  (square_error > max_error_squared) ? square_error : max_error_squared;
+ 		  (square_error > max_error_squared) ? max_error_squared : square_error;
 
 		/*
 		 * Three things are combined here, bias tracking and bias engaging
@@ -294,7 +289,7 @@ int main(int argc, char *argv[]) {
 		} else {
 			sel = 0;
 		}
-		osc32(rps[sel].c, rps[sel].s, &cur, &nxt, enable_bias, bias);
+		osc(rps[sel].c, rps[sel].s, &cur, &nxt, enable_bias, bias);
 		data1->data[i] = nxt.x + I * nxt.y;
 		/*
 		 * Detect zero crossings when x goes from positive to negative
@@ -348,7 +343,7 @@ int main(int argc, char *argv[]) {
 	plot_data(pf, error_sig, "err");
 	plot_data(pf, fft3, "fft");
 	plot(pf, "Variation on Amplitude", "err", PLOT_X_TIME_MS, PLOT_Y_AMPLITUDE);
-	plot_ranged(pf, title, "fft", PLOT_X_FREQUENCY, PLOT_Y_DB_NORMALIZED, 3500, 4000);
+	plot_ranged(pf, title, "fft", PLOT_X_FREQUENCY, PLOT_Y_DB_NORMALIZED, 3500, 4000, 0);
 	multiplot_end(pf);
 	fclose(pf);
 
@@ -374,12 +369,12 @@ int main(int argc, char *argv[]) {
 				PLOT_Y_AMPLITUDE_NORMALIZED);
 	snprintf(title, sizeof(title), "FFT Result (%d bins)", BINS);
 	plot_ranged(pf, title, "fft", PLOT_X_FREQUENCY,
-				PLOT_Y_DB_NORMALIZED, tone-1000, tone+1000);
+				PLOT_Y_DB_NORMALIZED, tone-1000, tone+1000, 0);
 	plot(pf, "Reference Data", "ref_data", PLOT_X_TIME_MS,
 				PLOT_Y_AMPLITUDE_NORMALIZED);
 	snprintf(title, sizeof(title), "FFT (Reference) Result (%d bins)", BINS);
 	plot_ranged(pf, title, "ref_fft", PLOT_X_FREQUENCY,
-				PLOT_Y_DB_NORMALIZED, tone-1000, tone+1000);
+				PLOT_Y_DB_NORMALIZED, tone-1000, tone+1000, 0);
 	multiplot_end(pf);
 	fclose(pf);
 	printf("Done.\n");

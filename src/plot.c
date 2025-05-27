@@ -37,6 +37,7 @@ typedef struct {
 		char *scale;
 	} *x;
 	char *ylabel;			/* Label for Y axis */
+	float ratio;
 	int	k;		    /* key option (inside, outside, off) */
 	size_t		nlines;		/* number of plot lines */
 	char	min_x[40];
@@ -56,6 +57,7 @@ static plot_t __plot_params = {
 		NULL,			/* name of the data */
 		NULL,			/* X scale/index */
 		NULL,			/* Y scale label */
+		0.75,			/* Plot width/height ratio */
 		PLOT_KEY_NONE,	/* Key default */
 		2,				/* space for two lines, initially empty */
 		"",
@@ -134,7 +136,7 @@ __plot(FILE *f, plot_t *plot)
 	}
 
 	/* need some "standard" colors here for re-use / consistency */
-	fprintf(f, "set size ratio .75\n");
+	fprintf(f, "set size ratio %f\n", plot->ratio);
 	fprintf(f, "set xtics nomirror out font 'Arial,8' offset 0,.5\n");
 	fprintf(f, "set ytics nomirror out font 'Arial,8' offset 0,.5\n");
 	fprintf(f, "set grid\n");
@@ -698,7 +700,7 @@ plot_data(FILE *f, sample_buf_t *buf, char *name)
 
 int
 plot(FILE *f, char *title, char *name, plot_scale_t x, plot_scale_t y) {
-	return plot_ranged(f, title, name, x, y, 0, 0);
+	return plot_ranged(f, title, name, x, y, 0, 0, .75);
 }
 /*
  * plot_ranged(...)
@@ -717,9 +719,11 @@ plot(FILE *f, char *title, char *name, plot_scale_t x, plot_scale_t y) {
  */
 int
 plot_ranged(FILE *f, char *title, char *name, plot_scale_t x, plot_scale_t y,
-				double x_min, double x_max)
+				double x_min, double x_max, float ratio)
 {
 	int plot_type = PLOT_TYPE_UNKNOWN;
+
+	__plot_params.ratio = (ratio == 0) ? 0.75 : ratio;
 
 	/* Title of the plot */
 	__plot_params.title = title;

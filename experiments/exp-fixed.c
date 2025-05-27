@@ -217,7 +217,7 @@ plot_drift(sample_buf_t *data, double sample_rate, double tone) {
 		snprintf(title, sizeof(title), 
 					"Reference vs Generated Window %d", k+1);
 		plot_ranged(pf, title, "ref", PLOT_X_TIME_MS, 
-				PLOT_Y_AMPLITUDE, p_start, p_end);
+				PLOT_Y_AMPLITUDE, p_start, p_end, .1);
 	}
 	multiplot_end(pf);
 	fclose(pf);
@@ -462,12 +462,12 @@ int main(int argc, char *argv[]) {
 				PLOT_Y_AMPLITUDE_NORMALIZED);
 	snprintf(title, sizeof(title), "FFT Result (%d bins)", BINS);
 	plot_ranged(pf, title, "fft", PLOT_X_FREQUENCY, 
-				PLOT_Y_DB, 0, 10000);
+				PLOT_Y_DB, 0, 10000, 0);
 	plot(pf, "Reference Data", "ref_data", PLOT_X_TIME_MS, 
 				PLOT_Y_AMPLITUDE_NORMALIZED);
 	snprintf(title, sizeof(title), "FFT (Reference) Result (%d bins)", BINS);
 	plot_ranged(pf, title, "ref_fft", PLOT_X_FREQUENCY, 
-				PLOT_Y_DB, 0, 10000);
+				PLOT_Y_DB, 0, 10000, 0);
 	multiplot_end(pf);
 	fclose(pf);
 	printf("Done.\n");

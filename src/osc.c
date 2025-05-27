@@ -8,6 +8,7 @@
 #include <stdint.h>
 #include <math.h>
 #include <dsp/osc.h>
+#include <dsp/ho_refs.h>
 
 
 /*
@@ -51,6 +52,32 @@ ho_params(double f, int sample_rate) {
 }
 
 /*
+ * This function looks up the nearest radians value in our "perfect"
+ * circle and returns what the X and Y values "should" have been for
+ * that angle.
+ */
+point_t *
+real_xy(int32_t fp_rps, int bitshift) {
+	double angle; 
+	static point_t res;
+
+	/* convert to floating point radians, wrap at 2pi */
+	angle = fp_rps / (double) bitshift;
+	while (angle > M_PI * 2.0) {
+		angle = angle - (M_PI * 2.0);
+	}
+	for (int i = 0; i < REFS_MAX_REF; i++) {
+		double epsilon = angle - refs[i].radians;
+		if (epsilon < REFS_MIN_RADIAN) {
+			res.x = refs[i].x;
+			res.y = refs[i].y;
+			return &res;
+		}
+	}
+	return NULL;
+}
+
+/*
  * Behaviorial implementation of the verilog implementing an oscillator.
  * Rotation
  *  | cos  sin |
@@ -77,8 +104,8 @@ osc(int16_t c, int16_t s, point_t *cur, point_t *res, int b_ena, int b) {
 	}
 	rx = (int32_t)(cur->x) * bc - (int32_t)(cur->y) * bs;
 	ry = (int32_t)(cur->x) * bs + (int32_t)(cur->y) * bc;
-	res->x = (int16_t)(rx / OSC16_BITSHIFT);
-	res->y = (int16_t)(ry / OSC16_BITSHIFT);
+	res->x = (int16_t)(rx / (double) OSC16_BITSHIFT);
+	res->y = (int16_t)(ry / (double) OSC16_BITSHIFT);
 }
 
 /*
@@ -95,21 +122,75 @@ osc(int16_t c, int16_t s, point_t *cur, point_t *res, int b_ena, int b) {
  *  b is the bias amount. 
  */
 void
-osc32(int32_t c, int32_t s, point_t *cur, point_t *res, int b_ena, int b) {
+osc16(int16_t c, int16_t s, point_t *cur, point_t *res, int bias) {
+	int32_t bc, bs;
+	int32_t rx, ry;
+
+	bc = c + bias;
+	bs = s + bias;
+	rx = (int32_t)(cur->x) * bc - (int32_t)(cur->y) * bs;
+	ry = (int32_t)(cur->x) * bs + (int32_t)(cur->y) * bc;
+	res->x = (int16_t)(rx / (double) OSC16_BITSHIFT);
+	res->y = (int16_t)(ry / (double) OSC16_BITSHIFT);
+}
+
+/*
+ * Behaviorial implementation of the verilog implementing an oscillator.
+ * Rotation
+ *  | cos  sin |
+ *  | -sin cos |
+ *  rx = x*cos - y*sin
+ *  ry = x*sin + y*cos
+ *  c is fixed point cosine, s is fixed point sine
+ *  cur is the current point
+ *  res is the next point
+ *  b_ena is the "bias enable" signal.
+ *  b is the bias amount. 
+ */
+void
+osc32(int32_t c, int32_t s, point_t *cur, point_t *res, int b) {
 	int32_t bc, bs;
 	int64_t rx, ry;
+	int64_t cx, cy;
+	double slope;
 
-	if (b_ena) {
-		bc = c + b;
-		bs = s + b;
-	} else {
-		bc = c;
-		bs = s;
+	cx = cur->x;
+	cy = cur->y;
+
+	/* reduce amplitude by computing the slope and moving along that line */
+	if (b) {
+		if (cx == 0) {
+			cy = cy + b;
+			printf("[0,%d]",b);
+		} else if (cy == 0) {
+			cx = cx + b;
+			printf("[%d,0]",b);
+		} else {
+			slope = (double) cy/ (double) cx;
+			cx = cx + b;
+			cy = cy + (int32_t) round(slope);
+			printf("[%d,%d]", b, (int32_t) round(slope));
+		}
 	}
-	rx = (int64_t)(cur->x) * bc - (int64_t)(cur->y) * bs;
-	ry = (int64_t)(cur->x) * bs + (int64_t)(cur->y) * bc;
-	res->x = (int16_t)(rx / OSC32_BITSHIFT);
-	res->y = (int16_t)(ry / OSC32_BITSHIFT);
+#if 0
+	if (b > 0) {			/* Grow the amplitude */
+		cx = (cx < 0) ? cx - b : cx + b;
+		cy = (cy < 0) ? cy - b : cy + b;
+	} else if (b < 0) {		/* Shrink the amplitude */
+		cx = (cx < 0) ? cx + b : cx - b;
+		cy = (cy < 0) ? cy + b : cy - b;
+	} else {
+		cx = cur->x;
+		cy = cur->y;
+	}
+#endif
+
+	bc = c;
+	bs = s;
+	rx = (int64_t)(cx) * bc - (int64_t)(cy) * bs;
+	ry = (int64_t)(cx) * bs + (int64_t)(cy) * bc;
+	res->x = (int16_t)(rx / (double) OSC32_BITSHIFT);
+	res->y = (int16_t)(ry / (double) OSC32_BITSHIFT);
 }
 
 /* 

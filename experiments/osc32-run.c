@@ -1,5 +1,5 @@
 /*
- * Fixed point oscillator experiment version 2
+ * Fixed point oscillator experiment version 3
  *
  * This code uses the fixed point harmonic oscillator code in the osc.c
  * module to generate a tone. It provides a way of experimenting with
@@ -15,17 +15,22 @@
 #include <dsp/fft.h>
 #include <dsp/plot.h>
 #include <dsp/signal.h>
+#include <dsp/ho_refs.h>
 #include <dsp/osc.h>
 
-#define PLOT_FILE "plots/osc2-test.plot"
+#define PLOT_FILE "plots/osc3-test.plot"
 #define SAMPLE_RATE 	96000
 #define BINS 			65536
 #define TONE			3765.7	// Tone frequency in Hz
 #define AMPLITUDE		16384
+#define ASQUARED	(AMPLITUDE * AMPLITUDE)
 #define BIAS_THRESHOLD	16381
+#define BIAS_AMP_ERROR_THRESHOLD 0.4999
+#define TAU	(2.0 * M_PI)
+
 
 /* Set this to a description of the experiment being run */
-char *exp_title = "Verilog equivalent";
+char *exp_title = "32 Bit Constants";
 
 /*
  * Magical Golden Ratio Gizmo
@@ -88,20 +93,75 @@ plot_drift(sample_buf_t *data, double sample_rate, double tone) {
 		snprintf(title, sizeof(title),
 					"Reference vs Generated Window %d", k+1);
 		plot_ranged(pf, title, "ref", PLOT_X_TIME_MS,
-				PLOT_Y_AMPLITUDE, p_start, p_end);
+				PLOT_Y_AMPLITUDE, p_start, p_end, .1);
 	}
 	multiplot_end(pf);
 	fclose(pf);
 }
 
+/*
+ * Code to generate the bias amount. There are options here which
+ * I can choose from with different defines. 
+ *
+ * bias is the existing bias, curx and cury are the x and y co-ordinates
+ * we computed last time. If they are "off" by enough, we return a bias to
+ * bring the algorithm back into where it should be.
+ *
+ */
+int
+gen_bias(int bias, int curx, int cury) {
+	double square_amplitude = AMPLITUDE * AMPLITUDE;
+	double square = curx * curx + cury * cury;
+	double square_error = ASQUARED - square_amplitude;
+	double amp = sqrt(square);
+	double amp_error = AMPLITUDE - amp;
+
+/*
+ * This resets the bias to 0 if we're "in the range" which may or
+ * may not be correct. If it was achieved with a bias in place, the
+ * unbiased constants may not work. This is something we're investigating.
+ * The alternative would be to return it unchanged which do the next
+ * computation with the same biases. Another alternative would be to back it
+ * off by "1" (assuming it's non-zero) either add one or subtract one
+ * depending on which way it was headed (negative bias gets +1, positive bias
+ * gets -1)
+ * EXPERIMENT 1: Set bias to zero
+ * DISCUSSION:
+ * EXPERIMENT 2: Leave bias unchanged
+ * DISCUSSION:
+ * EXPERIMENT 3: Move it one step closer to 0
+ * DISCUSSION
+ */
+	if (abs(amp_error) < BIAS_AMP_ERROR_THRESHOLD) {
+		return 0;
+	}
+
+	/*
+	 * Three things are combined here, bias tracking and bias engaging
+	 * Error_sig holds error_squared in real part and bias in
+ 	 * imaginary part.
+	 */
+	if (amp_error > BIAS_AMP_ERROR_THRESHOLD) {
+		//bias = -round(amp_error/BIAS_AMP_ERROR_THRESHOLD);
+		bias = -1;
+	} else if (amp_error < -BIAS_AMP_ERROR_THRESHOLD) {
+		//bias = -round(amp_error/BIAS_AMP_ERROR_THRESHOLD);
+		bias = 1;
+    } else {
+// Experiment #1: Set the bias to zero
+		bias = 0;
+	}
+	return (bias);
+}
+
 int main(int argc, char *argv[]) {
 	struct FIXEDPOINT_RPS {
-		int16_t	c, s;
+		int32_t	c, s;
 	} rps[2];					// Fixed point sine/cosine
 	point_t cur, nxt;
 	double tone = TONE;
 	double precise_rps;			// radians per sample
-	uint16_t fp_rps;
+	int32_t fp_rps;
 	double max_amp, min_amp;
 	int sample_rate = SAMPLE_RATE;
 	int use_grlds = 0, sel;
@@ -163,7 +223,7 @@ int main(int argc, char *argv[]) {
 			tone);
 		exit(1);
 	}
-	printf("Harmonic Osciallor fixed point math experiment.\n");
+	printf("Harmonic Osciallor 32 bit fixed point math experiment.\n");
 	printf("Test tone %f Hz, Sample rate %d samples per second.\n",
 			tone, sample_rate);
 	/* Allocate sample buffers
@@ -193,36 +253,52 @@ int main(int argc, char *argv[]) {
 	/* This is radians per sample */
 	precise_rps = (2.0 * M_PI * tone) / (double) sample_rate;
 
-	fp_rps = floor(precise_rps * 16384.5);
+	printf("Precise Radians %12.10f\n", precise_rps);
+
 	/* fixed point cosine and sine of radians per sample */
-	rps[0].c = floor((16384.5*cos(fp_rps/16384.0)));
-	rps[0].s = floor((16384.5*sin(fp_rps/16384.0)));
+	rps[0].c = round(cos(precise_rps) * OSC32_BITSHIFT);
+	rps[0].s = round(sin(precise_rps) * OSC32_BITSHIFT);
+	rps[1].c = round(cos(precise_rps + REFS_MIN_RADIAN) * OSC32_BITSHIFT);
+	rps[1].s = round(sin(precise_rps + REFS_MIN_RADIAN) * OSC32_BITSHIFT);
 
 	/* Now calculate how close that is to the frequency we want */
 
-	double efreq_l = ((fp_rps/16384.0) * sample_rate) / (M_PI * 2.0);
-	printf("\tEffective Frequency (low): %f\n", efreq_l);
-	double efreq_h = ((fp_rps+1)/16384.0 * sample_rate) / (M_PI * 2.0);
-	printf("\tNext Higer Frequency: %f\n", efreq_h);
-	rps[1].c = floor((16384.5 * cos(((fp_rps+1)/16384.0))));
-	rps[1].s = floor((16384.5 * sin(((fp_rps+1)/16384.0))));
+	struct {
+		double	cf;	/* inverse cosine frequency */
+		double	sf;	/* inverse sine frequency */
+		double	af;	/* avg frequency (cf+sf) / 2.0 */
+	} freq[2];
 
+	for (int ndx = 0; ndx < 2; ndx++) {
+		double fst = sample_rate / TAU;
+		freq[ndx].cf = acos(rps[ndx].c / (double) OSC32_BITSHIFT) * fst;
+		freq[ndx].sf = asin(rps[ndx].s / (double) OSC32_BITSHIFT) * fst;
+		freq[ndx].af = (freq[ndx].cf + freq[ndx].sf) / 2.0;
+	}
+	printf("Effective Frequency Numbers:\n");
+	printf("Index  Cosine(f) Sine(f) Average(f)\n");
+	for (int ndx = 0; ndx < 2; ndx++) {
+		printf(" %d : %10.4fHz %10.4fHz %10.4fHz\n", 
+			ndx, freq[ndx].cf, freq[ndx].sf, freq[ndx].af);
+	}
 
-	double delta_f = efreq_h - efreq_l;
-	double wanted = tone - efreq_l;
-	//uint32_t ratio = (uint32_t)floor((wanted / delta_f) * 4294967296);
-	uint32_t ratio = (uint32_t)floor(0.466 * 4294967296); // debug force this
+	double delta_f = freq[0].af - freq[1].af;
+	double wanted = tone - freq[0].af;
+	double ratio = 0;
+	if ((delta_f > 0.0000001) && (wanted > 0.0000001)) {
+		 ratio = delta_f / wanted;
+	}
 
-	printf("\tCorrection factor %f, to add %f Hz\n", ratio/4294967296.0, delta_f);
+	printf("\tCorrection factor %f, to add %f Hz\n", ratio, delta_f);
 
 	printf("Computed constants for tone of %8.3f Hz:\n", tone);
-	printf("\tRadians per sample: %8.6f\n", precise_rps);
-	printf("\tOscillator constant 0 (%7.2f Hz):  %d + %dj,\n",
-												efreq_l, rps[0].c, rps[0].s);
-	printf("\tOscillator constant 1 (%7.2f Hz):  %d + %dj,\n",
-												efreq_h, rps[1].c, rps[1].s);
+	printf("\tRadians per sample: %12.10f\n", precise_rps);
+	printf("\tOscillator constant 0 (%10.4f Hz):  %d + %dj,\n",
+											freq[0].af, rps[0].c, rps[0].s);
+	printf("\tOscillator constant 1 (%10.4f Hz):  %d + %dj,\n",
+											freq[1].af, rps[1].c, rps[1].s);
 
-	cur.x = 0;
+	cur.x = -1;
 	cur.y = -AMPLITUDE;
 
 	data1->data[0] = cur.x + I * cur.y;
@@ -234,61 +310,46 @@ int main(int argc, char *argv[]) {
 	max_amp = min_amp = 1.0;
 	max_error_squared = min_error_squared = 0;
 	angle = 0;
+	FILE *df = fopen("/tmp/x", "w");
 	if (verbose) {
 		printf("Generating:\n[");
 	}
+	fprintf(df, "Generating ...\n");
 	int adjustments = 0;
-
-#define AMPLITUDE_SQUARED	(AMPLITUDE * AMPLITUDE)
-
+	int max_err_sq, min_err_sq;
 	/* Run the oscillator across the length of the data buffer */
 	for (int i = 1; i < data1->n; i++) {
 		int32_t sample_squared, square_error;
 		double amp;
+		char bflag;
 
 		sample_squared = cur.x * cur.x + cur.y * cur.y;
-		square_error = AMPLITUDE_SQUARED - sample_squared;
+		square_error = ASQUARED - sample_squared;
 		amp = sqrt(cur.x * cur.x + cur.y * cur.y) / (double) AMPLITUDE;
 		min_amp = (amp < min_amp) ? amp : min_amp;
 		max_amp = (amp > max_amp) ? amp : max_amp;
 		min_error_squared =
- 		  (square_error < min_error_squared) ? min_error_squared : square_error;
+ 		  (square_error < -min_error_squared) ? min_error_squared : square_error;
 		max_error_squared =
- 		  (square_error > max_error_squared) ? max_error_squared : square_error;
+ 		  (square_error > max_error_squared) ? square_error : max_error_squared;
 
-		/*
-		 * Three things are combined here, bias tracking and bias engaging
-		 * Error_sig holds error_squared in real part and bias in
-	 	 * imaginary part.
-		 */
-		if (square_error > bias_threshold) {
-			enable_bias = 1;
-			bias = 1;
-			error_sig->data[i] =  (float) square_error + I*(bias * 4096);
-		} else if (square_error < -bias_threshold) {
-			enable_bias = 1;
-			bias = -1;
-			error_sig->data[i] = (float) square_error + I*(bias*4096);
-		} else {
-			enable_bias = 0; // no bias
-			error_sig->data[i] = (float) square_error;
-			bias = 0;
-		}
-		if (enable_bias) {
-			if (verbose) {
-				printf(bias ? "-" : "+");
-			}
-			/* note the adjustment */
+		bias = gen_bias(bias, cur.x, cur.y);
+		if (bias) {
+			bflag = (bias > 0) ? '+' : '-';
 			adjustments++;
+		} else {
+			bflag = ' ';
+		}
+		if (verbose) {
+			printf("%c", bflag);
 		}
 
 		if (use_grlds) {
 			sel = choose(ratio);
-			//sel = 1; // debug with -g always use the higher one
 		} else {
 			sel = 0;
 		}
-		osc(rps[sel].c, rps[sel].s, &cur, &nxt, enable_bias, bias);
+		osc32(rps[sel].c, rps[sel].s, &cur, &nxt, bias);
 		data1->data[i] = nxt.x + I * nxt.y;
 		/*
 		 * Detect zero crossings when x goes from positive to negative
@@ -342,7 +403,7 @@ int main(int argc, char *argv[]) {
 	plot_data(pf, error_sig, "err");
 	plot_data(pf, fft3, "fft");
 	plot(pf, "Variation on Amplitude", "err", PLOT_X_TIME_MS, PLOT_Y_AMPLITUDE);
-	plot_ranged(pf, title, "fft", PLOT_X_FREQUENCY, PLOT_Y_DB_NORMALIZED, 3500, 4000);
+	plot_ranged(pf, title, "fft", PLOT_X_FREQUENCY, PLOT_Y_DB_NORMALIZED, 3500, 4000, 0);
 	multiplot_end(pf);
 	fclose(pf);
 
@@ -368,12 +429,12 @@ int main(int argc, char *argv[]) {
 				PLOT_Y_AMPLITUDE_NORMALIZED);
 	snprintf(title, sizeof(title), "FFT Result (%d bins)", BINS);
 	plot_ranged(pf, title, "fft", PLOT_X_FREQUENCY,
-				PLOT_Y_DB_NORMALIZED, tone-1000, tone+1000);
+				PLOT_Y_DB_NORMALIZED, tone-1000, tone+1000, 0);
 	plot(pf, "Reference Data", "ref_data", PLOT_X_TIME_MS,
 				PLOT_Y_AMPLITUDE_NORMALIZED);
 	snprintf(title, sizeof(title), "FFT (Reference) Result (%d bins)", BINS);
 	plot_ranged(pf, title, "ref_fft", PLOT_X_FREQUENCY,
-				PLOT_Y_DB_NORMALIZED, tone-1000, tone+1000);
+				PLOT_Y_DB_NORMALIZED, tone-1000, tone+1000, 0);
 	multiplot_end(pf);
 	fclose(pf);
 	printf("Done.\n");

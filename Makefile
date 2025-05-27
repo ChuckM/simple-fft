@@ -32,8 +32,8 @@ LIB_SRC_DIR = ./src/lib
 
 EXPERIMENTS = exp1 exp2 exp3 exp4 exp5 exp6 exp7 exp8 exp9 exp10 exp11 exp12\
 			  exp-corr exp-corr-plot exp-corr-multiplot \
-			  experiment diff-test exp-fixed pll-test osc-test osc2-test gr \
-			  smallest_radian osc3-test osc32-test osc16-test perfect_osc \
+			  experiment diff-test exp-fixed pll-test osc-test osc16-run gr \
+			  smallest_radian osc32-run osc32-test osc16-test perfect_osc \
 				tone-space
 
 TEST_PROGRAMS = plot-test cic-test fft-test filt-test
@@ -49,7 +49,8 @@ HEADERS = cic.h dft.h fft.h filter.h plot.h \
 
 LDFLAGS = -lm 
 
-LIB_SRC = osc.c signal.c sample.c plot.c cic.c fft.c dft.c windows.c filter.c diff.c
+LIB_SRC = osc.c ho_refs.c signal.c sample.c plot.c cic.c fft.c dft.c \
+		  windows.c filter.c diff.c
 
 LIB = $(LIB_DIR)/libsdsp.a
 
@@ -99,11 +100,13 @@ $(OBJ_DIR)/remez.o: $(SRC_DIR)/remez.c dsp/remez.h
 $(BIN_DIR)/filt-design: $(SRC_DIR)/filt-design.c $(OBJ_DIR)/remez.o $(INCLUDES)
 	cc -I. -o $@ $< ${OBJECTS} $(OBJ_DIR)/remez.o -L$(LIB_DIR) -lsdsp ${LDFLAGS}
 
-dsp/ho_coords.h: bin/perfect_osc
-	bin/perfect_osc
-	cp /tmp/ho_coords.h dsp/
+dsp/ho_refs.h: bin/perfect_osc
+	bin/perfect_osc $@
 
-bin/osc16-test bin/osc13-test: dsp/ho_coords.h
+src/ho_refs.c: bin/perfect_osc
+	bin/perfect_osc $@
+
+bin/osc16-test bin/osc13-test: dsp/ho_refs.h
 
 .PHONY: printvars
 printvars:

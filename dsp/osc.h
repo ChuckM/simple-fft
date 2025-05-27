@@ -45,15 +45,25 @@ int32_t osc_amp_squared(osc_t *n);
  */
 void osc_step(osc_t *osc_cur, osc_t *rate, osc_t *osc_next);
 
-#define OSC32_BITSHIFT (int) (1 << 24)
-#define OSC16_BITSHIFT (int) (1 << 15)
+#define OSC_AMPLITUDE	16384
+#define OSC_ASQUARED	(OSC_AMPLITUDE * OSC_AMPLITUDE)
+#define OSC32_BITSHIFT (int) (1 << 30)
+#define OSC16_BITSHIFT (int) (1 << 14)
+
+/*
+ * Given the "current" radians (fixed point) return the "ideal" X, Y
+ * values.
+ */
+point_t *real_xy(int32_t fp_rps, int bitshift);
 
 /*
  * Behaviorial implementation of the verilog implementing a harmonic
  * oscillator.
  */
-void osc(int16_t c, int16_t s, point_t *cur, point_t *res, int b_ena, int b);
-void osc32(int32_t c, int32_t s, point_t *cur, point_t *res, int b_ena, int b);
+void osc(int16_t c, int16_t s, point_t *cur, point_t *res, int eb, int b);
+void osc32(int32_t c, int32_t s, point_t *cur, point_t *res, int b);
+// trying a different bias strategy
+void osc16(int16_t c, int16_t s, point_t *cur, point_t *res, int bias);
 
 /*
  * Computes the radians/sample rate for a given tone at the

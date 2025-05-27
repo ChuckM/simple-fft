@@ -909,3 +909,17 @@ tracks the convergence to the desired frequency.
 -------------------------------------------
 Fix the frequency computation so that we get a better answer.
 
+Still need to fix that, but looking at the adding bias function again
+especially since my 32 bit experiment was a huge failure and I expected
+it to be a lot better.
+
+The change I'm implementing is to ratchet up bias bit by bit or ratchet it down.
+
+Still lots of bias changes in my code. 
+
+ORIGINAL OSC2-TEST is broken with the changes to osc/bias etc.
+
+I now have the ability to track the "perfect" oscillator and with that I
+can now look at each point and see how it stacks up to the next.
+
+

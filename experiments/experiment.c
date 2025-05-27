@@ -2,8 +2,8 @@
  *
  * EXPERIMENT_DESCRIPTION
  *
- * Written MONTH 2023 by Chuck McManis
- * Copyright (c) 2023, Charles McManis
+ * Written MONTH 2025 by Chuck McManis
+ * Copyright (c) 2025, Charles McManis
  *
  * I hereby grant permission for anyone to use this software for any 
  * purpose that they choose, I do not warrant the software to be
@@ -21,6 +21,7 @@
 #include <strings.h>
 #include <getopt.h>
 #include <ctype.h>
+#include <stdint.h>
 #include <dsp/fft.h>
 #include <dsp/plot.h>
 #include <dsp/sample.h>
