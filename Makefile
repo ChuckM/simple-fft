@@ -33,7 +33,7 @@ LIB_SRC_DIR = ./src/lib
 EXPERIMENTS = exp1 exp2 exp3 exp4 exp5 exp6 exp7 exp8 exp9 exp10 exp11 exp12\
 			  exp-corr exp-corr-plot exp-corr-multiplot \
 			  experiment diff-test exp-fixed pll-test osc-test osc16-run gr \
-			  smallest_radian osc32-run osc32-test osc16-test perfect_osc \
+			  smallest_radian osc32-run osc32-test osc16-test \
 				tone-space
 
 TEST_PROGRAMS = plot-test cic-test fft-test filt-test
@@ -45,7 +45,7 @@ PROGRAMS = demo waves hann bh dft-test \
 	   genplot fig1 $(TEST_PROGRAMS)
 
 HEADERS = cic.h dft.h fft.h filter.h plot.h \
-			diff.h remez.h sample.h signal.h windows.h osc.h
+			diff.h remez.h sample.h signal.h windows.h osc.h 
 
 LDFLAGS = -lm 
 
@@ -60,18 +60,23 @@ LIB_OBJECTS = $(LIB_SRC:%.c=$(OBJ_DIR)/%.o)
 
 TOOL_OBJECTS = $(TOOL_SRC:%.c=$(OBJ_DIR)/%.o)
 
-
 INCLUDES = $(HEADERS:%.h=$(INC_DIR)/%.h)
 
 BINS = $(PROGRAMS:%=$(BIN_DIR)/%) $(EXPERIMENTS:%=$(BIN_DIR)/%)
 
-all: dirs $(LIB_OBJECTS) 3khz-tone-pdm.test $(OBJECTS) $(LIB) $(BINS)
+all: dirs bin/perfect_osc dsp/ho_refs.h $(LIB_OBJECTS) 3khz-tone-pdm.test $(OBJECTS) $(LIB) $(BINS)
+
+#obj/osc.o: dsp/ho_refs.h
 
 clean:
-	rm -f $(BIN_DIR)/* $(OBJECTS) $(OBJ_DIR)/* plots/*.plot $(LIB) dsp/ho_coords.h
+	rm -f $(BIN_DIR)/* $(OBJECTS) $(OBJ_DIR)/* plots/*.plot $(LIB) \
+			src/hs_refs.h dsp/ho_refs.h
 
 3khz-tone-pdm.test: bin/cic-test-data
 	bin/cic-test-data
+
+bin/perfect_osc: misc/perfect_osc.c
+	cc -o $@ $< -lm 
 
 dirs: 
 	mkdir -p $(BIN_DIR)
@@ -101,13 +106,18 @@ $(BIN_DIR)/filt-design: $(SRC_DIR)/filt-design.c $(OBJ_DIR)/remez.o $(INCLUDES)
 	cc -I. -o $@ $< ${OBJECTS} $(OBJ_DIR)/remez.o -L$(LIB_DIR) -lsdsp ${LDFLAGS}
 
 dsp/ho_refs.h: bin/perfect_osc
-	bin/perfect_osc $@
+	bin/perfect_osc dsp/ho_refs.h
 
 src/ho_refs.c: bin/perfect_osc
-	bin/perfect_osc $@
+	bin/perfect_osc src/ho_refs.c
 
-bin/osc16-test bin/osc13-test: dsp/ho_refs.h
+#
+#bin/osc16-test bin/osc13-test: dsp/ho_refs.h
+#
 
+#
+#obj/osc.o: dsp/ho_refs.h
+#
 .PHONY: printvars
 printvars:
 	@$(foreach V,$(sort $(.VARIABLES)),\
