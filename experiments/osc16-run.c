@@ -108,16 +108,19 @@ int main(int argc, char *argv[]) {
 	int use_grlds = 0, sel;
 	double angle, error;
 	int zero_crossings = 0;
+	int ref_zero_crossings = 0;
 	int zc_sample = 0;
+	int ref_zc_sample = 0;
 	double measured_freq;
 	int enable_bias = 0;
 	int extra_bias = 0;
 	int bias_threshold = BIAS_THRESHOLD;
 	int bias = 0;
+	int use_old = 0;
 	int verbose = 0;
 	int max_error_squared, min_error_squared;
 	FILE *pf;
-	const char *options = "t:s:vgbB:";
+	const char *options = "Ot:s:vgbB:";
 	char opt;
 	char title[340];
 	sample_buf_t *data1, *data2, *data3, *error_sig;
@@ -131,6 +134,9 @@ int main(int argc, char *argv[]) {
 				fprintf(stderr, "Usage %s [-s <sample rate>] [-t <tone>]\n",
 					argv[0]);
 				exit(1);
+			case 'O':
+				use_old++;
+				break;
 			case 'g':
 				use_grlds++;
 				break;
@@ -263,11 +269,9 @@ int main(int argc, char *argv[]) {
 	 	 * imaginary part.
 		 */
 		if (square_error > bias_threshold) {
-			enable_bias = 1;
 			bias = 1;
 			error_sig->data[i] =  (float) square_error + I*(bias * 4096);
 		} else if (square_error < -bias_threshold) {
-			enable_bias = 1;
 			bias = -1;
 			error_sig->data[i] = (float) square_error + I*(bias*4096);
 		} else {
@@ -289,7 +293,12 @@ int main(int argc, char *argv[]) {
 		} else {
 			sel = 0;
 		}
-		osc(rps[sel].c, rps[sel].s, &cur, &nxt, enable_bias, bias);
+		if (use_old) {
+			osc16a(rps[sel].c, rps[sel].s, &cur, &nxt, bias);
+		} else {
+			osc16(rps[sel].c, rps[sel].s, &cur, &nxt, bias);
+		}
+		
 		data1->data[i] = nxt.x + I * nxt.y;
 		/*
 		 * Detect zero crossings when x goes from positive to negative
@@ -299,6 +308,13 @@ int main(int argc, char *argv[]) {
 			zero_crossings++;
 			zc_sample = i;
 		}
+		int ref_x = creal(data2->data[i-1]);
+		int ref_nxt_x = creal(data2->data[i]);
+		if ((ref_x != 0) && (ref_x * ref_nxt_x <= 0)) {
+			ref_zero_crossings++;
+			ref_zc_sample = i;
+		}
+	
 		cur.x = nxt.x;
 		cur.y = nxt.y;
 
@@ -308,10 +324,15 @@ int main(int argc, char *argv[]) {
 	printf("]\nDone Generating\n");
 	printf("Total %d adjustments in %d samples, samples/adjustment = %f\n",
 		adjustments, data1->n, (double)(data1->n) / (double) adjustments);
-	double period_len = (double) zc_sample / (double) sample_rate;
+	double period_len;
+	period_len = (double) ref_zc_sample / (double) sample_rate;
+	measured_freq = (double) ref_zero_crossings / (2.0 * period_len);
+	printf("     Zero crossings (reference): %d\n", ref_zero_crossings);
+	printf("	Effective Frequency (reference): %f\n", measured_freq);
+	period_len = (double) zc_sample / (double) sample_rate;
 	measured_freq = (double) zero_crossings / (2.0 * period_len);
-	printf("     Zero crossings: %d\n", zero_crossings);
-	printf("Effective Frequency: %f\n", measured_freq);
+	printf("     Zero crossings (generated): %d\n", zero_crossings);
+	printf("	Effective Frequency (generated): %f\n", measured_freq);
 	/* Checking for a DC component */
 	{
 		int dc_i = 0, dc_q = 0;
@@ -355,9 +376,10 @@ int main(int argc, char *argv[]) {
 	data1->type = SAMPLE_SIGNAL;
 	{
 		snprintf(title, sizeof(title),
-		"Harmonic Oscillator Experiment (GRLDS: %s)\\n"
+		"Harmonic Oscillator Experiment (GRLDS: %s) (Split Bias:%s)\\n"
 		"(Tone: %6.2f (target %6.2f) Hz) (Amp (min/max): (%6.5f/%6.5f))\\n",
-			 use_grlds ? "On" : "Off",
+			 use_grlds ? "ON" : "OFF",
+			 use_old ? "OFF" : "ON",
 			 measured_freq, tone, min_amp, max_amp);
 		multiplot_begin(pf, title, 2, 2);
 	}

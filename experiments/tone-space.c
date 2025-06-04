@@ -46,16 +46,29 @@ usage(char *bin) {
 }
 
 void
-space_map(char *space, double tone, double bs) {
+space_map(char *space, double tone, double bs, double adj) {
 	int32_t fp_cos, fp_sin;
+	double fp_c_adj, fp_s_adj;
 	double cos_tones[3], sin_tones[3];
 	double precise_rps;
 	double err_cos, err_sin;
 
-	printf("Tone space (%s) for %fHz\n", space, tone);
+	printf("Tone space (%s) for %8.2f Hz\n", space, tone);
 	precise_rps = (TAU * tone) / SAMPLE_RATE;
 	fp_cos = round(cos(precise_rps) * bs);
 	fp_sin = round(sin(precise_rps) * bs);
+	if (adj == 0) {
+		printf("Selecting minimum adjustment.\n");
+		adj = (fp_cos < fp_sin) ? 1.0 / (double) fp_cos : 1.0 / (double) fp_sin;
+	}
+	fp_c_adj = fp_cos * adj;
+	fp_s_adj = fp_sin * adj;
+	printf("Fixed point constants:\n");
+	printf("\tcos - %8d\n", fp_cos);
+	printf("\tsin - %8d\n", fp_sin);
+	printf("Small (%f) adjustment cos(%5.4f) / sin(%5.4f)\n", 
+			adj, fp_c_adj, fp_s_adj);
+
 	for (int i = 0; i < 3; i++) {
 			int32_t c, s;
 			c = (fp_cos + i) - 1;
@@ -89,7 +102,8 @@ main(int argc, char *argv[])
 	char	opt;
 	double	tone = 3865.7;
 	double	err_cos, err_sin;
-	char	*options = "Ht:";
+	double	adjustment = 0;
+	char	*options = "Ht:a:";
 
 	printf("Experiment Tone Space Exploration\n");
 	while ((opt = getopt(argc, argv, options)) != -1) {
@@ -102,11 +116,14 @@ main(int argc, char *argv[])
 			case 't':
 				tone = atof(optarg);
 				break;
+			case 'a':
+				adjustment = atof(optarg);
+				break;
 		}
 	}
-	space_map("16 bit", tone, (double) OSC16_BITSHIFT);
+	space_map("16 bit", tone, (double) OSC16_BITSHIFT, adjustment);
 	printf("\n");
-	space_map("32 bit", tone, (double) (1<<30));
+	space_map("32 bit", tone, (double) (1<<30), adjustment);
 	exit(0);
 
 }

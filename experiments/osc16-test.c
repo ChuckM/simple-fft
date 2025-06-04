@@ -167,10 +167,10 @@ gen_bias(int bias, int curx, int cury) {
 	 */
 /*	if (square_error > BIAS_SQUARE_THRESHOLD)  */
 	if (amp_error > BIAS_AMP_ERROR_THRESHOLD) {
-		bias++;
+		bias = 1;
 /* 	else if (square_error < -BIAS_SQUARE_THRESHOLD)  */
 	} else if (amp < (OSC_AMPLITUDE - 0.499)) {
-		bias--;
+		bias = -1;
     } else {
 // Experiment #1: Set the bias to zero
 		bias = 0;

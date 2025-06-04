@@ -118,14 +118,40 @@ osc(int16_t c, int16_t s, point_t *cur, point_t *res, int b_ena, int b) {
  *  c is fixed point cosine, s is fixed point sine
  *  cur is the current point
  *  res is the next point
- *  b_ena is the "bias enable" signal.
  *  b is the bias amount. 
  */
 void
 osc16(int16_t c, int16_t s, point_t *cur, point_t *res, int bias) {
 	int32_t bc, bs;
 	int32_t rx, ry;
+	int s_bias, c_bias;
+	
+	/*
+	 * This requires bias to be -1, 0, or 1. It picks the lowest bias
+	 * that will change the smaller constant by 1, and then sets the other
+	 * bias to be the same ratio.
+	 */
+	s_bias = c_bias = 1;
+	if (s < c) {
+		c_bias = round((1.0 / (double) s) * c);
+	} else {
+		c_bias = round((1.0 / (double) c) * s);
+	}
+	bc = c + (bias * c_bias);
+	bs = s + (bias * s_bias);
+	rx = (int32_t)(cur->x) * bc - (int32_t)(cur->y) * bs;
+	ry = (int32_t)(cur->x) * bs + (int32_t)(cur->y) * bc;
+	res->x = (int16_t)(rx / (double) OSC16_BITSHIFT);
+	res->y = (int16_t)(ry / (double) OSC16_BITSHIFT);
+}
 
+/*** DEBUG OLD VERSION ***/
+void
+osc16a(int16_t c, int16_t s, point_t *cur, point_t *res, int bias) {
+	int32_t bc, bs;
+	int32_t rx, ry;
+	int s_bias, c_bias;
+	
 	bc = c + bias;
 	bs = s + bias;
 	rx = (int32_t)(cur->x) * bc - (int32_t)(cur->y) * bs;
