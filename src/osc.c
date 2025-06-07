@@ -10,6 +10,19 @@
 #include <dsp/osc.h>
 #include <dsp/ho_refs.h>
 
+struct {
+	int	resid;	// residual after difference
+	int	bias;	// bias intensity
+} bias_level[8] = {
+	{    0, 0},	// amplitude error 0
+	{ 3277, 1},	// amplitude error 0.1
+	{ 6554, 2},	// amplitude error 0.2
+	{ 9830, 3},	// amplitude error 0.3
+	{13107, 4},	// amplitude error 0.4
+	{16384, 5},	// amplitude error 0.5
+	{19661, 6},	// amplitude error 0.6
+	{22938, 7}	// amplitude error 0.7
+};
 
 /*
  * This is the current effective amplitude of the oscillator squared.
@@ -122,6 +135,35 @@ osc(int16_t c, int16_t s, point_t *cur, point_t *res, int b_ena, int b) {
  */
 void
 osc16(int16_t c, int16_t s, point_t *cur, point_t *res, int bias) {
+	int32_t bc, bs;
+	int32_t rx, ry;
+	int s_bias, c_bias;
+	
+	/*
+	 * This requires bias to be -1, 0, or 1. It picks the lowest bias
+	 * that will change the smaller constant by 1, and then sets the other
+	 * bias to be the same ratio.
+	 */
+	s_bias = c_bias = 1;
+	if (s < c) {
+		c_bias = round((1.0 / (double) s) * c);
+	} else {
+		c_bias = round((1.0 / (double) c) * s);
+	}
+	bc = c + (bias * c_bias);
+	bs = s + (bias * s_bias);
+	rx = (int32_t)(cur->x) * bc - (int32_t)(cur->y) * bs;
+	ry = (int32_t)(cur->x) * bs + (int32_t)(cur->y) * bc;
+	res->x = (int16_t)(rx / (double) OSC16_BITSHIFT);
+	res->y = (int16_t)(ry / (double) OSC16_BITSHIFT);
+}
+
+/*
+ * This version takes what we've learned to proactively bias toward
+ * the point we want.
+ */
+void
+osc16c(int16_t c, int16_t s, point_t *cur, point_t *res, int bias) {
 	int32_t bc, bs;
 	int32_t rx, ry;
 	int s_bias, c_bias;
