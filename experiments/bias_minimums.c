@@ -38,10 +38,19 @@ local_osc(int16_t c, int16_t s, point_t *cur, point_t *res, int b_ena, int b) {
 	res->y = (int16_t)(ry / (double) OSC16_BITSHIFT);
 }
 
+#define FACTOR 0.00001
+
 int
 main(int argc, char *argv[]) {
 	double tone = TONE;
-	int16_t fp_cos[8], fp_sin[8];
+	double factor = FACTOR;
+	struct {
+		int16_t c;
+		int16_t s;
+		int16_t dc;
+		int16_t ds;
+		double d_avg;
+	} fp[8];
 	double rps;
 	point_t	tests[8];
 	double c, s;
@@ -60,31 +69,42 @@ main(int argc, char *argv[]) {
 	c = cos(rps);
 	s = sin(rps);
 	for (int i = 0; i < 8; i++) {
-		double factor = 1 + (i / 1000.0);
-		fp_cos[i] = round(16384.0 * c * factor);
-		fp_sin[i] = round(16384.0 * s * factor);
+		fp[i].c = round(16384.0 * c * ((factor * i) + 1.0));
+		fp[i].dc = fp[i].c - fp[0].c;
+		fp[i].s = round(16384.0 * s * ((factor * i) + 1.0));
+		fp[i].ds = fp[i].s - fp[0].s;
 	}
 	printf("Biasing constants for tone: %f\n", tone);
-	printf("%10s | %10s\n", "sin", "cos");
+	printf("%10s | delta | %10s | delta\n", "sin", "cos");
 	for (int i = 0; i < 8; i++) {
-		printf("%10d | %10d\n", fp_sin[i], fp_cos[i]);
+		printf("%10d | %5d | %10d | %5d\n", 
+				fp[i].s, fp[i].ds, fp[i].c, fp[i].dc);
 	}
 	/* run 128 "samples" of the tone with each set of parameters */
-	for (int k = 0; k < 128; k++) {
+#define SAMPLES 128
+	for (int k = 0; k < SAMPLES; k++) {
 		printf("[%3d] ", k);
 		for (int i = 0; i < 8; i++) {
 			point_t cur, nxt;
-			double cur_a, new_a;
+			double cur_a, ref_a, delta_a;
 			cur.x = tests[i].x;
 			cur.y = tests[i].y;
-			local_osc(fp_cos[i], fp_sin[i], &cur, &nxt, 0, 0);
 			cur_a = sqrt(cur.x * cur.x + cur.y * cur.y);
-			new_a = sqrt(nxt.x * nxt.x + nxt.y * nxt.y);
+			if (i == 0) {
+				ref_a = cur_a;
+			}
+			local_osc(fp[i].c, fp[i].s, &cur, &nxt, 0, 0);
+			delta_a = cur_a - ref_a;
+			fp[i].d_avg += delta_a;
 			tests[i] = nxt;
-			printf("[%1d: %6d, %6d, %9.3f] ",
-				i, cur.x, cur.y, cur_a);
+			printf("\n\t[%1d: %6d, %6d, %9.3f (%9.3f)] ",
+				i, cur.x, cur.y, cur_a, delta_a);
 		}
 		printf("\n");
+	}
+	printf("Amplitude Delta averages :\n");
+	for (int i = 0; i < 8; i++) {
+		printf("\t%2d: %8.3f\n", i, fp[i].d_avg / (double) SAMPLES);
 	}
 	exit(0);
 }
