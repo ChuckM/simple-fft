@@ -15,6 +15,28 @@
 
 /* The amplitude of choice */
 #define AMPLITUDE	16384
+int16_t *octant_table;
+int octant_elements;
+
+void
+gen_octant() {
+	int i;
+	
+	octant_elements = (int) ((double) AMPLITUDE * sqrt(2.0)/2.0 + 0.5)
+	printf("Generate octant table with %d entries.\n", size);
+	octant_table = calloc(octant_elements, sizeof(int16_t));
+	if (! octant_table) {
+		fprintf(stderr, "Error allocating octant table.\n");
+		exit(1);
+	}
+
+	for (int k = 0; k < octant_elements; k++) {
+		double r = sqrt(AMPLITUDE * AMPLITUDE - k * k);
+		octant_table[k] = (int16_t)(r + 0.5);
+	}
+	printf("done.\n");
+}
+
 int
 main(int argc, char *argv[]) {
 
@@ -23,7 +45,7 @@ main(int argc, char *argv[]) {
 	double ea, ex, ey, dx, dy;
 	double max_ea, max_ex, max_ey;
 	double min_ea, min_ex, min_ey;
-	int num_refs;
+	int num_refs = 1;
 	double len;
 	int gen_code = 0;
 	FILE *of;
@@ -57,6 +79,7 @@ main(int argc, char *argv[]) {
 			" */\n"
 			"#include <dsp/ho_refs.h>\n\n"
 			"ref_t refs[] = {\n", argv[1]);
+			fprintf(of, "    { %10.7f, %5d, %5d },\n", 0.0, 0, AMPLITUDE);
 	} else {
 		fprintf(of,
 			"/*\n"
@@ -73,60 +96,33 @@ main(int argc, char *argv[]) {
 			"    int16_t y;\n"
 			"} ref_t;\n\n"
 		);
+		fprintf(of,
+			"extern int16_t octant_table[11586];\n");
 	}
 	px = 0;
 	py = 16384;
 	cur_rad = 0;
-	num_refs = 0;
-	while (cur_rad <= (2 * M_PI + rad)) {
-		double x, y;
+	num_refs = 1;
+	for (int k = 1; k < octant_elements; k++) {
 		int16_t xi, yi;
-		double t, f;
+		double rad;
 
-		x = AMPLITUDE * sin(cur_rad);
-		y = AMPLITUDE * cos(cur_rad);
-		xi = (int16_t) round(x);
-		yi = (int16_t) round(y);
-		cur_rad += rad;
-		if ((abs(xi-px) > 1) || (abs(yi-py) > 1)) {
-			printf("GAP at %d\n", xi);
-			printf("      Radians: %f\n"
-				   "    prev X, Y: %d, %d\n"
-				   " current X, Y: %d, %d\n",
-				cur_rad - rad, px, py, xi, yi);
-			fclose(of);
-			exit(1);
-		}
-		if ((xi ==  px) && (yi == py)) {
-			/*
-			 * This IFDEF'd  out because it's harmless
-			 * but GAPs, those are a problem.
-			 */
-#if 0
-			printf("DUP at %d\n", xi);
-			printf("DUP at %d\n", xi);
-			printf("      Radians: %f\n"
-		 		   "    prev X, Y: %d, %d\n"
-		 		   " current X, Y: %d, %d\n",
-		 		cur_rad - rad, px, py, xi, yi);
-#endif
-			continue;
-		}
-		px = xi;
-		py = yi;
+		xi = octant_table[k];
+		yi = k;
+		rad = atan2((double) yi, (double) xi);
+
 		/* actual radius and actual angle */
 		double act_r = sqrt(xi * xi + yi * yi);
 		double act_a = asin(xi / act_r);
 
-		num_refs++;
 		if (gen_code) {
-
-			fprintf(of, "    { %10.7f, %5d, %5d },", cur_rad - rad, xi, yi);
+xxx
+			fprintf(of, "    { %10.7f, %5d, %5d },", rad, xi, yi);
 			ex = x - xi;		// Fractional part of X
 			ey = y - yi;		// Fractional part of Y
 			ea = AMPLITUDE - act_r;		// Fractional part of amplitude.
-			fprintf(of, "// (Ae, Xe, Ye) => %6.5f, %6.5f, %6.5f\n",
-				ea, ex, ey);
+			fprintf(of, "// [ %d%c] (Ae, Xe, Ye) => %6.5f, %6.5f, %6.5f\n",
+				num_refs, (num_refs != xi) ? '*' : ' ', ea, ex, ey);
 			max_ex = (ex >= max_ex) ? ex : max_ex;
 			max_ey = (ey >= max_ey) ? ey : max_ey;
 			max_ea = (ea >= max_ea) ? ea : max_ea;
@@ -135,6 +131,7 @@ main(int argc, char *argv[]) {
 			min_ea = (ea <= min_ea) ? ea : min_ea;
 
 		}
+		num_refs++;
 	}
 	if (gen_code) {
 		fprintf(of, "};\n");
@@ -149,6 +146,18 @@ main(int argc, char *argv[]) {
 		fprintf(of, 
 			"#define REFS_MAX_REF	%d\n"
 			"extern ref_t refs[REFS_MAX_REF];\n", num_refs);
+	}
+	if (gen_code) {
+		fprintf(of, "int16_t octant_table[] = {\n\t");
+		for (int i = 0; i < 11586; i++) {
+			double r = sqrt(AMPLITUDE * AMPLITUDE - i * i);
+			int16_t ri = (int16_t)(r + 0.5);
+			fprintf(of, "%6d, ", ri);
+			if (((i + 1) % 8) == 0) {
+				fprintf(of, "\n\t");
+			}
+		}
+		fprintf(of,"\n};\n");
 	}
 	fclose(of);
 }

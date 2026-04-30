@@ -65,6 +65,7 @@ void osc32(int32_t c, int32_t s, point_t *cur, point_t *res, int b);
 // trying a different bias strategy
 void osc16(int16_t c, int16_t s, point_t *cur, point_t *res, int bias);
 void osc16a(int16_t c, int16_t s, point_t *cur, point_t *res, int bias);
+void osc16o(int16_t c, int16_t s, point_t *cur, point_t *res);
 
 /*
  * Computes the radians/sample rate for a given tone at the

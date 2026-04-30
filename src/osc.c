@@ -203,6 +203,36 @@ osc16a(int16_t c, int16_t s, point_t *cur, point_t *res, int bias) {
 }
 
 /*
+ * 16 bit version that is corrected by the octant table.
+ *
+ */
+void
+osc16o(int16_t c, int16_t s, point_t *cur, point_t *res) {
+	int32_t rx, ry;
+	int16_t ax, ay;
+
+	
+	rx = (int32_t)(((cur->x) * c - (int32_t)(cur->y) * s) / OSC16_BITSHIFT);
+	ry = (int32_t)(((cur->x) * s + (int32_t)(cur->y) * c) / OSC16_BITSHIFT);
+	ax = (int16_t) abs(rx);
+	ay = (int16_t) abs(ry);
+
+	printf("[Rx,Ry] = [%6d, %6d] => ", rx, ry);
+	if (rx == 0) {
+		ry = OSC_AMPLITUDE * (ry/ry);
+	} else if (ry == 0) {
+		rx = OSC_AMPLITUDE * (rx/rx);
+	} else if (ax < ay) {
+		ry = (ry < 0) ? -octant_table[ax] : octant_table[ax];
+	} else {
+		rx = (rx < 0) ? -octant_table[ay] : octant_table[ay]; 
+	}
+	printf("[%6d, %6d]\n", rx, ry);
+
+	res->x = (int16_t)(rx);
+	res->y = (int16_t)(ry);
+}
+/*
  * Behaviorial implementation of the verilog implementing an oscillator.
  * Rotation
  *  | cos  sin |

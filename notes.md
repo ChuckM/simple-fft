@@ -922,4 +922,30 @@ ORIGINAL OSC2-TEST is broken with the changes to osc/bias etc.
 I now have the ability to track the "perfect" oscillator and with that I
 can now look at each point and see how it stacks up to the next.
 
+-----------------------------------------------
+OSC16 fixes. 
 
+Generate an octant table (first octant) for integer value of
+16384 magnitude curve. 
+
+So generating the octant table found that `perfect_osc` wasn't perfect.
+
+The algorithm for correcting is then:
+```
+ abs(x) < abs(y) - octants 2,3,6,7
+	y = octant[x] * (y/y)
+ abs(x) > abs(y) - octants 1,4,6,8
+	x = octant[y] * (x/x)
+/* y/y and x/x give 1 or -1 to correct sign. */
+```
+
+## How to be more intentional about OSC16
+
+We have a better understanding of how this works, and the question I have is
+how "pure" can I make the tone with 16 bit, 18 bit, 32 bit, and 36 bit math.
+
+We have the bias technique
+
+We have the octant table technique
+
+ 

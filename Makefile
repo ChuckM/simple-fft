@@ -34,7 +34,7 @@ EXPERIMENTS = exp1 exp2 exp3 exp4 exp5 exp6 exp7 exp8 exp9 exp10 exp11 exp12\
 			  exp-corr exp-corr-plot exp-corr-multiplot \
 			  experiment diff-test exp-fixed pll-test osc-test osc16-run gr \
 			  smallest_radian osc32-run osc32-test osc16-test \
-				tone-space bias_minimums
+				tone-space bias_minimums refs_test octants_test
 
 TEST_PROGRAMS = plot-test cic-test fft-test filt-test
 
@@ -52,7 +52,7 @@ LDFLAGS = -lm
 LIB_SRC = osc.c ho_refs.c signal.c sample.c plot.c cic.c fft.c dft.c \
 		  windows.c filter.c diff.c
 
-LIB = $(LIB_DIR)/libsdsp.a
+LIB = $(LIB_DIR)/libdsp.a
 
 OBJECTS = $(TOOL_SRC:%.c=$(OBJ_DIR)/%.o)
 
@@ -90,20 +90,20 @@ $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c $(INCLUDES)
 
 #$(EXPERIMENTS:%=$(BIN_DIR)/%): $(EXPERIMENTS:%=$(EXP_SRC)/%.c) $(LIB)
 $(BIN_DIR)/%: $(EXP_SRC)/%.c $(LIB)
-	cc -g -I. -o $@ $< -L$(LIB_DIR) -lsdsp ${LDFLAGS}
+	cc -g -I. -o $@ $< -L$(LIB_DIR) -ldsp ${LDFLAGS}
 
 $(LIB_DIR)/%: $(LIB_OBJECTS)
 	ar -r $@ $(LIB_OBJECTS)
 	echo "LIB - $@"
 
 $(BIN_DIR)/%: $(SRC_DIR)/%.c $(OBJECTS) $(INCLUDES) $(LIB) 
-	cc -g -I. -o $@ $< ${OBJECTS} -L$(LIB_DIR) -lsdsp ${LDFLAGS}
+	cc -g -I. -o $@ $< ${OBJECTS} -L$(LIB_DIR) -ldsp ${LDFLAGS}
 
 $(OBJ_DIR)/remez.o: $(SRC_DIR)/remez.c dsp/remez.h
 	cc -g -fPIC -I. -o $@ -c $(SRC_DIR)/remez.c
 
 $(BIN_DIR)/filt-design: $(SRC_DIR)/filt-design.c $(OBJ_DIR)/remez.o $(INCLUDES)
-	cc -I. -o $@ $< ${OBJECTS} $(OBJ_DIR)/remez.o -L$(LIB_DIR) -lsdsp ${LDFLAGS}
+	cc -I. -o $@ $< ${OBJECTS} $(OBJ_DIR)/remez.o -L$(LIB_DIR) -ldsp ${LDFLAGS}
 
 dsp/ho_refs.h: bin/perfect_osc
 	bin/perfect_osc dsp/ho_refs.h
