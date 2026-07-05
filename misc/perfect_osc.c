@@ -22,8 +22,8 @@ void
 gen_octant() {
 	int i;
 	
-	octant_elements = (int) ((double) AMPLITUDE * sqrt(2.0)/2.0 + 0.5)
-	printf("Generate octant table with %d entries.\n", size);
+	octant_elements = (int) ((double) AMPLITUDE * sqrt(2.0)/2.0 + 0.5);
+	printf("Generate octant table with %d entries.\n", octant_elements);
 	octant_table = calloc(octant_elements, sizeof(int16_t));
 	if (! octant_table) {
 		fprintf(stderr, "Error allocating octant table.\n");
@@ -116,7 +116,9 @@ main(int argc, char *argv[]) {
 		double act_a = asin(xi / act_r);
 
 		if (gen_code) {
-xxx
+			int16_t x, y;
+			x = 1;
+			y = 1; // this isn't correct XXX
 			fprintf(of, "    { %10.7f, %5d, %5d },", rad, xi, yi);
 			ex = x - xi;		// Fractional part of X
 			ey = y - yi;		// Fractional part of Y
